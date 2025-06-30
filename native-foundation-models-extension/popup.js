@@ -509,6 +509,9 @@ try {
   }
 
   showCodeModal(code) {
+    // Load Prism.js CSS and JS
+    this.loadPrismAssets();
+    
     // Create backdrop
     const backdrop = document.createElement('div');
     backdrop.className = 'settings-backdrop active';
@@ -594,24 +597,43 @@ try {
       line-height: 1.5;
     `;
 
-    const textarea = document.createElement('textarea');
-    textarea.value = code;
-    textarea.style.cssText = `
+    // Create code container with Prism.js highlighting
+    const codeContainer = document.createElement('div');
+    codeContainer.style.cssText = `
       flex: 1;
       min-height: 350px;
       background: #1a202c;
-      color: #e2e8f0;
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 12px;
+      overflow: auto;
+      position: relative;
+    `;
+
+    const pre = document.createElement('pre');
+    pre.style.cssText = `
+      margin: 0;
       padding: 16px;
+      background: transparent;
       font-family: 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', monospace;
       font-size: 13px;
       line-height: 1.5;
-      resize: none;
-      outline: none;
-      white-space: pre;
-      overflow-wrap: normal;
-      overflow-x: auto;
+      overflow: visible;
+    `;
+
+    const codeElement = document.createElement('code');
+    codeElement.className = 'language-javascript';
+    codeElement.textContent = code;
+    
+    pre.appendChild(codeElement);
+    codeContainer.appendChild(pre);
+
+    // Hidden textarea for copying
+    const textarea = document.createElement('textarea');
+    textarea.value = code;
+    textarea.style.cssText = `
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
     `;
     textarea.readonly = true;
 
@@ -691,6 +713,7 @@ try {
     buttonContainer.appendChild(cancelBtn);
     buttonContainer.appendChild(copyBtn);
     content.appendChild(instructions);
+    content.appendChild(codeContainer);
     content.appendChild(textarea);
     content.appendChild(buttonContainer);
     modal.appendChild(header);
@@ -700,12 +723,37 @@ try {
     document.body.appendChild(backdrop);
     document.body.appendChild(modal);
 
-    // Auto-select text after a brief delay
+    // Apply syntax highlighting after modal is added to DOM
     setTimeout(() => {
+      if (window.Prism) {
+        window.Prism.highlightElement(codeElement);
+      }
+      // Auto-select text after highlighting
       textarea.focus();
       textarea.select();
       textarea.setSelectionRange(0, textarea.value.length);
     }, 100);
+  }
+
+  loadPrismAssets() {
+    // Load Prism.js CSS if not already loaded
+    if (!document.querySelector('link[href*="prism.css"]')) {
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = chrome.runtime.getURL('prism.js/prism.css');
+      document.head.appendChild(cssLink);
+    }
+
+    // Load Prism.js JavaScript if not already loaded
+    if (!window.Prism) {
+      const script = document.createElement('script');
+      script.src = chrome.runtime.getURL('prism.js/prism.js');
+      script.onload = () => {
+        // Prism.js is now loaded
+        console.log('Prism.js loaded successfully');
+      };
+      document.head.appendChild(script);
+    }
   }
 
 }
