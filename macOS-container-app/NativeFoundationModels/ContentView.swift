@@ -196,6 +196,7 @@ struct ContentView: View {
         }
         .frame(width: 420, height: 540)
         .onAppear {
+            AppMover.moveIfNecessary()
             binaryManager.checkInstallationStatus()
             animateGradient = true
         }

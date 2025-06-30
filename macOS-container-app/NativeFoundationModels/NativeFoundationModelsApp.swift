@@ -19,9 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct NativeFoundationModelsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
-    init() {
-        // Don't auto-install on startup, let user control it
-    }
+    init() {}
     
     var body: some Scene {
         WindowGroup {
