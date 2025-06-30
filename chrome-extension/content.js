@@ -1,0 +1,27 @@
+// Content script that injects the website API and handles communication
+(function() {
+  // Inject the API script into the page
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('injected.js');
+  script.onload = function() {
+    this.remove();
+  };
+  (document.head || document.documentElement).appendChild(script);
+  
+  // Handle messages from injected script
+  window.addEventListener('message', (event) => {
+    if (event.data.type === 'chromellm-request') {
+      // Forward to background script
+      chrome.runtime.sendMessage(event.data, (response) => {
+        // Send response back to injected script
+        window.postMessage({
+          type: 'chromellm-response',
+          requestId: event.data.requestId,
+          success: !response.error,
+          data: response.error ? null : response,
+          error: response.error
+        }, '*');
+      });
+    }
+  });
+})();

@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "ChromeLLM - On-Device LLM",
+  "version": "1.0.0",
+  "description": "Provides on-device LLM capabilities to websites with built-in playground",
+  
+  "permissions": [
+    "nativeMessaging",
+    "storage"
+  ],
+  
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ChromeLLM Playground"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

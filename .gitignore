@@ -1,0 +1,39 @@
+# Build artifacts
+.build/
+*.dSYM/
+
+# IDE files
+.DS_Store
+.vscode/
+*.xcworkspace/
+*.xcodeproj/
+
+# Compiled binaries
+*.o
+*.a
+*.so
+*.dylib
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+.swp
+.swo
+
+# Node modules (if any)
+node_modules/
+
+# Logs
+*.log
+logs/

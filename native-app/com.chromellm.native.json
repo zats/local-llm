@@ -1,0 +1,9 @@
+{
+  "name": "com.chromellm.native",
+  "description": "ChromeLLM Native Messaging Host",
+  "path": "/Users/zats/bin/chromellm-native",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://giaikgfppdlhndeaafppjjjkdpdfphob/"
+  ]
+}
