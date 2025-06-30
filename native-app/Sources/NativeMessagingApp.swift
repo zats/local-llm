@@ -107,7 +107,7 @@ class NativeMessagingApp: @unchecked Sendable {
             
         case "startPlaygroundSession":
             logMessage("Received startPlaygroundSession command.", type: .info)
-            handleStartPlaygroundSession(requestId: requestId)
+            handleStartPlaygroundSession(requestId: requestId, payload: payload)
             
         case "sendPlaygroundMessage":
             logMessage("Received sendPlaygroundMessage command.", type: .info)
@@ -166,7 +166,7 @@ class NativeMessagingApp: @unchecked Sendable {
                 
                 sendMessage(responseMessage)
             } catch {
-                sendError("Generation failed: \(error.localizedDescription)", requestId: requestIdCopy)
+                sendStructuredError(error, requestId: requestIdCopy)
             }
         }
     }
@@ -207,15 +207,16 @@ class NativeMessagingApp: @unchecked Sendable {
                 sendMessage(endMessage)
                 
             } catch {
-                sendError("Streaming failed: \(error.localizedDescription)", requestId: requestIdCopy)
+                sendStructuredError(error, requestId: requestIdCopy)
             }
         }
     }
     
-    private func handleStartPlaygroundSession(requestId: String) {
+    private func handleStartPlaygroundSession(requestId: String, payload: [String: Any]? = nil) {
         let sessionId = UUID().uuidString
         do {
-            let session = try LanguageModelSession()
+            let systemPrompt = payload?["systemPrompt"] as? String
+            let session = try LanguageModelSession(systemPrompt: systemPrompt)
             activeSessions[sessionId] = session
             
             let response: [String: Any] = [
@@ -227,7 +228,7 @@ class NativeMessagingApp: @unchecked Sendable {
             ]
             
             sendMessage(response)
-            logMessage("Started playground session: \(sessionId)", type: .info)
+            logMessage("Started playground session: \(sessionId) with system prompt: \(systemPrompt ?? "none")", type: .info)
         } catch {
             sendError("Failed to create session: \(error.localizedDescription)", requestId: requestId)
         }
@@ -277,16 +278,7 @@ class NativeMessagingApp: @unchecked Sendable {
                 sendMessage(endMessage)
                 
             } catch {
-                let errorMessage: [String: Any] = [
-                    "requestId": requestIdCopy,
-                    "type": "error",
-                    "payload": [
-                        "sessionId": sessionIdCopy,
-                        "message": error.localizedDescription,
-                        "code": "generation_failed"
-                    ]
-                ]
-                sendMessage(errorMessage)
+                sendStructuredSessionError(error, requestId: requestIdCopy, sessionId: sessionIdCopy)
             }
         }
     }
@@ -321,6 +313,22 @@ class NativeMessagingApp: @unchecked Sendable {
         
         if let maxTokens = payload["maximumResponseTokens"] as? Int {
             options.maximumResponseTokens = maxTokens
+        }
+        
+        if let samplingModeString = payload["samplingMode"] as? String {
+            switch samplingModeString {
+            case "top-p":
+                // Use default parameters for top-p
+                options.samplingMode = .topP()
+            case "top-k":
+                // Use default parameters for top-k
+                options.samplingMode = .topK()
+            case "greedy":
+                options.samplingMode = .greedy
+            default:
+                // Keep default (topP)
+                break
+            }
         }
         
         return options
@@ -365,6 +373,93 @@ class NativeMessagingApp: @unchecked Sendable {
         if let requestId = requestId {
             errorMessage["requestId"] = requestId
         }
+        
+        sendMessage(errorMessage)
+    }
+    
+    private func sendStructuredError(_ error: Error, requestId: String) {
+        var errorCode = "generation_failed"
+        var userMessage = "An error occurred while generating a response."
+        
+        if let languageModelError = error as? LanguageModelError {
+            switch languageModelError {
+            case .assetsUnavailable:
+                errorCode = "assets_unavailable"
+                userMessage = languageModelError.userFriendlyMessage
+            case .contextWindowExceeded:
+                errorCode = "context_window_exceeded"
+                userMessage = languageModelError.userFriendlyMessage
+            case .guardrailViolation:
+                errorCode = "guardrail_violation"
+                userMessage = languageModelError.userFriendlyMessage
+            case .decodingFailure:
+                errorCode = "decoding_failure"
+                userMessage = languageModelError.userFriendlyMessage
+            case .unsupportedGuide:
+                errorCode = "unsupported_guide"
+                userMessage = languageModelError.userFriendlyMessage
+            case .sessionNotAvailable:
+                errorCode = "session_not_available"
+                userMessage = languageModelError.userFriendlyMessage
+            case .generationFailed:
+                errorCode = "generation_failed"
+                userMessage = languageModelError.userFriendlyMessage
+            }
+        }
+        
+        let errorMessage: [String: Any] = [
+            "requestId": requestId,
+            "type": "error",
+            "payload": [
+                "message": userMessage,
+                "code": errorCode,
+                "technical_details": error.localizedDescription
+            ]
+        ]
+        
+        sendMessage(errorMessage)
+    }
+    
+    private func sendStructuredSessionError(_ error: Error, requestId: String, sessionId: String) {
+        var errorCode = "generation_failed"
+        var userMessage = "An error occurred while generating a response."
+        
+        if let languageModelError = error as? LanguageModelError {
+            switch languageModelError {
+            case .assetsUnavailable:
+                errorCode = "assets_unavailable"
+                userMessage = languageModelError.userFriendlyMessage
+            case .contextWindowExceeded:
+                errorCode = "context_window_exceeded"
+                userMessage = languageModelError.userFriendlyMessage
+            case .guardrailViolation:
+                errorCode = "guardrail_violation"
+                userMessage = languageModelError.userFriendlyMessage
+            case .decodingFailure:
+                errorCode = "decoding_failure"
+                userMessage = languageModelError.userFriendlyMessage
+            case .unsupportedGuide:
+                errorCode = "unsupported_guide"
+                userMessage = languageModelError.userFriendlyMessage
+            case .sessionNotAvailable:
+                errorCode = "session_not_available"
+                userMessage = languageModelError.userFriendlyMessage
+            case .generationFailed:
+                errorCode = "generation_failed"
+                userMessage = languageModelError.userFriendlyMessage
+            }
+        }
+        
+        let errorMessage: [String: Any] = [
+            "requestId": requestId,
+            "type": "error",
+            "payload": [
+                "sessionId": sessionId,
+                "message": userMessage,
+                "code": errorCode,
+                "technical_details": error.localizedDescription
+            ]
+        ]
         
         sendMessage(errorMessage)
     }

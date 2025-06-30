@@ -1,7 +1,7 @@
 # NativeFoundationModels Native App
 
 macOS native application that provides on-device LLM capabilities to the Chrome extension via native messaging.
-No more downloading 3GB+ models, no more long latency and LLM service bills 
+No more downloading 3GB+ models, no more long latency and LLM service bills! 
 
 ## Quick Setup
 
@@ -41,14 +41,14 @@ After loading the extension in Chrome and getting its ID, run:
 ## Configuration
 
 1. Get your Chrome extension ID after loading it in developer mode
-2. Run `../update_manifest_with_id.sh <YOUR_EXTENSION_ID>` with the actual extension ID
+2. Run `./update_manifest_with_id.sh <YOUR_EXTENSION_ID>` with the actual extension ID
 3. Replace the mock `LanguageModelSession` with actual LLM framework integration
 
 ## Testing
 
 ### Test Native Messaging Directly
 ```bash
-python3 test_native_messaging.py
+python3 test_complete.py
 ```
 
 ### Test Chrome Extension
@@ -57,12 +57,12 @@ python3 test_native_messaging.py
 3. Check browser console for any errors
 
 ### Test Website Integration  
-1. Open `sample-website/index.html` in Chrome
+1. Open the test page in Chrome
 2. Use the demo interface to test the API
 
 ## Architecture
 
-- `main.swift`: Entry point
+- `EntryPoint.swift`: Entry point
 - `NativeMessagingApp.swift`: Handles Chrome extension communication
 - `LanguageModelSession.swift`: LLM session management (currently mock)
 
@@ -90,8 +90,9 @@ The extension exposes `window.nativeFoundationModels` with methods:
 NativeFoundationModels/
 ├── native-foundation-models-extension/ # Chrome extension files
 ├── native-app/                         # Swift native messaging app
-├── sample-website/                     # Demo website
 ├── test_extension.html                 # Extension test page
-├── test_native_messaging.py            # Native messaging test
+├── test_complete.py                    # Complete test suite
+├── test_consistency.py                 # Consistency tests
+├── test_production.py                  # Production tests
 └── setup_chrome_extension.sh           # Automated setup
 ```

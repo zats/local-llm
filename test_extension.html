@@ -447,34 +447,34 @@
                         <div class="code-section">
                 <h3>Simple. Powerful. Ready to Use.</h3>
                 <div class="code-examples">
-                    <div class="code-block" data-title="Check Availability">// Verify NativeFoundationModels is ready
-const isReady = await window.nativeFoundationModels
+                    <div class="code-block" data-title="Check Availability"><pre class="hljs" style="display: block; overflow-x: auto; padding: 0.5em; color: rgb(186, 186, 186);"><span class="hljs-comment" style="color: rgb(127, 127, 127);">// Verify NativeFoundationModels is ready</span>
+<span class="hljs-keyword" style="color: rgb(203, 120, 50);">const</span> isReady = <span class="hljs-keyword" style="color: rgb(203, 120, 50);">await</span> <span class="hljs-built_in" style="color: rgb(224, 196, 108);">window</span>.nativeFoundationModels
   .checkAvailability();
 
-if (isReady.available) {
-  console.log('NativeFoundationModels ready! 🚀');
-}</div>
+<span class="hljs-keyword" style="color: rgb(203, 120, 50);">if</span> (isReady.available) {
+  <span class="hljs-built_in" style="color: rgb(224, 196, 108);">console</span>.log(<span class="hljs-string" style="color: rgb(224, 196, 108);">'NativeFoundationModels ready! 🚀'</span>);
+}</pre></div>
 
-                    <div class="code-block" data-title="Get Completion">// Generate content instantly
-const result = await window.nativeFoundationModels
-  .getCompletion('Explain quantum computing');
+                    <div class="code-block" data-title="Get Completion"><pre class="hljs" style="display: block; overflow-x: auto; padding: 0.5em; color: rgb(186, 186, 186);"><span class="hljs-comment" style="color: rgb(127, 127, 127);">// Generate content instantly</span>
+<span class="hljs-keyword" style="color: rgb(203, 120, 50);">const</span> result = <span class="hljs-keyword" style="color: rgb(203, 120, 50);">await</span> <span class="hljs-built_in" style="color: rgb(224, 196, 108);">window</span>.nativeFoundationModels
+  .getCompletion(<span class="hljs-string" style="color: rgb(224, 196, 108);">'Explain quantum computing'</span>);
 
-console.log(result.response);</div>
+<span class="hljs-built_in" style="color: rgb(224, 196, 108);">console</span>.log(result.response);</pre></div>
 
-                    <div class="code-block" data-title="Stream Responses">// Real-time streaming
-const stream = await window.nativeFoundationModels
-  .getCompletionStream('Write a story');
+                    <div class="code-block" data-title="Stream Responses"><pre class="hljs" style="display: block; overflow-x: auto; padding: 0.5em; color: rgb(186, 186, 186);"><span class="hljs-comment" style="color: rgb(127, 127, 127);">// Real-time streaming</span>
+<span class="hljs-keyword" style="color: rgb(203, 120, 50);">const</span> stream = <span class="hljs-keyword" style="color: rgb(203, 120, 50);">await</span> <span class="hljs-built_in" style="color: rgb(224, 196, 108);">window</span>.nativeFoundationModels
+  .getCompletionStream(<span class="hljs-string" style="color: rgb(224, 196, 108);">'Write a story'</span>);
 
-for await (const token of stream) {
-  updateUI(token); // Live updates
-}</div>
+<span class="hljs-keyword" style="color: rgb(203, 120, 50);">for</span> <span class="hljs-keyword" style="color: rgb(203, 120, 50);">await</span> (<span class="hljs-keyword" style="color: rgb(203, 120, 50);">const</span> token <span class="hljs-keyword" style="color: rgb(203, 120, 50);">of</span> stream) {
+  updateUI(token); <span class="hljs-comment" style="color: rgb(127, 127, 127);">// Live updates</span>
+}</pre></div>
 
-                    <div class="code-block" data-title="Advanced Options">// Fine-tune behavior
-const result = await window.nativeFoundationModels
+                    <div class="code-block" data-title="Advanced Options"><pre class="hljs" style="display: block; overflow-x: auto; padding: 0.5em; color: rgb(186, 186, 186);"><span class="hljs-comment" style="color: rgb(127, 127, 127);">// Configure behavior</span>
+<span class="hljs-keyword" style="color: rgb(203, 120, 50);">const</span> result = <span class="hljs-keyword" style="color: rgb(203, 120, 50);">await</span> <span class="hljs-built_in" style="color: rgb(224, 196, 108);">window</span>.nativeFoundationModels
   .getCompletion(prompt, {
-    temperature: 0.8,
-    maxTokens: 500
-  });</div>
+    temperature: <span class="hljs-number" style="color: rgb(104, 150, 186);">0.8</span>,
+    maxTokens: <span class="hljs-number" style="color: rgb(104, 150, 186);">500</span>
+  });</pre></div>
                 </div>
             </div>
 
