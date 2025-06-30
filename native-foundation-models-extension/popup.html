@@ -230,35 +230,41 @@
     }
     
     .settings-view {
-      position: absolute;
-      top: 0;
-      right: -100%;
-      width: 100%;
-      height: 100%;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      width: 500px;
+      max-height: 80vh;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       z-index: 1000;
       display: flex;
       flex-direction: column;
-      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+      border-radius: 20px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
     
     .settings-view.active {
-      right: 0;
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, -50%) scale(1);
     }
     
     .settings-backdrop {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.3);
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
       z-index: 999;
       opacity: 0;
       visibility: hidden;
       transition: all 0.3s ease;
-      backdrop-filter: blur(2px);
+      backdrop-filter: blur(4px);
     }
     
     .settings-backdrop.active {
