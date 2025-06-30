@@ -29,17 +29,17 @@ struct ModernButtonStyle: ButtonStyle {
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
             .background(
-                isPrimary ?
-                LinearGradient(
-                    colors: [Color(hex: "667eea"), Color(hex: "764ba2")],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ) :
-                LinearGradient(
-                    colors: [Color.white, Color(hex: "f8f9fa")],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+                Group {
+                    if isPrimary {
+                        LinearGradient(
+                            colors: [Color(hex: "667eea"), Color(hex: "764ba2")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        Color.white
+                    }
+                }
             )
             .cornerRadius(25)
             .shadow(color: Color.black.opacity(configuration.isPressed ? 0.1 : 0.2), 
@@ -100,28 +100,31 @@ struct ContentView: View {
                                 .frame(width: 12, height: 12)
                                 .overlay(
                                     Circle()
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                                        .stroke(Color.white.opacity(0.5), lineWidth: 2)
                                         .frame(width: 18, height: 18)
                                 )
                             
                             Text("Installation Status")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(Color(hex: "2c3e50"))
+                                .foregroundColor(.white)
                             
                             Spacer()
                         }
                         
                         Text(binaryManager.statusMessage)
                             .font(.system(size: 14))
-                            .foregroundColor(Color(hex: "6c757d"))
+                            .foregroundColor(Color.white.opacity(0.9))
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(20)
                     .background(
                         RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.white.opacity(0.95))
-                            .shadow(color: Color.black.opacity(0.1), radius: 10, y: 5)
+                            .fill(Color.white.opacity(0.15))
+                            .background(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
                     )
                     
                     // Action buttons
@@ -153,10 +156,10 @@ struct ContentView: View {
                             HStack(spacing: 8) {
                                 ProgressView()
                                     .scaleEffect(0.7)
-                                    .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "667eea")))
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 Text("Processing...")
                                     .font(.system(size: 12))
-                                    .foregroundColor(Color(hex: "6c757d"))
+                                    .foregroundColor(Color.white.opacity(0.8))
                             }
                             .padding(.top, 4)
                         }
@@ -166,16 +169,20 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Binary Location")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(hex: "6c757d"))
+                            .foregroundColor(Color.white.opacity(0.7))
                         
                         Text("~/bin/nativefoundationmodels-native")
                             .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(Color(hex: "667eea"))
+                            .foregroundColor(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(hex: "667eea").opacity(0.1))
+                                    .fill(Color.white.opacity(0.15))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                    )
                             )
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
