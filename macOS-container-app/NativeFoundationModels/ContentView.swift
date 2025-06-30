@@ -59,6 +59,18 @@ struct ContentView: View {
             GradientBackground()
             
             VStack(spacing: 0) {
+                // Window title bar area
+                HStack {
+                    Spacer()
+                    Text("NativeFoundationModels")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.8))
+                        .frame(maxWidth: .infinity)
+                    Spacer()
+                }
+                .frame(height: 28)
+                .background(Color.clear)
+                
                 // Main content card
                 VStack(spacing: 24) {
                     // Header with icon and title
@@ -80,16 +92,6 @@ struct ContentView: View {
                                 .font(.system(size: 32))
                                 .foregroundStyle(.white)
                         }
-                        
-                        Text("NativeFoundationModels")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color.white, Color.white.opacity(0.9)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
                     }
                     
                     // Status card
@@ -187,9 +189,12 @@ struct ContentView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(32)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 32)
+                .padding(.top, 16)
+                
+                Spacer()
             }
-            .padding(24)
         }
         .frame(width: 420, height: 480)
         .onAppear {

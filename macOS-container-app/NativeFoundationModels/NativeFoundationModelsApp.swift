@@ -28,6 +28,7 @@ struct NativeFoundationModelsApp: App {
             ContentView()
         }
         .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }
         }
