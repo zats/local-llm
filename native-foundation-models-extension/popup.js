@@ -572,19 +572,6 @@ try {
       gap: 16px;
     `;
 
-    const instructions = document.createElement('p');
-    instructions.innerHTML = `
-      <strong>Ready to copy!</strong> The code below reproduces your current playground configuration with a standard sample prompt.<br>
-      <span style="opacity: 0.8;">Paste this code into any website console where the Native Foundation Models extension is available.</span>
-    `;
-    instructions.style.cssText = `
-      margin: 0;
-      color: #e2e8f0;
-      font-size: 14px;
-      line-height: 1.5;
-    `;
-
-
     // Create code container with Prism.js highlighting
     const codeContainer = document.createElement('div');
     codeContainer.style.cssText = `
@@ -762,7 +749,6 @@ try {
     buttonContainer.appendChild(copyBtn);
     bottomContainer.appendChild(modeContainer);
     bottomContainer.appendChild(buttonContainer);
-    content.appendChild(instructions);
     content.appendChild(codeContainer);
     content.appendChild(textarea);
     content.appendChild(bottomContainer);

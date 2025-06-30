@@ -62,9 +62,13 @@
       align-items: center;
     }
     
+    .settings-btn:hover {
+      opacity: 1;
+    } 
+    
     .settings-btn {
       background: rgba(255, 255, 255, 0.2);
-      color: white;
+      opacity: 0.4;
       border: none;
       border-radius: 8px;
       padding: 6px;
@@ -339,16 +343,12 @@
     }
     
     .setting-section {
-      background: #1a202c;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
       margin-bottom: 16px;
       overflow: hidden;
     }
     
     .setting-item {
       padding: 16px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -356,18 +356,10 @@
       color: #e2e8f0;
     }
     
-    .setting-item:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-    
-    .setting-item:last-child {
-      border-bottom: none;
-    }
-    
     .setting-label {
       font-size: 16px;
       font-weight: 500;
-      color: #2c3e50;
+      color: #9ca2a9;
       letter-spacing: -0.41px;
     }
     
@@ -459,9 +451,7 @@
     .settings-warning {
       text-align: center;
       font-size: 13px;
-      color: rgba(255, 255, 255, 0.8);
-      background: rgba(255, 193, 7, 0.2);
-      border: 1px solid rgba(255, 193, 7, 0.3);
+      color: rgba(255, 193, 7, 0.3);
       border-radius: 12px;
       padding: 12px 16px;
       backdrop-filter: blur(10px);
@@ -618,11 +608,11 @@
           </div>
         </div>
         
+        
+        <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 16px;">
         <div class="settings-warning">
           ⚠️ Saving changes will reset the current chat
         </div>
-        
-        <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 16px;">
           <button class="save-btn" id="saveBtn">Save Settings</button>
         </div>
       </div>
