@@ -12,6 +12,9 @@ class NativeFoundationModelsPlayground {
     // Temporary settings for the settings dialog
     this.tempSettings = {};
     
+    // Track conversation for code export
+    this.conversationHistory = [];
+    
     // Get reference to the unified API
     this.api = window.nativeFoundationModels;
     
@@ -31,6 +34,7 @@ class NativeFoundationModelsPlayground {
     this.sendBtn = document.getElementById('sendBtn');
     this.newChatBtn = document.getElementById('newChatBtn');
     this.settingsBtn = document.getElementById('settingsBtn');
+    this.exportCodeBtn = document.getElementById('exportCodeBtn');
     this.cancelBtn = document.getElementById('cancelBtn');
     this.saveBtn = document.getElementById('saveBtn');
     this.settingsView = document.getElementById('settingsView');
@@ -49,6 +53,7 @@ class NativeFoundationModelsPlayground {
     this.sendBtn.addEventListener('click', () => this.sendMessage());
     this.newChatBtn.addEventListener('click', () => this.startNewChat());
     this.settingsBtn.addEventListener('click', () => this.showSettings());
+    this.exportCodeBtn.addEventListener('click', () => this.exportCode());
     this.cancelBtn.addEventListener('click', () => this.cancelSettings());
     this.saveBtn.addEventListener('click', () => this.saveSettings());
     this.settingsBackdrop.addEventListener('click', () => this.cancelSettings());
@@ -88,20 +93,16 @@ class NativeFoundationModelsPlayground {
 
   async checkAvailability() {
     try {
-      console.log('Checking LLM availability...');
       const response = await this.api.checkAvailability();
-      console.log('Availability response:', response);
       
       if (response && response.payload && response.payload.available) {
         this.statusEl.textContent = 'Ready';
         this.statusEl.className = 'status ready';
       } else {
         // If checkAvailability fails, try a different approach
-        console.log('Initial availability check failed, trying fallback...');
         this.tryFallbackAvailabilityCheck();
       }
     } catch (error) {
-      console.log('Availability check error:', error);
       // If the availability check fails, try a fallback
       this.tryFallbackAvailabilityCheck();
     }
@@ -160,6 +161,9 @@ class NativeFoundationModelsPlayground {
 
       this.currentSession = await this.api.createSession(sessionOptions);
       
+      // Clear conversation history
+      this.conversationHistory = [];
+      
       // Clear chat and show empty state
       this.chatContainer.innerHTML = `
         <div class="empty-state" id="emptyState">
@@ -192,8 +196,9 @@ class NativeFoundationModelsPlayground {
       return;
     }
 
-    // Add user message to chat
+    // Add user message to chat and conversation history
     this.addMessage(prompt, 'user');
+    this.conversationHistory.push({ role: 'user', content: prompt });
     this.promptInput.value = '';
     
     // Disable input
@@ -219,6 +224,9 @@ class NativeFoundationModelsPlayground {
         this.streamingContent += token;
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
       }
+      
+      // Add assistant response to conversation history
+      this.conversationHistory.push({ role: 'assistant', content: this.streamingContent });
       
       this.resetGenerating();
       
@@ -427,6 +435,297 @@ class NativeFoundationModelsPlayground {
       // Always set the system prompt input value (either loaded or default)
       this.systemPromptInput.value = this.systemPrompt;
     });
+  }
+
+  async exportCode() {
+    const jsCode = this.generateJavaScriptCode();
+    
+    // Always show modal with pre-selected code
+    this.showCodeModal(jsCode);
+  }
+
+  generateJavaScriptCode() {
+    const config = {
+      systemPrompt: this.systemPrompt,
+      temperature: this.temperature,
+      maxTokens: this.maxTokens,
+      samplingMode: this.samplingMode
+    };
+
+    let code = `
+// Check if Native Foundation Models is available
+if (!window.nativeFoundationModels) {
+  console.error('Native Foundation Models extension not found');
+  return;
+}
+
+try {
+  // Create session with current settings
+  const session = await window.nativeFoundationModels.createSession({`;
+
+  if (config.systemPrompt && config.systemPrompt.trim()) {
+    code += `
+    systemPrompt: ${JSON.stringify(config.systemPrompt)}`;
+  }
+
+  code += `
+  });
+
+  // Configuration
+  const options = {
+    temperature: ${config.temperature},
+    maximumResponseTokens: ${config.maxTokens},
+    samplingMode: '${config.samplingMode}'
+  };
+
+  console.log('🤖 Session ready with configuration:', options);
+`;
+
+    if (this.conversationHistory.length > 0) {
+      code += `
+  console.log('📜 Replaying conversation...');
+`;
+      
+      // Add each conversation turn
+      for (let i = 0; i < this.conversationHistory.length; i += 2) {
+        const userMessage = this.conversationHistory[i];
+        const assistantMessage = this.conversationHistory[i + 1];
+
+        if (userMessage && userMessage.role === 'user') {
+          code += `
+  // User message ${Math.floor(i/2) + 1}
+  console.log('👤 User:', ${JSON.stringify(userMessage.content)});
+  
+  let response${Math.floor(i/2) + 1} = '';
+  for await (const token of session.sendMessageStream(${JSON.stringify(userMessage.content)}, options)) {
+    response${Math.floor(i/2) + 1} += token;
+  }
+  console.log('🤖 Assistant:', response${Math.floor(i/2) + 1});
+`;
+        }
+      }
+      
+      code += `
+  console.log('✅ Conversation replay completed');`;
+  } else {
+    code += `
+  // Example usage - replace with your own prompts
+  let response = '';
+  for await (const token of session.sendMessageStream('Hello! How can you help me today?', options)) {
+    response += token;
+  }
+  console.log('🤖 Assistant:', response);`;
+  }
+
+  code += `  
+  // Clean up
+  await session.end();
+} catch (error) {
+  console.error('❌ Error:', error);
+}
+`;
+
+    return code;
+  }
+
+  showCodeModal(code) {
+    // Create backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'settings-backdrop active';
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90vw;
+      max-width: 800px;
+      max-height: 80vh;
+      background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+      border-radius: 20px;
+      z-index: 10001;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    `;
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    `;
+
+    const title = document.createElement('h3');
+    title.textContent = '💻 JavaScript Code Export';
+    title.style.cssText = `
+      margin: 0;
+      color: #e2e8f0;
+      font-size: 18px;
+      font-weight: 600;
+    `;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = `
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    `;
+    closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+    closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+
+    // Content area
+    const content = document.createElement('div');
+    content.style.cssText = `
+      padding: 20px 24px;
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    `;
+
+    const instructions = document.createElement('p');
+    instructions.innerHTML = `
+      <strong>Ready to copy!</strong> The code below reproduces your current playground configuration${this.conversationHistory.length > 0 ? ' and conversation' : ''}.<br>
+      <span style="opacity: 0.8;">Paste this code into any website console where the Native Foundation Models extension is available.</span>
+    `;
+    instructions.style.cssText = `
+      margin: 0;
+      color: #e2e8f0;
+      font-size: 14px;
+      line-height: 1.5;
+    `;
+
+    const textarea = document.createElement('textarea');
+    textarea.value = code;
+    textarea.style.cssText = `
+      flex: 1;
+      min-height: 350px;
+      background: #1a202c;
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      font-family: 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow-x: auto;
+    `;
+    textarea.readonly = true;
+
+    // Buttons
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    `;
+
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = '📋 Copy to Clipboard';
+    copyBtn.style.cssText = `
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    `;
+    copyBtn.onmouseover = () => copyBtn.style.transform = 'translateY(-1px)';
+    copyBtn.onmouseout = () => copyBtn.style.transform = 'translateY(0)';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Close';
+    cancelBtn.style.cssText = `
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    `;
+    cancelBtn.onmouseover = () => cancelBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+    cancelBtn.onmouseout = () => cancelBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+
+    // Event handlers
+    const closeModal = () => {
+      document.body.removeChild(backdrop);
+      document.body.removeChild(modal);
+    };
+
+    closeBtn.onclick = closeModal;
+    cancelBtn.onclick = closeModal;
+    backdrop.onclick = closeModal;
+
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(code);
+        copyBtn.textContent = '✅ Copied!';
+        copyBtn.style.background = 'linear-gradient(135deg, #46b946 0%, #2d8f2d 100%)';
+        setTimeout(() => {
+          copyBtn.textContent = '📋 Copy to Clipboard';
+          copyBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }, 2000);
+      } catch (error) {
+        // Fallback - select all text
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+        copyBtn.textContent = '📝 Text Selected';
+        setTimeout(() => {
+          copyBtn.textContent = '📋 Copy to Clipboard';
+        }, 2000);
+      }
+    };
+
+    // Assemble modal
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(copyBtn);
+    content.appendChild(instructions);
+    content.appendChild(textarea);
+    content.appendChild(buttonContainer);
+    modal.appendChild(header);
+    modal.appendChild(content);
+
+    // Add to page
+    document.body.appendChild(backdrop);
+    document.body.appendChild(modal);
+
+    // Auto-select text after a brief delay
+    setTimeout(() => {
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+    }, 100);
   }
 
 }

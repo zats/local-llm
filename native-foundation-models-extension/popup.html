@@ -22,7 +22,7 @@
     
     .container {
       min-height: 100vh;
-      max-width: 1200px;
+      max-width: 800px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -68,7 +68,7 @@
       border: none;
       border-radius: 8px;
       padding: 6px;
-      font-size: 16px;
+      font-size: 20px;
       cursor: pointer;
       transition: all 0.3s ease;
       width: 28px;
@@ -87,6 +87,12 @@
     
     .settings-btn:active {
       transform: scale(0.95);
+    }
+    
+    .title-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     
     .title {
@@ -124,28 +130,22 @@
     }
     
     .status {
-      text-align: center;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 400;
-      padding: 8px 20px;
-      margin: 8px 20px;
-      border-radius: 12px;
       letter-spacing: -0.08px;
-      backdrop-filter: blur(10px);
-      position: relative;
-      z-index: 2;
+      opacity: 0.9;
     }
     
     .status.ready {
-      background: rgba(46, 204, 113, 0.2);
-      color: #2ecc71;
-      border: 1px solid rgba(46, 204, 113, 0.3);
+      color: rgba(144, 238, 144, 0.9); /* Light green tint */
     }
     
     .status.error {
-      background: rgba(231, 76, 60, 0.2);
-      color: #e74c3c;
-      border: 1px solid rgba(231, 76, 60, 0.3);
+      color: rgba(255, 182, 193, 0.9); /* Light red tint */
+    }
+    
+    .status:not(.ready):not(.error) {
+      color: rgba(255, 218, 185, 0.8); /* Light orange tint for loading/checking states */
     }
     
     .chat-container {
@@ -557,14 +557,16 @@
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">NativeFoundationModels</div>
+      <div class="title-section">
+        <div class="title">Native Foundation Models</div>
+        <div class="status" id="status">Checking availability...</div>
+      </div>
       <div class="header-buttons">
-        <button class="settings-btn" id="settingsBtn">⚙️</button>
-        <button class="new-chat-btn" id="newChatBtn">New Chat</button>
+        <button class="settings-btn" id="exportCodeBtn" title="Export as Code">💻</button>
+        <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+        <button class="settings-btn" id="newChatBtn" title="New Chat">📄</button>
       </div>
     </div>
-    
-    <div class="status" id="status">Checking availability...</div>
     
     <div class="chat-container" id="chatContainer">
       <div class="empty-state" id="emptyState">

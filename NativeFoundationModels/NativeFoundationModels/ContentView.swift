@@ -8,6 +8,10 @@
 import SwiftUI
 
 struct ContentView: View {
+    init() {
+        print(Bundle.main.bundleURL.relativePath)
+    }
+    
     var body: some View {
         VStack {
             Image(systemName: "globe")
