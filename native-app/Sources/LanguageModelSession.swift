@@ -19,8 +19,6 @@ public class LanguageModelSession: @unchecked Sendable {
     }
     
     public func generateResponse(to prompt: String, options: GenerationOptions) async throws -> String {
-        transcript.append("User: \(prompt)")
-        
         guard let session = session else {
             throw LanguageModelError.sessionNotAvailable("No session found")
         }
@@ -30,8 +28,13 @@ public class LanguageModelSession: @unchecked Sendable {
             maximumResponseTokens: options.maximumResponseTokens
         )
         
-        let response = try await session.respond(to: prompt, options: generationOptions)
+        // Build full conversation context for the LLM
+        let conversationContext = self.buildConversationContext(newPrompt: prompt)
+        let response = try await session.respond(to: conversationContext, options: generationOptions)
         let responseText = response.content
+        
+        // Add to transcript after successful response
+        transcript.append("User: \(prompt)")
         transcript.append("Assistant: \(responseText)")
         return responseText
     }
@@ -39,8 +42,6 @@ public class LanguageModelSession: @unchecked Sendable {
     public func streamResponse(to prompt: String, options: GenerationOptions) -> AsyncThrowingStream<String, Error> {
         return AsyncThrowingStream { continuation in
             Task {
-                self.transcript.append("User: \(prompt)")
-                
                 guard let session = self.session else {
                     continuation.finish(throwing: LanguageModelError.sessionNotAvailable("No session found when streaming response"))
                     return
@@ -52,7 +53,9 @@ public class LanguageModelSession: @unchecked Sendable {
                 )
                 
                 do {
-                    let responseStream = session.streamResponse(to: prompt, options: generationOptions)
+                    // Build full conversation context for the LLM
+                    let conversationContext = self.buildConversationContext(newPrompt: prompt)
+                    let responseStream = session.streamResponse(to: conversationContext, options: generationOptions)
                     var fullResponse = ""
                     
                     for try await token in responseStream {
@@ -60,6 +63,8 @@ public class LanguageModelSession: @unchecked Sendable {
                         continuation.yield(token)
                     }
                     
+                    // Add to transcript after successful response
+                    self.transcript.append("User: \(prompt)")
                     self.transcript.append("Assistant: \(fullResponse)")
                     continuation.finish()
                     
@@ -68,6 +73,19 @@ public class LanguageModelSession: @unchecked Sendable {
                 }
             }
         }
+    }
+    
+    private func buildConversationContext(newPrompt: String) -> String {
+        // If this is the first message, just return the prompt
+        if transcript.isEmpty {
+            return newPrompt
+        }
+        
+        // Build the full conversation context
+        var context = transcript.joined(separator: "\n")
+        context += "\nUser: \(newPrompt)"
+        
+        return context
     }
 }
 

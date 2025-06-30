@@ -12,9 +12,6 @@ let package = Package(
             targets: ["ChromeLLMNative"]
         )
     ],
-    dependencies: [
-        // Add any dependencies here if needed
-    ],
     targets: [
         .executableTarget(
             name: "ChromeLLMNative",
