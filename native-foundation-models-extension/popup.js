@@ -452,8 +452,7 @@ class NativeFoundationModelsPlayground {
 
     const standardPrompt = "Write a short creative story about a robot discovering nature for the first time.";
 
-    let code = `// Generated from Native Foundation Models Playground
-if (!window.nativeFoundationModels) {
+    let code = `if (!window.nativeFoundationModels) {
   console.error('Native Foundation Models extension not found');
   return;
 }
@@ -478,15 +477,12 @@ try {
 `;
 
     if (useStreaming) {
-      code += `  // Streaming example - get tokens as they're generated
-  let response = '';
+      code += `  let response = '';
   for await (const token of session.sendMessageStream(${JSON.stringify(standardPrompt)}, options)) {
     response += token;
-    // Process each token in real-time
   }`;
     } else {
-      code += `  // One-shot example - get complete response at once
-  const response = await session.sendMessage(${JSON.stringify(standardPrompt)}, options);`;
+      code += `  const response = await session.sendMessage(${JSON.stringify(standardPrompt)}, options);`;
     }
 
     code += `
@@ -588,36 +584,6 @@ try {
       line-height: 1.5;
     `;
 
-    // Mode selection checkbox
-    const modeContainer = document.createElement('div');
-    modeContainer.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 16px 0;
-    `;
-
-    const streamingCheckbox = document.createElement('input');
-    streamingCheckbox.type = 'checkbox';
-    streamingCheckbox.id = 'streamingMode';
-    streamingCheckbox.checked = true;
-    streamingCheckbox.style.cssText = `
-      margin: 0;
-      cursor: pointer;
-    `;
-
-    const checkboxLabel = document.createElement('label');
-    checkboxLabel.htmlFor = 'streamingMode';
-    checkboxLabel.textContent = 'Generate streaming code (unchecked = one-shot)';
-    checkboxLabel.style.cssText = `
-      color: #e2e8f0;
-      font-size: 13px;
-      cursor: pointer;
-      user-select: none;
-    `;
-
-    modeContainer.appendChild(streamingCheckbox);
-    modeContainer.appendChild(checkboxLabel);
 
     // Create code container with Prism.js highlighting
     const codeContainer = document.createElement('div');
@@ -657,6 +623,12 @@ try {
     `;
     textarea.readonly = true;
 
+    // Streaming mode checkbox
+    const streamingCheckbox = document.createElement('input');
+    streamingCheckbox.type = 'checkbox';
+    streamingCheckbox.id = 'streamingMode';
+    streamingCheckbox.checked = true;
+
     // Function to update code based on checkbox state
     const updateCode = () => {
       const useStreaming = streamingCheckbox.checked;
@@ -676,12 +648,49 @@ try {
     // Update code when checkbox changes
     streamingCheckbox.addEventListener('change', updateCode);
 
-    // Buttons
+    // Bottom container with checkbox and buttons
+    const bottomContainer = document.createElement('div');
+    bottomContainer.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 16px;
+      gap: 12px;
+    `;
+
+    // Mode selection checkbox
+    const modeContainer = document.createElement('div');
+    modeContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `;
+
+    streamingCheckbox.style.cssText = `
+      margin: 0;
+      cursor: pointer;
+    `;
+
+    const checkboxLabel = document.createElement('label');
+    checkboxLabel.htmlFor = 'streamingMode';
+    checkboxLabel.textContent = 'Streaming';
+    checkboxLabel.style.cssText = `
+      color: #e2e8f0;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    `;
+
+    modeContainer.appendChild(streamingCheckbox);
+    modeContainer.appendChild(checkboxLabel);
+
+    // Buttons container
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = `
       display: flex;
       gap: 12px;
-      justify-content: flex-end;
     `;
 
     const copyBtn = document.createElement('button');
@@ -751,11 +760,12 @@ try {
     header.appendChild(closeBtn);
     buttonContainer.appendChild(cancelBtn);
     buttonContainer.appendChild(copyBtn);
+    bottomContainer.appendChild(modeContainer);
+    bottomContainer.appendChild(buttonContainer);
     content.appendChild(instructions);
-    content.appendChild(modeContainer);
     content.appendChild(codeContainer);
     content.appendChild(textarea);
-    content.appendChild(buttonContainer);
+    content.appendChild(bottomContainer);
     modal.appendChild(header);
     modal.appendChild(content);
 
