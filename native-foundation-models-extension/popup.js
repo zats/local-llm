@@ -438,19 +438,19 @@ class NativeFoundationModelsPlayground {
   }
 
   async exportCode() {
-    const jsCode = this.generateJavaScriptCode();
-    
-    // Always show modal with pre-selected code
-    this.showCodeModal(jsCode);
+    // Always show modal with default streaming mode
+    this.showCodeModal();
   }
 
-  generateJavaScriptCode() {
+  generateJavaScriptCode(useStreaming = true) {
     const config = {
       systemPrompt: this.systemPrompt,
       temperature: this.temperature,
       maxTokens: this.maxTokens,
       samplingMode: this.samplingMode
     };
+
+    const standardPrompt = "Write a short creative story about a robot discovering nature for the first time.";
 
     let code = `// Generated from Native Foundation Models Playground
 if (!window.nativeFoundationModels) {
@@ -461,12 +461,12 @@ if (!window.nativeFoundationModels) {
 try {
   const session = await window.nativeFoundationModels.createSession({`;
 
-  if (config.systemPrompt && config.systemPrompt.trim()) {
-    code += `
+    if (config.systemPrompt && config.systemPrompt.trim()) {
+      code += `
     systemPrompt: ${JSON.stringify(config.systemPrompt)}`;
-  }
+    }
 
-  code += `
+    code += `
   });
 
   const options = {
@@ -474,31 +474,22 @@ try {
     maximumResponseTokens: ${config.maxTokens},
     samplingMode: '${config.samplingMode}'
   };
+
 `;
 
-    if (this.conversationHistory.length > 0) {
-      // Add each conversation turn
-      for (let i = 0; i < this.conversationHistory.length; i += 2) {
-        const userMessage = this.conversationHistory[i];
-
-        if (userMessage && userMessage.role === 'user') {
-          code += `
-  let response${Math.floor(i/2) + 1} = '';
-  for await (const token of session.sendMessageStream(${JSON.stringify(userMessage.content)}, options)) {
-    response${Math.floor(i/2) + 1} += token;
-  }`;
-        }
-      }
-  } else {
-    code += `
-  // Example - replace with your own prompts
+    if (useStreaming) {
+      code += `  // Streaming example - get tokens as they're generated
   let response = '';
-  for await (const token of session.sendMessageStream('Hello! How can you help me today?', options)) {
+  for await (const token of session.sendMessageStream(${JSON.stringify(standardPrompt)}, options)) {
     response += token;
+    // Process each token in real-time
   }`;
-  }
+    } else {
+      code += `  // One-shot example - get complete response at once
+  const response = await session.sendMessage(${JSON.stringify(standardPrompt)}, options);`;
+    }
 
-  code += `
+    code += `
 
   await session.end();
 } catch (error) {
@@ -508,7 +499,7 @@ try {
     return code;
   }
 
-  showCodeModal(code) {
+  showCodeModal() {
     // Load Prism.js CSS and JS
     this.loadPrismAssets();
     
@@ -587,7 +578,7 @@ try {
 
     const instructions = document.createElement('p');
     instructions.innerHTML = `
-      <strong>Ready to copy!</strong> The code below reproduces your current playground configuration${this.conversationHistory.length > 0 ? ' and conversation' : ''}.<br>
+      <strong>Ready to copy!</strong> The code below reproduces your current playground configuration with a standard sample prompt.<br>
       <span style="opacity: 0.8;">Paste this code into any website console where the Native Foundation Models extension is available.</span>
     `;
     instructions.style.cssText = `
@@ -596,6 +587,37 @@ try {
       font-size: 14px;
       line-height: 1.5;
     `;
+
+    // Mode selection checkbox
+    const modeContainer = document.createElement('div');
+    modeContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0;
+    `;
+
+    const streamingCheckbox = document.createElement('input');
+    streamingCheckbox.type = 'checkbox';
+    streamingCheckbox.id = 'streamingMode';
+    streamingCheckbox.checked = true;
+    streamingCheckbox.style.cssText = `
+      margin: 0;
+      cursor: pointer;
+    `;
+
+    const checkboxLabel = document.createElement('label');
+    checkboxLabel.htmlFor = 'streamingMode';
+    checkboxLabel.textContent = 'Generate streaming code (unchecked = one-shot)';
+    checkboxLabel.style.cssText = `
+      color: #e2e8f0;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    `;
+
+    modeContainer.appendChild(streamingCheckbox);
+    modeContainer.appendChild(checkboxLabel);
 
     // Create code container with Prism.js highlighting
     const codeContainer = document.createElement('div');
@@ -622,20 +644,37 @@ try {
 
     const codeElement = document.createElement('code');
     codeElement.className = 'language-javascript';
-    codeElement.textContent = code;
     
     pre.appendChild(codeElement);
     codeContainer.appendChild(pre);
 
     // Hidden textarea for copying
     const textarea = document.createElement('textarea');
-    textarea.value = code;
     textarea.style.cssText = `
       position: absolute;
       left: -9999px;
       opacity: 0;
     `;
     textarea.readonly = true;
+
+    // Function to update code based on checkbox state
+    const updateCode = () => {
+      const useStreaming = streamingCheckbox.checked;
+      const code = this.generateJavaScriptCode(useStreaming);
+      codeElement.textContent = code;
+      textarea.value = code;
+      
+      // Re-highlight with Prism.js
+      if (window.Prism) {
+        window.Prism.highlightElement(codeElement);
+      }
+    };
+
+    // Generate initial code
+    updateCode();
+
+    // Update code when checkbox changes
+    streamingCheckbox.addEventListener('change', updateCode);
 
     // Buttons
     const buttonContainer = document.createElement('div');
@@ -689,7 +728,7 @@ try {
 
     copyBtn.onclick = async () => {
       try {
-        await navigator.clipboard.writeText(code);
+        await navigator.clipboard.writeText(textarea.value);
         copyBtn.textContent = '✅ Copied!';
         copyBtn.style.background = 'linear-gradient(135deg, #46b946 0%, #2d8f2d 100%)';
         setTimeout(() => {
@@ -713,6 +752,7 @@ try {
     buttonContainer.appendChild(cancelBtn);
     buttonContainer.appendChild(copyBtn);
     content.appendChild(instructions);
+    content.appendChild(modeContainer);
     content.appendChild(codeContainer);
     content.appendChild(textarea);
     content.appendChild(buttonContainer);
@@ -723,12 +763,8 @@ try {
     document.body.appendChild(backdrop);
     document.body.appendChild(modal);
 
-    // Apply syntax highlighting after modal is added to DOM
+    // Auto-select text after modal is added to DOM
     setTimeout(() => {
-      if (window.Prism) {
-        window.Prism.highlightElement(codeElement);
-      }
-      // Auto-select text after highlighting
       textarea.focus();
       textarea.select();
       textarea.setSelectionRange(0, textarea.value.length);
