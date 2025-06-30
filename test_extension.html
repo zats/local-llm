@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ChromeLLM Extension Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { margin: 5px; padding: 8px 16px; }
+        #output { white-space: pre-wrap; background: #f5f5f5; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>ChromeLLM Extension Test Page</h1>
+    
+    <div class="test-section">
+        <h2>Setup Instructions</h2>
+        <ol>
+            <li>Load the extension in Chrome (chrome://extensions/ → Load unpacked → select chrome-extension folder)</li>
+            <li>Copy the Extension ID from the extension card</li>
+            <li>Run: <code>./update_manifest_with_id.sh &lt;EXTENSION_ID&gt;</code></li>
+            <li>Refresh this page and test the buttons below</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>API Tests</h2>
+        <button onclick="testAvailability()">Test Availability</button>
+        <button onclick="testCompletion()">Test Completion</button>
+        <button onclick="testStreaming()">Test Streaming</button>
+        <button onclick="clearOutput()">Clear Output</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `[${timestamp}] <span class="${type}">${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        async function testAvailability() {
+            log('Testing availability...', 'info');
+            
+            if (!window.chromeNativeLLM) {
+                log('❌ ChromeLLM API not available. Make sure extension is loaded.', 'error');
+                return;
+            }
+            
+            try {
+                const result = await window.chromeNativeLLM.checkAvailability();
+                log(`✅ Availability check: ${JSON.stringify(result)}`, 'success');
+            } catch (error) {
+                log(`❌ Availability check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCompletion() {
+            log('Testing completion...', 'info');
+            
+            if (!window.chromeNativeLLM) {
+                log('❌ ChromeLLM API not available. Make sure extension is loaded.', 'error');
+                return;
+            }
+            
+            try {
+                const result = await window.chromeNativeLLM.getCompletion('Say hello in a friendly way');
+                log(`✅ Completion result: ${JSON.stringify(result)}`, 'success');
+            } catch (error) {
+                log(`❌ Completion failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testStreaming() {
+            log('Testing streaming...', 'info');
+            
+            if (!window.chromeNativeLLM) {
+                log('❌ ChromeLLM API not available. Make sure extension is loaded.', 'error');
+                return;
+            }
+            
+            try {
+                log('Starting streaming completion...', 'info');
+                const stream = await window.chromeNativeLLM.getCompletionStream('Tell me a short story about a robot');
+                
+                for await (const token of stream) {
+                    log(`Token: ${token}`, 'success');
+                }
+                
+                log('✅ Streaming completed', 'success');
+            } catch (error) {
+                log(`❌ Streaming failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Test API availability on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (window.chromeNativeLLM) {
+                    log('✅ ChromeLLM API detected', 'success');
+                } else {
+                    log('❌ ChromeLLM API not detected. Extension not loaded?', 'error');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
