@@ -16,14 +16,14 @@ macOS native application that provides on-device LLM capabilities to the Chrome 
 
 3. Install native messaging manifest:
    ```bash
-   # Update the extension ID in com.nativefoundationmodels.native.json first
-   cp com.nativefoundationmodels.native.json ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/
+   # After loading the extension in Chrome and getting its ID, run:
+   # ../update_manifest_with_id.sh <YOUR_EXTENSION_ID>
    ```
 
 ## Configuration
 
 1. Get your Chrome extension ID after loading it in developer mode
-2. Update `com.nativefoundationmodels.native.json` with the actual extension ID
+2. Run `../update_manifest_with_id.sh <YOUR_EXTENSION_ID>` with the actual extension ID
 3. Replace the mock `LanguageModelSession` with actual LLM framework integration
 
 ## Architecture
