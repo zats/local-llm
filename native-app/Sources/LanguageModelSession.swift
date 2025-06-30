@@ -75,6 +75,71 @@ public class LanguageModelSession: @unchecked Sendable {
         }
     }
     
+    public func generateResponseDirect(to prompt: String, options: GenerationOptions) async throws -> String {
+        // Direct completion without conversation history for API calls
+        guard let session = session else {
+            throw LanguageModelError.sessionNotAvailable("No session found")
+        }
+        
+        let generationOptions = FoundationModels.GenerationOptions(
+            temperature: options.temperature,
+            maximumResponseTokens: options.maximumResponseTokens
+        )
+        
+        // Use prompt directly without conversation context
+        let response = try await session.respond(to: prompt, options: generationOptions)
+        return response.content
+    }
+    
+    public func streamResponseDirect(to prompt: String, options: GenerationOptions) -> AsyncThrowingStream<String, Error> {
+        // Direct streaming without conversation history for API calls
+        return AsyncThrowingStream { continuation in
+            Task {
+                guard let session = self.session else {
+                    continuation.finish(throwing: LanguageModelError.sessionNotAvailable("No session found when streaming response"))
+                    return
+                }
+                
+                let generationOptions = FoundationModels.GenerationOptions(
+                    temperature: options.temperature,
+                    maximumResponseTokens: options.maximumResponseTokens
+                )
+                
+                do {
+                    // Use prompt directly without conversation context
+                    let responseStream = session.streamResponse(to: prompt, options: generationOptions)
+                    
+                    for try await token in responseStream {
+                        continuation.yield(token)
+                    }
+                    
+                    continuation.finish()
+                    
+                } catch {
+                    continuation.finish(throwing: LanguageModelError.generationFailed(error.localizedDescription))
+                }
+            }
+        }
+    }
+    
+    private func logMessage(_ message: String) {
+        let timestamp = Date()
+        let logMessage = "[\(timestamp)] LanguageModelSession: \(message)\n"
+        
+        // Write to log file for debugging
+        let logPath = "/tmp/chromellm-native.log"
+        if let logData = logMessage.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: logPath) {
+                let fileHandle = FileHandle(forWritingAtPath: logPath)
+                fileHandle?.seekToEndOfFile()
+                fileHandle?.write(logData)
+                fileHandle?.closeFile()
+            } else {
+                try? logData.write(to: URL(fileURLWithPath: logPath))
+            }
+        }
+    }
+    
     private func buildConversationContext(newPrompt: String) -> String {
         // If this is the first message, just return the prompt
         if transcript.isEmpty {

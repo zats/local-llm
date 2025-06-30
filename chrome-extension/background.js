@@ -47,6 +47,15 @@ class ChromeLLMBackground {
       chrome.runtime.sendMessage({ type, payload }).catch(() => {
         // Popup might not be open, ignore error
       });
+      
+      // Forward streaming messages to content scripts
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+          chrome.tabs.sendMessage(tab.id, message).catch(() => {
+            // Content script might not be active, ignore error
+          });
+        });
+      });
     }
     
     // Handle regular responses

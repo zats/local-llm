@@ -24,4 +24,16 @@
       });
     }
   });
+  
+  // Listen for streaming messages from background script
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Forward streaming messages to injected script
+    window.postMessage({
+      type: 'chromellm-response',
+      requestId: message.requestId,
+      success: !message.error,
+      data: message.error ? null : message,
+      error: message.error
+    }, '*');
+  });
 })();

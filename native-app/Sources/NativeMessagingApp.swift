@@ -143,7 +143,7 @@ class NativeMessagingApp: @unchecked Sendable {
         Task {
             do {
                 let session = try LanguageModelSession()
-                let response = try await session.generateResponse(to: promptCopy, options: options)
+                let response = try await session.generateResponseDirect(to: promptCopy, options: options)
                 
                 let responseMessage: [String: Any] = [
                     "requestId": requestIdCopy,
@@ -174,9 +174,10 @@ class NativeMessagingApp: @unchecked Sendable {
         
         Task {
             do {
+                // Use streamResponseDirect for API calls (no conversation history)
                 let session = try LanguageModelSession()
                 
-                for try await token in session.streamResponse(to: promptCopy, options: options) {
+                for try await token in session.streamResponseDirect(to: promptCopy, options: options) {
                     let chunkMessage: [String: Any] = [
                         "requestId": requestIdCopy,
                         "type": "streamChunk",
@@ -358,9 +359,25 @@ class NativeMessagingApp: @unchecked Sendable {
     }
     
     private func logMessage(_ message: String) {
-        let logMessage = "[\(Date())] \(message)\n"
+        let timestamp = Date()
+        let logMessage = "[\(timestamp)] \(message)\n"
+        
+        // Write to stderr
         if let data = logMessage.data(using: .utf8) {
             stderr.write(data)
+        }
+        
+        // Also write to log file for debugging
+        let logPath = "/tmp/chromellm-native.log"
+        if let logData = logMessage.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: logPath) {
+                let fileHandle = FileHandle(forWritingAtPath: logPath)
+                fileHandle?.seekToEndOfFile()
+                fileHandle?.write(logData)
+                fileHandle?.closeFile()
+            } else {
+                try? logData.write(to: URL(fileURLWithPath: logPath))
+            }
         }
     }
 }
