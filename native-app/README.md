@@ -1,4 +1,4 @@
-# NativeFoundationModels Native App
+# Native Foundation Models Native App
 
 macOS native application that provides on-device LLM capabilities to the Chrome extension via native messaging.
 No more downloading 3GB+ models, no more long latency and LLM service bills! 

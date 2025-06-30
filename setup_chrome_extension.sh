@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 NativeFoundationModels Extension Setup"
+echo "🚀 Native Foundation Models Extension Setup"
 echo "============================"
 
 # Check if Swift is available

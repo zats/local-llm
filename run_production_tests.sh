@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# NativeFoundationModels Production Test Runner
+# Native Foundation Models Production Test Runner
 # Builds the native app and runs comprehensive tests
 
 set -e
 
-echo "🧪 NativeFoundationModels Production Test Suite"
+echo "🧪 Native Foundation Models Production Test Suite"
 echo "=================================="
 
 # Change to native-app directory

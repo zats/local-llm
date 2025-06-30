@@ -58,19 +58,7 @@ struct ContentView: View {
         ZStack {
             GradientBackground()
             
-            VStack(spacing: 0) {
-                // Window title bar area
-                HStack {
-                    Spacer()
-                    Text("NativeFoundationModels")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
-                        .frame(maxWidth: .infinity)
-                    Spacer()
-                }
-                .frame(height: 28)
-                .background(Color.clear)
-                
+            VStack(spacing: 0) {                
                 // Main content card
                 VStack(spacing: 24) {
                     // Header with icon and title
@@ -173,33 +161,61 @@ struct ContentView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(Color.white.opacity(0.7))
                         
-                        Text("~/bin/nativefoundationmodels-native")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.white.opacity(0.15))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                    )
-                            )
+                        HStack(spacing: 8) {
+                            Text("~/bin/nativefoundationmodels-native")
+                                .font(.caption.monospaced())
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white.opacity(0.15))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
+                            Button(action: {
+                                revealBinaryLocation()
+                            }) {
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.white.opacity(0.3))
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .help(binaryManager.isInstalled ? "Reveal in Finder" : "Open ~/bin folder")
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 32)
-                .padding(.bottom, 32)
-                .padding(.top, 16)
-                
-                Spacer()
             }
         }
-        .frame(width: 420, height: 480)
+        .frame(width: 420)
         .onAppear {
             binaryManager.checkInstallationStatus()
             animateGradient = true
+        }
+    }
+    
+    private func revealBinaryLocation() {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser
+        let binDir = homeDir.appendingPathComponent("bin")
+        
+        if binaryManager.isInstalled {
+            // Reveal the specific binary file
+            let binaryPath = binDir.appendingPathComponent("nativefoundationmodels-native")
+            NSWorkspace.shared.activateFileViewerSelecting([binaryPath])
+        } else {
+            // Open the ~/bin directory (create if needed)
+            do {
+                try FileManager.default.createDirectory(at: binDir, withIntermediateDirectories: true)
+                NSWorkspace.shared.open(binDir)
+            } catch {
+                // If can't create, just try to open home directory
+                NSWorkspace.shared.open(homeDir)
+            }
         }
     }
 }
