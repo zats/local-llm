@@ -5,6 +5,7 @@ class NativeFoundationModelsBackground {
     this.requestHandlers = new Map();
     this.setupNativeMessaging();
     this.setupMessageHandlers();
+    this.setupActionHandler();
   }
 
   setupNativeMessaging() {
@@ -21,6 +22,15 @@ class NativeFoundationModelsBackground {
 
   setupMessageHandlers() {
     chrome.runtime.onMessage.addListener(this.handleExtensionMessage.bind(this));
+  }
+
+  setupActionHandler() {
+    // Handle extension icon click - open playground in new tab
+    chrome.action.onClicked.addListener((tab) => {
+      chrome.tabs.create({
+        url: chrome.runtime.getURL('popup.html')
+      });
+    });
   }
 
   handleExtensionMessage(message, sender, sendResponse) {
@@ -45,7 +55,7 @@ class NativeFoundationModelsBackground {
     
     if (type === 'streamChunk' || type === 'streamEnd' || type === 'error') {
       // Forward streaming messages to popup if it's listening
-      chrome.runtime.sendMessage({ type, payload }).catch(() => {
+      chrome.runtime.sendMessage({ requestId, type, payload }).catch(() => {
         // Popup might not be open, ignore error
       });
       

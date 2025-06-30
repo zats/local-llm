@@ -6,7 +6,8 @@
   
   "permissions": [
     "nativeMessaging",
-    "storage"
+    "storage",
+    "tabs"
   ],
   
   "host_permissions": [
@@ -26,8 +27,7 @@
   ],
   
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "NativeFoundationModels Playground"
+    "default_title": "Open NativeFoundationModels Playground"
   },
   
   "web_accessible_resources": [

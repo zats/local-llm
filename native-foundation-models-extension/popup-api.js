@@ -1,10 +1,9 @@
-// Injected script that provides the website-facing API
+// API bridge for popup to use the same API as websites
 (function() {
   'use strict';
 
   class NativeFoundationModels {
     constructor() {
-      // Extension ID not needed in injected script
       this.sessions = new Map(); // Track active sessions
     }
 
@@ -34,49 +33,30 @@
       let streamError = null;
       let tokenWaiters = [];
       
-      const messageHandler = (event) => {
-        if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
-          const { success, data, error } = event.data;
-          
-          if (!success) {
-            streamError = new Error(error);
-            streamComplete = true;
-            // Wake up any waiting promises
+      const messageHandler = (message) => {
+        if (message.requestId === requestId) {
+          if (message.type === 'streamChunk') {
+            tokens.push(message.payload.token);
             tokenWaiters.forEach(resolve => resolve());
             tokenWaiters = [];
-            return;
-          }
-          
-          if (data.type === 'streamChunk') {
-            tokens.push(data.payload.token);
-            // Wake up any waiting promises
+          } else if (message.type === 'streamEnd') {
+            streamComplete = true;
             tokenWaiters.forEach(resolve => resolve());
             tokenWaiters = [];
-          } else if (data.type === 'streamEnd') {
+          } else if (message.type === 'error') {
+            streamError = new Error(message.payload.message);
             streamComplete = true;
-            // Wake up any waiting promises
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
-          } else if (data.type === 'error') {
-            streamError = new Error(data.payload.message);
-            streamComplete = true;
-            // Wake up any waiting promises
             tokenWaiters.forEach(resolve => resolve());
             tokenWaiters = [];
           }
         }
       };
       
-      window.addEventListener('message', messageHandler);
+      chrome.runtime.onMessage.addListener(messageHandler);
       
       try {
-        // Start the streaming request
-        window.postMessage({
-          type: 'nativefoundationmodels-request',
-          requestId,
-          command: 'getCompletionStream',
-          payload: { prompt, ...options }
-        }, '*');
+        // Send the streaming request
+        await this.sendToBackground('getCompletionStream', { prompt, ...options }, requestId);
         
         // Yield tokens as they arrive
         let tokenIndex = 0;
@@ -85,69 +65,50 @@
             throw streamError;
           }
           
-          // Yield any new tokens that have arrived
           while (tokenIndex < tokens.length) {
             yield tokens[tokenIndex];
             tokenIndex++;
           }
           
-          // If we've yielded all tokens and stream is complete, we're done
           if (streamComplete && tokenIndex >= tokens.length) {
             break;
           }
           
-          // Wait for more tokens to arrive
           await new Promise(resolve => {
             tokenWaiters.push(resolve);
           });
         }
         
       } finally {
-        window.removeEventListener('message', messageHandler);
+        chrome.runtime.onMessage.removeListener(messageHandler);
       }
     }
 
     async sendMessage(command, payload = {}) {
       const requestId = this.generateRequestId();
+      return this.sendToBackground(command, payload, requestId);
+    }
+
+    async sendToBackground(command, payload = {}, requestId = null) {
+      if (!requestId) {
+        requestId = this.generateRequestId();
+      }
       
       return new Promise((resolve, reject) => {
-        const messageHandler = (event) => {
-          if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
-            window.removeEventListener('message', messageHandler);
-            
-            const { success, data, error } = event.data;
-            if (success) {
-              // For getCompletion, extract the response text from payload
-              if (command === 'getCompletion' && data.payload && data.payload.response) {
-                resolve({ response: data.payload.response });
-              } else {
-                resolve(data);
-              }
-            } else {
-              reject(new Error(error, { cause: event.data }));
-            }
+        chrome.runtime.sendMessage({ requestId, command, payload }, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else if (response.error) {
+            reject(new Error(response.error));
+          } else {
+            resolve(response);
           }
-        };
-        
-        window.addEventListener('message', messageHandler);
-        
-        window.postMessage({
-          type: 'nativefoundationmodels-request',
-          requestId,
-          command,
-          payload
-        }, '*');
-        
-        // Timeout after 30 seconds
-        setTimeout(() => {
-          window.removeEventListener('message', messageHandler);
-          reject(new Error('Request timeout'));
-        }, 30000);
+        });
       });
     }
 
     generateRequestId() {
-      return 'req-' + Math.random().toString(36).substr(2, 9);
+      return 'popup-' + Math.random().toString(36).substr(2, 9);
     }
 
     // Internal method to clean up session
@@ -189,28 +150,37 @@
       let streamError = null;
       let tokenWaiters = [];
       
-      const messageHandler = (event) => {
-        if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
-          const { success, data, error } = event.data;
-          
-          if (!success) {
-            streamError = new Error(error);
+      const messageHandler = (message) => {
+        if (message.requestId === requestId) {
+          if (message.type === 'streamChunk' && message.payload.sessionId === this.id) {
+            const newToken = message.payload.token;
+            const currentContent = tokens.join('');
+            
+            // Check if this is cumulative or incremental
+            if (tokens.length === 0) {
+              // First token
+              tokens.push(newToken);
+            } else {
+              // Check if it's cumulative (contains previous content)
+              if (newToken.startsWith(currentContent)) {
+                // It's cumulative - extract only the new part
+                const newPart = newToken.slice(currentContent.length);
+                if (newPart) {
+                  tokens.push(newPart);
+                }
+              } else {
+                // It's incremental
+                tokens.push(newToken);
+              }
+            }
+            tokenWaiters.forEach(resolve => resolve());
+            tokenWaiters = [];
+          } else if (message.type === 'streamEnd' && message.payload.sessionId === this.id) {
             streamComplete = true;
             tokenWaiters.forEach(resolve => resolve());
             tokenWaiters = [];
-            return;
-          }
-          
-          if (data.type === 'streamChunk' && data.payload.sessionId === this.id) {
-            tokens.push(data.payload.token);
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
-          } else if (data.type === 'streamEnd' && data.payload.sessionId === this.id) {
-            streamComplete = true;
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
-          } else if (data.type === 'error' && data.payload.sessionId === this.id) {
-            streamError = new Error(data.payload.message);
+          } else if (message.type === 'error' && message.payload.sessionId === this.id) {
+            streamError = new Error(message.payload.message);
             streamComplete = true;
             tokenWaiters.forEach(resolve => resolve());
             tokenWaiters = [];
@@ -218,16 +188,15 @@
         }
       };
       
-      window.addEventListener('message', messageHandler);
+      chrome.runtime.onMessage.addListener(messageHandler);
       
       try {
-        // Start the streaming request
-        window.postMessage({
-          type: 'nativefoundationmodels-request',
-          requestId,
-          command: 'sendPlaygroundMessage',
-          payload: { sessionId: this.id, prompt, ...options }
-        }, '*');
+        // Send the streaming request  
+        await this.api.sendToBackground('sendPlaygroundMessage', {
+          sessionId: this.id, 
+          prompt, 
+          ...options
+        }, requestId);
         
         // Yield tokens as they arrive
         let tokenIndex = 0;
@@ -251,7 +220,7 @@
         }
         
       } finally {
-        window.removeEventListener('message', messageHandler);
+        chrome.runtime.onMessage.removeListener(messageHandler);
       }
     }
 
@@ -269,8 +238,6 @@
     }
   }
 
-  // Message forwarding is now handled by content script
-
-  // Expose API to websites
+  // Expose API to popup
   window.nativeFoundationModels = new NativeFoundationModels();
 })();

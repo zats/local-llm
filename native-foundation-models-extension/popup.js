@@ -1,7 +1,7 @@
 // Popup playground functionality
 class NativeFoundationModelsPlayground {
   constructor() {
-    this.currentSessionId = null;
+    this.currentSession = null; // Now stores Session object instead of ID
     this.isGenerating = false;
     this.streamingContent = '';
     this.temperature = 0.8;
@@ -11,6 +11,9 @@ class NativeFoundationModelsPlayground {
     
     // Temporary settings for the settings dialog
     this.tempSettings = {};
+    
+    // Get reference to the unified API
+    this.api = window.nativeFoundationModels;
     
     this.initializeElements();
     this.setupEventListeners();
@@ -80,22 +83,13 @@ class NativeFoundationModelsPlayground {
       this.tempSettings.samplingMode = this.samplingModeSelect.value;
     });
 
-    // Listen for streaming messages from background
-    chrome.runtime.onMessage.addListener((message) => {
-      if (message.type === 'streamChunk') {
-        this.handleStreamChunk(message.payload);
-      } else if (message.type === 'streamEnd') {
-        this.handleStreamEnd(message.payload);
-      } else if (message.type === 'error') {
-        this.handleStreamError(message.payload);
-      }
-    });
+    // Streaming is now handled directly by the unified API
   }
 
   async checkAvailability() {
     try {
       console.log('Checking LLM availability...');
-      const response = await this.sendToBackground('checkAvailability');
+      const response = await this.api.checkAvailability();
       console.log('Availability response:', response);
       
       if (response && response.payload && response.payload.available) {
@@ -116,16 +110,14 @@ class NativeFoundationModelsPlayground {
   async tryFallbackAvailabilityCheck() {
     try {
       // Try to start a session as a way to test availability
-      const response = await this.sendToBackground('startPlaygroundSession');
-      if (response && response.payload && response.payload.sessionId) {
+      const session = await this.api.createSession();
+      if (session && session.id) {
         // If we can start a session, LLM is available
         this.statusEl.textContent = 'Ready';
         this.statusEl.className = 'status ready';
         
         // Clean up the test session
-        await this.sendToBackground('endPlaygroundSession', { 
-          sessionId: response.payload.sessionId 
-        });
+        await session.end();
       } else {
         // One more retry after a short delay
         setTimeout(() => this.finalAvailabilityRetry(), 500);
@@ -138,14 +130,12 @@ class NativeFoundationModelsPlayground {
   
   async finalAvailabilityRetry() {
     try {
-      const response = await this.sendToBackground('startPlaygroundSession');
-      if (response && response.payload && response.payload.sessionId) {
+      const session = await this.api.createSession();
+      if (session && session.id) {
         this.statusEl.textContent = 'Ready';
         this.statusEl.className = 'status ready';
         
-        await this.sendToBackground('endPlaygroundSession', { 
-          sessionId: response.payload.sessionId 
-        });
+        await session.end();
       } else {
         this.statusEl.textContent = 'LLM not available';
         this.statusEl.className = 'status error';
@@ -158,20 +148,17 @@ class NativeFoundationModelsPlayground {
 
   async startNewChat() {
     try {
-      if (this.currentSessionId) {
-        await this.sendToBackground('endPlaygroundSession', { 
-          sessionId: this.currentSessionId 
-        });
+      if (this.currentSession) {
+        await this.currentSession.end();
       }
 
-      // Prepare session payload with system prompt if provided
-      const sessionPayload = {};
+      // Prepare session options with system prompt if provided
+      const sessionOptions = {};
       if (this.systemPrompt.trim()) {
-        sessionPayload.systemPrompt = this.systemPrompt.trim();
+        sessionOptions.systemPrompt = this.systemPrompt.trim();
       }
 
-      const response = await this.sendToBackground('startPlaygroundSession', sessionPayload);
-      this.currentSessionId = response.payload.sessionId;
+      this.currentSession = await this.api.createSession(sessionOptions);
       
       // Clear chat and show empty state
       this.chatContainer.innerHTML = `
@@ -186,6 +173,7 @@ class NativeFoundationModelsPlayground {
     } catch (error) {
       this.statusEl.textContent = 'Failed to start new chat';
       this.statusEl.className = 'status error';
+      this.currentSession = null; // Make sure it's null on failure
     }
   }
 
@@ -194,8 +182,14 @@ class NativeFoundationModelsPlayground {
     if (!prompt || this.isGenerating) return;
 
     // Start session if needed
-    if (!this.currentSessionId) {
+    if (!this.currentSession) {
       await this.startNewChat();
+    }
+
+    // Check if session creation was successful
+    if (!this.currentSession) {
+      this.displayError({ message: 'Failed to create session', code: 'session_creation_failed' });
+      return;
     }
 
     // Add user message to chat
@@ -208,26 +202,25 @@ class NativeFoundationModelsPlayground {
     this.statusEl.textContent = 'Generating...';
 
     try {
-      // Prepare message payload
-      const payload = {
-        sessionId: this.currentSessionId,
-        prompt: prompt,
+      // Prepare message options
+      const options = {
         temperature: this.temperature,
         maximumResponseTokens: this.maxTokens,
         samplingMode: this.samplingMode
       };
-      
-      // Include system prompt if provided
-      if (this.systemPrompt.trim()) {
-        payload.systemPrompt = this.systemPrompt.trim();
-      }
 
-      // Send to background (streaming will be handled by message listener)
-      await this.sendToBackground('sendPlaygroundMessage', payload);
-      
       // Add empty assistant message for streaming
       this.currentAssistantMessage = this.addMessage('', 'assistant');
       this.streamingContent = '';
+      
+      // Stream the response using the unified API
+      for await (const token of this.currentSession.sendMessageStream(prompt, options)) {
+        this.currentAssistantMessage.textContent += token;
+        this.streamingContent += token;
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+      
+      this.resetGenerating();
       
     } catch (error) {
       this.displayError({ message: error.message, code: 'request_failed' });
@@ -235,38 +228,6 @@ class NativeFoundationModelsPlayground {
     }
   }
 
-  handleStreamChunk(payload) {
-    if (payload.sessionId === this.currentSessionId && this.currentAssistantMessage) {
-      console.log('Received token:', JSON.stringify(payload.token));
-      
-      // Check if this is a cumulative response or individual token
-      if (payload.token.startsWith(this.streamingContent)) {
-        // It's cumulative - extract only the new part
-        const newContent = payload.token.slice(this.streamingContent.length);
-        this.currentAssistantMessage.textContent += newContent;
-        this.streamingContent = payload.token;
-      } else {
-        // It's an individual token
-        this.currentAssistantMessage.textContent += payload.token;
-        this.streamingContent += payload.token;
-      }
-      
-      this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
-    }
-  }
-
-  handleStreamEnd(payload) {
-    if (payload.sessionId === this.currentSessionId) {
-      this.resetGenerating();
-    }
-  }
-
-  handleStreamError(payload) {
-    if (payload.sessionId === this.currentSessionId) {
-      this.displayError(payload);
-      this.resetGenerating();
-    }
-  }
 
   resetGenerating() {
     this.isGenerating = false;
@@ -468,21 +429,6 @@ class NativeFoundationModelsPlayground {
     });
   }
 
-  sendToBackground(command, payload = {}) {
-    return new Promise((resolve, reject) => {
-      const requestId = 'popup-' + Math.random().toString(36).substr(2, 9);
-      
-      chrome.runtime.sendMessage({ requestId, command, payload }, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else if (response.error) {
-          reject(new Error(response.error));
-        } else {
-          resolve(response);
-        }
-      });
-    });
-  }
 }
 
 // Initialize playground when popup loads
