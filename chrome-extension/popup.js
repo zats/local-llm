@@ -8,7 +8,9 @@ class ChromeLLMPlayground {
     this.maxTokens = 1024;
     this.initializeElements();
     this.setupEventListeners();
-    this.checkAvailability();
+    
+    // Delay the availability check slightly to allow background script to initialize
+    setTimeout(() => this.checkAvailability(), 100);
   }
 
   initializeElements() {
@@ -64,16 +66,64 @@ class ChromeLLMPlayground {
 
   async checkAvailability() {
     try {
+      console.log('Checking LLM availability...');
       const response = await this.sendToBackground('checkAvailability');
-      if (response.available) {
+      console.log('Availability response:', response);
+      
+      if (response && response.payload && response.payload.available) {
         this.statusEl.textContent = 'Ready';
         this.statusEl.className = 'status ready';
+      } else {
+        // If checkAvailability fails, try a different approach
+        console.log('Initial availability check failed, trying fallback...');
+        this.tryFallbackAvailabilityCheck();
+      }
+    } catch (error) {
+      console.log('Availability check error:', error);
+      // If the availability check fails, try a fallback
+      this.tryFallbackAvailabilityCheck();
+    }
+  }
+  
+  async tryFallbackAvailabilityCheck() {
+    try {
+      // Try to start a session as a way to test availability
+      const response = await this.sendToBackground('startPlaygroundSession');
+      if (response && response.payload && response.payload.sessionId) {
+        // If we can start a session, LLM is available
+        this.statusEl.textContent = 'Ready';
+        this.statusEl.className = 'status ready';
+        
+        // Clean up the test session
+        await this.sendToBackground('endPlaygroundSession', { 
+          sessionId: response.payload.sessionId 
+        });
+      } else {
+        // One more retry after a short delay
+        setTimeout(() => this.finalAvailabilityRetry(), 500);
+      }
+    } catch (error) {
+      // One more retry after a short delay
+      setTimeout(() => this.finalAvailabilityRetry(), 500);
+    }
+  }
+  
+  async finalAvailabilityRetry() {
+    try {
+      const response = await this.sendToBackground('startPlaygroundSession');
+      if (response && response.payload && response.payload.sessionId) {
+        this.statusEl.textContent = 'Ready';
+        this.statusEl.className = 'status ready';
+        
+        await this.sendToBackground('endPlaygroundSession', { 
+          sessionId: response.payload.sessionId 
+        });
       } else {
         this.statusEl.textContent = 'LLM not available';
         this.statusEl.className = 'status error';
       }
     } catch (error) {
-      this.statusEl.textContent = 'Connection error: ' + error.message;
+      this.statusEl.textContent = 'LLM not available';
       this.statusEl.className = 'status error';
     }
   }
@@ -96,7 +146,7 @@ class ChromeLLMPlayground {
         </div>
       `;
       
-      this.statusEl.textContent = 'New chat started';
+      this.statusEl.textContent = 'Ready';
       this.statusEl.className = 'status ready';
     } catch (error) {
       this.statusEl.textContent = 'Failed to start new chat';
