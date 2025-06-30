@@ -1,4 +1,4 @@
-# ChromeLLM Setup Guide
+# NativeFoundationModels Setup Guide
 
 ## Quick Setup
 
@@ -20,14 +20,14 @@ swift build -c release
 ### 2. Install Native App
 ```bash
 mkdir -p ~/bin
-cp .build/release/ChromeLLMNative ~/bin/chromellm-native
-chmod +x ~/bin/chromellm-native
+cp .build/release/NativeFoundationModelsNative ~/bin/nativefoundationmodels-native
+chmod +x ~/bin/nativefoundationmodels-native
 ```
 
 ### 3. Install Native Messaging Manifest
 ```bash
 mkdir -p ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts
-cp com.chromellm.native.json ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/
+cp com.nativefoundationmodels.native.json ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/
 ```
 
 ### 4. Load Chrome Extension
@@ -80,7 +80,7 @@ The extension exposes `window.chromeNativeLLM` with methods:
 ## File Structure
 
 ```
-ChromeLLM/
+NativeFoundationModels/
 ├── chrome-extension/        # Chrome extension files
 ├── native-app/             # Swift native messaging app
 ├── sample-website/         # Demo website

@@ -1,5 +1,5 @@
-// Background service worker for ChromeLLM extension
-class ChromeLLMBackground {
+// Background service worker for NativeFoundationModels extension
+class NativeFoundationModelsBackground {
   constructor() {
     this.nativePort = null;
     this.requestHandlers = new Map();
@@ -9,12 +9,13 @@ class ChromeLLMBackground {
 
   setupNativeMessaging() {
     try {
-      this.nativePort = chrome.runtime.connectNative('com.chromellm.native');
+      console.log('Attempting to connect to native app: com.nativefoundationmodels.native');
+      this.nativePort = chrome.runtime.connectNative('com.nativefoundationmodels.native');
       this.nativePort.onMessage.addListener(this.handleNativeMessage.bind(this));
       this.nativePort.onDisconnect.addListener(this.handleNativeDisconnect.bind(this));
-      console.log('Native messaging port established');
+      console.log('Native messaging port established successfully.');
     } catch (error) {
-      console.error('Failed to connect to native app:', error);
+      console.error('Failed to connect to native app. Error details:', error.message, error.stack);
     }
   }
 
@@ -83,4 +84,4 @@ class ChromeLLMBackground {
 }
 
 // Initialize background service
-new ChromeLLMBackground();
+new NativeFoundationModelsBackground();

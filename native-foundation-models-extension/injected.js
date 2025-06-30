@@ -2,7 +2,7 @@
 (function() {
   'use strict';
 
-  class ChromeNativeLLM {
+  class NativeFoundationModels {
     constructor() {
       // Extension ID not needed in injected script
     }
@@ -24,7 +24,7 @@
       let tokenWaiters = [];
       
       const messageHandler = (event) => {
-        if (event.data.type === 'chromellm-response' && event.data.requestId === requestId) {
+        if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
           const { success, data, error } = event.data;
           
           if (!success) {
@@ -61,7 +61,7 @@
       try {
         // Start the streaming request
         window.postMessage({
-          type: 'chromellm-request',
+          type: 'nativefoundationmodels-request',
           requestId,
           command: 'getCompletionStream',
           payload: { prompt, ...options }
@@ -101,7 +101,7 @@
       
       return new Promise((resolve, reject) => {
         const messageHandler = (event) => {
-          if (event.data.type === 'chromellm-response' && event.data.requestId === requestId) {
+          if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
             window.removeEventListener('message', messageHandler);
             
             const { success, data, error } = event.data;
@@ -113,7 +113,7 @@
                 resolve(data);
               }
             } else {
-              reject(new Error(error));
+              reject(new Error(error, { cause: event.data }));
             }
           }
         };
@@ -121,7 +121,7 @@
         window.addEventListener('message', messageHandler);
         
         window.postMessage({
-          type: 'chromellm-request',
+          type: 'nativefoundationmodels-request',
           requestId,
           command,
           payload
@@ -143,5 +143,5 @@
   // Message forwarding is now handled by content script
 
   // Expose API to websites
-  window.chromeNativeLLM = new ChromeNativeLLM();
+  window.nativeFoundationModels = new NativeFoundationModels();
 })();

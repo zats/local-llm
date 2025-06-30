@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 ChromeLLM Extension Setup"
+echo "🚀 NativeFoundationModels Extension Setup"
 echo "============================"
 
 # Check if Swift is available
@@ -20,14 +20,14 @@ cd ..
 # Install the native app binary
 echo "📋 Installing native app binary..."
 mkdir -p ~/bin
-rm -f ~/bin/chromellm-native
-cp native-app/.build/release/ChromeLLMNative ~/bin/chromellm-native
-chmod +x ~/bin/chromellm-native
+rm -f ~/bin/nativefoundationmodels-native
+cp native-app/.build/release/NativeFoundationModelsNative ~/bin/nativefoundationmodels-native
+chmod +x ~/bin/nativefoundationmodels-native
 
 # Install the native messaging host manifest
 echo "📄 Installing native messaging manifest..."
 mkdir -p ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts
-cp -f native-app/com.chromellm.native.json ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/
+cp -f native-app/com.nativefoundationmodels.native.json ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/
 
 echo "✅ Setup completed!"
 echo ""

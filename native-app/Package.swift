@@ -2,19 +2,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "ChromeLLMNative",
+    name: "NativeFoundationModelsNative",
     platforms: [
         .macOS("26.0")
     ],
     products: [
         .executable(
-            name: "ChromeLLMNative",
-            targets: ["ChromeLLMNative"]
+            name: "NativeFoundationModelsNative",
+            targets: ["NativeFoundationModelsNative"]
         )
     ],
     targets: [
         .executableTarget(
-            name: "ChromeLLMNative",
+            name: "NativeFoundationModelsNative",
             dependencies: [],
             path: "Sources",
             swiftSettings: [

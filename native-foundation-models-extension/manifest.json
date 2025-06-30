@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "ChromeLLM - On-Device LLM",
+  "name": "NativeFoundationModels - On-Device LLM",
   "version": "1.0.0",
   "description": "Provides on-device LLM capabilities to websites with built-in playground",
   
@@ -27,7 +27,7 @@
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ChromeLLM Playground"
+    "default_title": "NativeFoundationModels Playground"
   },
   
   "web_accessible_resources": [

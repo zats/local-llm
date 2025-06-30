@@ -127,7 +127,7 @@ public class LanguageModelSession: @unchecked Sendable {
         let logMessage = "[\(timestamp)] LanguageModelSession: \(message)\n"
         
         // Write to log file for debugging
-        let logPath = "/tmp/chromellm-native.log"
+        let logPath = "/tmp/nativefoundationmodels-native.log"
         if let logData = logMessage.data(using: .utf8) {
             if FileManager.default.fileExists(atPath: logPath) {
                 let fileHandle = FileHandle(forWritingAtPath: logPath)

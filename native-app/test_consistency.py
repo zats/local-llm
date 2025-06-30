@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Consistency test to verify that the installed binary (/Users/zats/bin/chromellm-native)
+Consistency test to verify that the installed binary (/Users/zats/bin/nativefoundationmodels-native)
 reports the same availability as the freshly built version.
 """
 import sys
@@ -56,13 +56,13 @@ def test_binary_availability(binary_path):
         return None, f"Error: {e}"
 
 def main():
-    print("🔍 ChromeLLM Binary Consistency Test")
+    print("🔍 NativeFoundationModels Binary Consistency Test")
     print("=" * 45)
     
     # Test binaries
     binaries = [
-        ("/Users/zats/bin/chromellm-native", "Installed binary"),
-        (".build/arm64-apple-macosx/debug/ChromeLLMNative", "Fresh build")
+        ("/Users/zats/bin/nativefoundationmodels-native", "Installed binary"),
+        (".build/arm64-apple-macosx/debug/NativeFoundationModelsNative", "Fresh build")
     ]
     
     results = []
@@ -102,7 +102,7 @@ def main():
         print("   This suggests version mismatch or configuration differences.")
         print("   Consider rebuilding and reinstalling the binary:")
         print("   1. cd native-app && swift build")
-        print("   2. cp .build/arm64-apple-macosx/debug/ChromeLLMNative /Users/zats/bin/chromellm-native")
+        print("   2. cp .build/arm64-apple-macosx/debug/NativeFoundationModelsNative /Users/zats/bin/nativefoundationmodels-native")
     
     return consistent
 

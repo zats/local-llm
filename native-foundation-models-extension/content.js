@@ -10,12 +10,12 @@
   
   // Handle messages from injected script
   window.addEventListener('message', (event) => {
-    if (event.data.type === 'chromellm-request') {
+    if (event.data.type === 'nativefoundationmodels-request') {
       // Forward to background script
       chrome.runtime.sendMessage(event.data, (response) => {
         // Send response back to injected script
         window.postMessage({
-          type: 'chromellm-response',
+          type: 'nativefoundationmodels-response',
           requestId: event.data.requestId,
           success: !response.error,
           data: response.error ? null : response,
@@ -29,7 +29,7 @@
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Forward streaming messages to injected script
     window.postMessage({
-      type: 'chromellm-response',
+      type: 'nativefoundationmodels-response',
       requestId: message.requestId,
       success: !message.error,
       data: message.error ? null : message,

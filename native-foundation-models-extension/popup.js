@@ -1,5 +1,5 @@
 // Popup playground functionality
-class ChromeLLMPlayground {
+class NativeFoundationModelsPlayground {
   constructor() {
     this.currentSessionId = null;
     this.isGenerating = false;
@@ -290,5 +290,5 @@ class ChromeLLMPlayground {
 
 // Initialize playground when popup loads
 document.addEventListener('DOMContentLoaded', () => {
-  new ChromeLLMPlayground();
+  new NativeFoundationModelsPlayground();
 });

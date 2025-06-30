@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Production-like test suite for ChromeLLM native messaging app.
+Production-like test suite for NativeFoundationModels native messaging app.
 Builds the binary and runs comprehensive tests using proper native messaging protocol.
 """
 import sys
@@ -12,15 +12,15 @@ import os
 import tempfile
 from pathlib import Path
 
-class ChromeLLMTester:
+class NativeFoundationModelsTester:
     def __init__(self, build_dir=None):
         self.build_dir = build_dir or ".build/arm64-apple-macosx/debug"
-        self.binary_path = f"{self.build_dir}/ChromeLLMNative"
+        self.binary_path = f"{self.build_dir}/NativeFoundationModelsNative"
         self.test_results = []
         
     def build_binary(self):
         """Build the native app binary using Swift Package Manager."""
-        print("🔨 Building ChromeLLM native app...")
+        print("🔨 Building NativeFoundationModels native app...")
         
         try:
             result = subprocess.run(
@@ -189,7 +189,7 @@ class ChromeLLMTester:
     
     def run_all_tests(self):
         """Run comprehensive test suite."""
-        print("🧪 ChromeLLM Production Test Suite")
+        print("🧪 NativeFoundationModels Production Test Suite")
         print("=" * 60)
         
         # Build first
@@ -285,9 +285,9 @@ def main():
     """Run the production test suite."""
     if len(sys.argv) > 1:
         build_dir = sys.argv[1]
-        tester = ChromeLLMTester(build_dir)
+        tester = NativeFoundationModelsTester(build_dir)
     else:
-        tester = ChromeLLMTester()
+        tester = NativeFoundationModelsTester()
     
     success = tester.run_all_tests()
     sys.exit(0 if success else 1)

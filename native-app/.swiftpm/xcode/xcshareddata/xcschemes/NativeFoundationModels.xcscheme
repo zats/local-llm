@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "ChromeLLMNative"
-               BuildableName = "ChromeLLMNative"
-               BlueprintName = "ChromeLLMNative"
+               BlueprintIdentifier = "NativeFoundationModelsNative"
+               BuildableName = "NativeFoundationModelsNative"
+               BlueprintName = "NativeFoundationModelsNative"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -34,9 +34,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "ChromeLLMNativeTests"
-               BuildableName = "ChromeLLMNativeTests"
-               BlueprintName = "ChromeLLMNativeTests"
+               BlueprintIdentifier = "NativeFoundationModelsNativeTests"
+               BuildableName = "NativeFoundationModelsNativeTests"
+               BlueprintName = "NativeFoundationModelsNativeTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>
@@ -56,9 +56,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "ChromeLLMNative"
-            BuildableName = "ChromeLLMNative"
-            BlueprintName = "ChromeLLMNative"
+            BlueprintIdentifier = "NativeFoundationModelsNative"
+            BuildableName = "NativeFoundationModelsNative"
+            BlueprintName = "NativeFoundationModelsNative"
             ReferencedContainer = "container:">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -73,9 +73,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "ChromeLLMNative"
-            BuildableName = "ChromeLLMNative"
-            BlueprintName = "ChromeLLMNative"
+            BlueprintIdentifier = "NativeFoundationModelsNative"
+            BuildableName = "NativeFoundationModelsNative"
+            BlueprintName = "NativeFoundationModelsNative"
             ReferencedContainer = "container:">
          </BuildableReference>
       </BuildableProductRunnable>

@@ -1,12 +1,15 @@
 import Foundation
+import os.log
 
 class NativeMessagingApp: @unchecked Sendable {
     private var activeSessions: [String: LanguageModelSession] = [:]
     private let stdin = FileHandle.standardInput
     private let stdout = FileHandle.standardOutput
     private let stderr = FileHandle.standardError
+    private let logger = OSLog(subsystem: "com.nativefoundationmodels.native", category: "NativeMessagingApp")
     
-    func run() {      
+    func run() {
+        logMessage("NativeMessagingApp started.", type: .info)
         // Set up input monitoring - keep reading until no more data
         stdin.readabilityHandler = { [weak self] handle in
             self?.handleAllAvailableInput(from: handle)
@@ -31,7 +34,7 @@ class NativeMessagingApp: @unchecked Sendable {
         // Try to read message length (4 bytes)
         guard let lengthData = try? fileHandle.read(upToCount: 4),
               lengthData.count == 4 else {
-            // No complete length header available
+            logMessage("Failed to read 4-byte length header or no more data.", type: .error)
             return false
         }
         
@@ -41,15 +44,16 @@ class NativeMessagingApp: @unchecked Sendable {
         
         // Validate message length (reasonable bounds)
         guard messageLength > 0 && messageLength < 1024 * 1024 else { // Max 1MB
-            logMessage("Invalid message length: \(messageLength)")
+            logMessage("Invalid message length: \(messageLength)", type: .error)
             sendError("Invalid message length")
             return false
         }
         
         // Try to read message data
-        guard let messageData = try? fileHandle.read(upToCount: Int(messageLength)),
+        let messageDataResult = try? fileHandle.read(upToCount: Int(messageLength))
+        guard let messageData = messageDataResult,
               messageData.count == Int(messageLength) else {
-            logMessage("Failed to read complete message (expected \(messageLength) bytes)")
+            logMessage("Failed to read complete message (expected \(messageLength) bytes, got \(messageDataResult?.count ?? 0))", type: .error)
             return false
         }
         
@@ -59,7 +63,7 @@ class NativeMessagingApp: @unchecked Sendable {
             processMessage(message)
             return true
         } catch {
-            logMessage("Failed to parse JSON: \(error)")
+            logMessage("Failed to parse JSON: \(error)", type: .error)
             sendError("Invalid JSON message")
             return true // Continue reading other messages
         }
@@ -67,47 +71,54 @@ class NativeMessagingApp: @unchecked Sendable {
     
     private func processMessage(_ message: [String: Any]?) {
         guard let message = message else {
-            logMessage("Received nil message")
+            logMessage("Received nil message", type: .error)
             sendError("Null message received")
             return
         }
         
         guard let requestId = message["requestId"] as? String else {
-            logMessage("Missing or invalid requestId in message: \(message)")
+            logMessage("Missing or invalid requestId in message: \(message)", type: .error)
             sendError("Missing requestId field")
             return
         }
         
         guard let command = message["command"] as? String else {
-            logMessage("Missing or invalid command in message: \(message)")
+            logMessage("Missing or invalid command in message: \(message)", type: .error)
             sendError("Missing command field", requestId: requestId)
             return
         }
         
-        logMessage("Processing command: \(command) with requestId: \(requestId)")
+        logMessage("Processing command: \(command) with requestId: \(requestId)", type: .info)
         
         let payload = message["payload"] as? [String: Any]
         
         switch command {
         case "checkAvailability":
+            logMessage("Received checkAvailability command.", type: .info)
             handleCheckAvailability(requestId: requestId)
             
         case "getCompletion":
+            logMessage("Received getCompletion command.", type: .info)
             handleGetCompletion(requestId: requestId, payload: payload)
             
         case "getCompletionStream":
+            logMessage("Received getCompletionStream command.", type: .info)
             handleGetCompletionStream(requestId: requestId, payload: payload)
             
         case "startPlaygroundSession":
+            logMessage("Received startPlaygroundSession command.", type: .info)
             handleStartPlaygroundSession(requestId: requestId)
             
         case "sendPlaygroundMessage":
+            logMessage("Received sendPlaygroundMessage command.", type: .info)
             handleSendPlaygroundMessage(requestId: requestId, payload: payload)
             
         case "endPlaygroundSession":
+            logMessage("Received endPlaygroundSession command.", type: .info)
             handleEndPlaygroundSession(requestId: requestId, payload: payload)
             
         default:
+            logMessage("Received unknown command: \(command)", type: .error)
             sendError("Unknown command: \(command)", requestId: requestId)
         }
     }
@@ -216,7 +227,7 @@ class NativeMessagingApp: @unchecked Sendable {
             ]
             
             sendMessage(response)
-            logMessage("Started playground session: \(sessionId)")
+            logMessage("Started playground session: \(sessionId)", type: .info)
         } catch {
             sendError("Failed to create session: \(error.localizedDescription)", requestId: requestId)
         }
@@ -288,7 +299,7 @@ class NativeMessagingApp: @unchecked Sendable {
         }
         
         activeSessions.removeValue(forKey: sessionId)
-        logMessage("Ended playground session: \(sessionId)")
+        logMessage("Ended playground session: \(sessionId)", type: .info)
         
         let response: [String: Any] = [
             "requestId": requestId,
@@ -335,10 +346,10 @@ class NativeMessagingApp: @unchecked Sendable {
             // Debug log the response (without sensitive data)
             if let requestId = message["requestId"] as? String,
                let type = message["type"] as? String {
-                logMessage("Sent response: \(type) for request: \(requestId)")
+                logMessage("Sent response: \(type) for request: \(requestId)", type: .debug)
             }
         } catch {
-            logMessage("Failed to send message: \(error)")
+            logMessage("Failed to send message: \(error)", type: .error)
         }
     }
     
@@ -358,26 +369,16 @@ class NativeMessagingApp: @unchecked Sendable {
         sendMessage(errorMessage)
     }
     
-    private func logMessage(_ message: String) {
+    private func logMessage(_ message: String, type: OSLogType = .debug) {
         let timestamp = Date()
-        let logMessage = "[\(timestamp)] \(message)\n"
+        let logMessage = "[" + String(describing: timestamp) + "] " + message + "\n"
         
         // Write to stderr
-        if let data = logMessage.data(using: .utf8) {
+        if type == .error, let data = logMessage.data(using: .utf8) {
             stderr.write(data)
         }
-        
-        // Also write to log file for debugging
-        let logPath = "/tmp/chromellm-native.log"
-        if let logData = logMessage.data(using: .utf8) {
-            if FileManager.default.fileExists(atPath: logPath) {
-                let fileHandle = FileHandle(forWritingAtPath: logPath)
-                fileHandle?.seekToEndOfFile()
-                fileHandle?.write(logData)
-                fileHandle?.closeFile()
-            } else {
-                try? logData.write(to: URL(fileURLWithPath: logPath))
-            }
-        }
+                
+        // Use os.log for system-wide logging
+        os_log("%{public}@", log: logger, type: type, message)
     }
 }

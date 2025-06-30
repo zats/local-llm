@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# ChromeLLM Production Test Runner
+# NativeFoundationModels Production Test Runner
 # Builds the native app and runs comprehensive tests
 
 set -e
 
-echo "🧪 ChromeLLM Production Test Suite"
+echo "🧪 NativeFoundationModels Production Test Suite"
 echo "=================================="
 
 # Change to native-app directory

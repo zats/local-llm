@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Complete test of ChromeLLM native messaging app functionality.
+Complete test of NativeFoundationModels native messaging app functionality.
 Uses real session IDs and no mock data.
 """
 import sys
@@ -15,7 +15,7 @@ def send_message(message):
     return struct.pack('<I', len(j)) + j
 
 def main():
-    print("🧪 ChromeLLM Native App - Complete Functionality Test (No Mock Data)")
+    print("🧪 NativeFoundationModels Native App - Complete Functionality Test (No Mock Data)")
     print("=" * 70)
     
     # Test availability first
@@ -42,7 +42,7 @@ def main():
     print(f"📤 Sending {len(commands)} commands...")
     
     # Start the app
-    proc = subprocess.Popen(['.build/arm64-apple-macosx/debug/ChromeLLMNative'], 
+    proc = subprocess.Popen(['.build/arm64-apple-macosx/debug/NativeFoundationModelsNative'], 
                            stdin=subprocess.PIPE, 
                            stdout=subprocess.PIPE, 
                            stderr=subprocess.PIPE)

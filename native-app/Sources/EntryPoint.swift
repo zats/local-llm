@@ -1,7 +1,7 @@
 import Foundation
 
 @main
-struct ChromeLLMNative {
+struct NativeFoundationModelsNative {
     static func main() {
         let app = NativeMessagingApp()
         app.run()
