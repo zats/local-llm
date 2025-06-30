@@ -72,7 +72,7 @@
             }
             
             try {
-                const result = await window.chromeNativeLLM.getCompletion('Say hello in a friendly way');
+                const result = await window.chromeNativeLLM.getCompletion(`Say hello in a language of your choice, also print readable version of the date: ${Date.now()}`);
                 log(`✅ Completion result: ${JSON.stringify(result)}`, 'success');
             } catch (error) {
                 log(`❌ Completion failed: ${error.message}`, 'error');

@@ -238,12 +238,14 @@ class NativeMessagingApp: @unchecked Sendable {
         let options = createGenerationOptions(from: payload)
         let promptCopy = prompt
         let sessionIdCopy = sessionId
+        let requestIdCopy = requestId
         
         Task {
             do {
                 
                 for try await token in session.streamResponse(to: promptCopy, options: options) {
                     let chunkMessage: [String: Any] = [
+                        "requestId": requestIdCopy,
                         "type": "streamChunk",
                         "payload": [
                             "sessionId": sessionIdCopy,
@@ -254,6 +256,7 @@ class NativeMessagingApp: @unchecked Sendable {
                 }
                 
                 let endMessage: [String: Any] = [
+                    "requestId": requestIdCopy,
                     "type": "streamEnd",
                     "payload": [
                         "sessionId": sessionIdCopy
@@ -263,6 +266,7 @@ class NativeMessagingApp: @unchecked Sendable {
                 
             } catch {
                 let errorMessage: [String: Any] = [
+                    "requestId": requestIdCopy,
                     "type": "error",
                     "payload": [
                         "sessionId": sessionIdCopy,

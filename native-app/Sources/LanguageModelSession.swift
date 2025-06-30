@@ -8,7 +8,7 @@ public class LanguageModelSession: @unchecked Sendable {
     public init() throws {
         // Check if Foundation Models is available
         guard Self.isAvailable() else {
-            throw LanguageModelError.sessionNotAvailable
+            throw LanguageModelError.sessionNotAvailable("Can't initialize LanguageModelSession; it is unavailable")
         }
         
         self.session = FoundationModels.LanguageModelSession()
@@ -22,7 +22,7 @@ public class LanguageModelSession: @unchecked Sendable {
         transcript.append("User: \(prompt)")
         
         guard let session = session else {
-            throw LanguageModelError.sessionNotAvailable
+            throw LanguageModelError.sessionNotAvailable("No session found")
         }
         
         let generationOptions = FoundationModels.GenerationOptions(
@@ -42,7 +42,7 @@ public class LanguageModelSession: @unchecked Sendable {
                 self.transcript.append("User: \(prompt)")
                 
                 guard let session = self.session else {
-                    continuation.finish(throwing: LanguageModelError.sessionNotAvailable)
+                    continuation.finish(throwing: LanguageModelError.sessionNotAvailable("No session found when streaming response"))
                     return
                 }
                 
@@ -72,13 +72,13 @@ public class LanguageModelSession: @unchecked Sendable {
 }
 
 public enum LanguageModelError: Error, LocalizedError {
-    case sessionNotAvailable
+    case sessionNotAvailable(String)
     case generationFailed(String)
     
     public var errorDescription: String? {
         switch self {
-        case .sessionNotAvailable:
-            return "Foundation Models framework is not available. This requires macOS 26.0+ with Apple Intelligence enabled. Please enable Apple Intelligence in System Settings → Apple Intelligence & Siri."
+        case .sessionNotAvailable(let reason):
+            return "Foundation Models framework is not available: \(reason)"
         case .generationFailed(let message):
             return "Language model generation failed: \(message)"
         }

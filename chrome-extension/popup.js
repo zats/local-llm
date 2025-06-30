@@ -3,6 +3,7 @@ class ChromeLLMPlayground {
   constructor() {
     this.currentSessionId = null;
     this.isGenerating = false;
+    this.streamingContent = '';
     this.initializeElements();
     this.setupEventListeners();
     this.checkAvailability();
@@ -57,7 +58,7 @@ class ChromeLLMPlayground {
         this.statusEl.style.color = '#dc3545';
       }
     } catch (error) {
-      this.statusEl.textContent = 'Connection error';
+      this.statusEl.textContent = 'Connection error' + error.message;
       this.statusEl.style.color = '#dc3545';
     }
   }
@@ -120,6 +121,7 @@ class ChromeLLMPlayground {
       
       // Add empty assistant message for streaming
       this.currentAssistantMessage = this.addMessage('', 'assistant');
+      this.streamingContent = '';
       
     } catch (error) {
       this.addMessage('Error: ' + error.message, 'assistant');
@@ -129,7 +131,20 @@ class ChromeLLMPlayground {
 
   handleStreamChunk(payload) {
     if (payload.sessionId === this.currentSessionId && this.currentAssistantMessage) {
-      this.currentAssistantMessage.textContent += payload.token;
+      console.log('Received token:', JSON.stringify(payload.token));
+      
+      // Check if this is a cumulative response or individual token
+      if (payload.token.startsWith(this.streamingContent)) {
+        // It's cumulative - extract only the new part
+        const newContent = payload.token.slice(this.streamingContent.length);
+        this.currentAssistantMessage.textContent += newContent;
+        this.streamingContent = payload.token;
+      } else {
+        // It's an individual token
+        this.currentAssistantMessage.textContent += payload.token;
+        this.streamingContent += payload.token;
+      }
+      
       this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
   }
