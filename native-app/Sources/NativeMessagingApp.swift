@@ -35,7 +35,7 @@ class NativeMessagingApp: @unchecked Sendable {
         guard let lengthData = try? fileHandle.read(upToCount: 4),
               lengthData.count == 4 else {
             logMessage("Failed to read 4-byte length header or no more data.", type: .error)
-            return false
+            exit(1) // Exit on read failure to prevent infinite loop
         }
         
         let messageLength = lengthData.withUnsafeBytes { bytes in
@@ -469,7 +469,7 @@ class NativeMessagingApp: @unchecked Sendable {
         let logMessage = "[" + String(describing: timestamp) + "] " + message + "\n"
         
         // Write to stderr
-        if type == .error, let data = logMessage.data(using: .utf8) {
+        if type == .error, let data = message.data(using: .utf8) {
             stderr.write(data)
         }
                 
