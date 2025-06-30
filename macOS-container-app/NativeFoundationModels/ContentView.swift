@@ -47,7 +47,6 @@ struct ModernButtonStyle: ButtonStyle {
                 y: 4
             )
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
@@ -59,21 +58,15 @@ struct ContentView: View {
             GradientBackground()
             
             VStack(spacing: 0) {
-                // Top brain icon with fixed positioning
-                VStack {
-                    Image(.brain)
-                        .font(.system(size: 32))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 40)
-                .padding(.bottom, 32)
+
+                Image(.brain)
+                    .font(.system(size: 32))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+                    .padding(.top, 40)
+                    .padding(.bottom, 32)
                 
-                // Main content card
                 VStack(spacing: 24) {
-                    
-                    // Status card with animations
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(spacing: 12) {
                             Circle()
@@ -84,7 +77,6 @@ struct ContentView: View {
                                         .stroke(Color.white.opacity(0.5), lineWidth: 2)
                                         .frame(width: 18, height: 18)
                                 )
-                                .animation(.easeInOut(duration: 0.3), value: binaryManager.isInstalled)
                             
                             Text("Installation Status")
                                 .font(.system(size: 16, weight: .semibold))
@@ -109,50 +101,7 @@ struct ContentView: View {
                             )
                     )
                     
-                    // Action buttons with smooth transitions
-                    VStack(spacing: 12) {
-                        if binaryManager.isInstalled {
-                            HStack(spacing: 12) {
-                                Button("Reinstall") {
-                                    binaryManager.reinstallBinary()
-                                }
-                                .buttonStyle(ModernButtonStyle(isPrimary: true))
-                                .disabled(binaryManager.isProcessing)
-                                
-                                Button("Remove") {
-                                    binaryManager.removeBinary()
-                                }
-                                .buttonStyle(ModernButtonStyle(isPrimary: false))
-                                .disabled(binaryManager.isProcessing)
-                            }
-                        } else {
-                            Button("Install Binary") {
-                                binaryManager.installBinary()
-                            }
-                            .buttonStyle(ModernButtonStyle(isPrimary: true))
-                            .disabled(binaryManager.isProcessing)
-                        }
-                        
-                        // Simple loading indicator
-                        if binaryManager.isProcessing {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                Text("Processing...")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Color.white.opacity(0.8))
-                            }
-                            .padding(.top, 4)
-                        }
-                    }
-                    
-                    // Info section
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Binary Location")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color.white.opacity(0.7))
-                        
                         HStack(spacing: 8) {
                             Text("~/bin/nativefoundationmodels-native")
                                 .font(.caption.monospaced())
@@ -168,23 +117,76 @@ struct ContentView: View {
                                                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
                                         )
                                 )
+                        }
+                        .overlay(alignment: .trailing) {
                             Button(action: {
                                 revealBinaryLocation()
                             }) {
                                 Image(systemName: "arrow.right.circle.fill")
-                                    .font(.title2)
+                                    .font(.title3)
                                     .foregroundColor(.white.opacity(0.7))
                             }
                             .buttonStyle(PlainButtonStyle())
                             .help(binaryManager.isInstalled ? "Reveal in Finder" : "Open ~/bin folder")
+                            .padding(.trailing, 4)
                         }
+                        Text("Binary Location")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.5))
+                            .padding(.leading, 8)
+                        
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                }
+
+                    // Action buttons with fixed layout
+                    VStack(spacing: 12) {
+                        HStack(spacing: 12) {
+                            if binaryManager.isInstalled {
+                                Button("Reinstall") {
+                                    binaryManager.reinstallBinary()
+                                }
+                                .buttonStyle(ModernButtonStyle(isPrimary: true))
+                                .disabled(binaryManager.isProcessing)
+                                
+                                Button("Remove") {
+                                    binaryManager.removeBinary()
+                                }
+                                .buttonStyle(ModernButtonStyle(isPrimary: false))
+                                .disabled(binaryManager.isProcessing)
+                            } else {
+                                Button("Install Binary") {
+                                    binaryManager.installBinary()
+                                }
+                                .buttonStyle(ModernButtonStyle(isPrimary: true))
+                                .disabled(binaryManager.isProcessing)
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .frame(height: 44) // Fixed height for button area
+                        
+                        // Fixed space for loading indicator to prevent layout shifts
+                        HStack(spacing: 8) {
+                            if binaryManager.isProcessing {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                Text("Processing...")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color.white.opacity(0.8))
+                            } else {
+                                // Invisible placeholder to maintain layout
+                                Color.clear
+                                    .frame(height: 16)
+                            }
+                        }
+                        .frame(height: 20)
+                        .padding(.top, 4)
+                    }
+                                    }
                 .padding(.horizontal, 32)
             }
         }
-        .frame(width: 420, height: 540)
+        .frame(width: 420, height: 640)
         .onAppear {
             AppMover.moveIfNecessary()
             binaryManager.checkInstallationStatus()

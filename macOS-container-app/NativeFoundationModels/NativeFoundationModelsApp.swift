@@ -59,7 +59,7 @@ class BinaryManager: ObservableObject {
         DispatchQueue.main.async {
             self.isInstalled = exists
             if exists {
-                self.statusMessage = "Binary is installed at ~/bin/\(self.binaryName)"
+                self.statusMessage = "Binary is installed"
             } else {
                 self.statusMessage = "Binary is not installed"
             }
@@ -96,7 +96,7 @@ class BinaryManager: ObservableObject {
                 
                 DispatchQueue.main.async {
                     self.isInstalled = true
-                    self.statusMessage = "Successfully installed binary to ~/bin/\(self.binaryName)"
+                    self.statusMessage = "Successfully installed binary"
                     self.isProcessing = false
                 }
             } catch {
@@ -119,7 +119,7 @@ class BinaryManager: ObservableObject {
                 
                 DispatchQueue.main.async {
                     self.isInstalled = false
-                    self.statusMessage = "Successfully removed binary from ~/bin/"
+                    self.statusMessage = "Successfully removed binary"
                     self.isProcessing = false
                 }
             } catch {
