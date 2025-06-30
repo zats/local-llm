@@ -452,15 +452,13 @@ class NativeFoundationModelsPlayground {
       samplingMode: this.samplingMode
     };
 
-    let code = `
-// Check if Native Foundation Models is available
+    let code = `// Generated from Native Foundation Models Playground
 if (!window.nativeFoundationModels) {
   console.error('Native Foundation Models extension not found');
   return;
 }
 
 try {
-  // Create session with current settings
   const session = await window.nativeFoundationModels.createSession({`;
 
   if (config.systemPrompt && config.systemPrompt.trim()) {
@@ -471,59 +469,41 @@ try {
   code += `
   });
 
-  // Configuration
   const options = {
     temperature: ${config.temperature},
     maximumResponseTokens: ${config.maxTokens},
     samplingMode: '${config.samplingMode}'
   };
-
-  console.log('🤖 Session ready with configuration:', options);
 `;
 
     if (this.conversationHistory.length > 0) {
-      code += `
-  console.log('📜 Replaying conversation...');
-`;
-      
       // Add each conversation turn
       for (let i = 0; i < this.conversationHistory.length; i += 2) {
         const userMessage = this.conversationHistory[i];
-        const assistantMessage = this.conversationHistory[i + 1];
 
         if (userMessage && userMessage.role === 'user') {
           code += `
-  // User message ${Math.floor(i/2) + 1}
-  console.log('👤 User:', ${JSON.stringify(userMessage.content)});
-  
   let response${Math.floor(i/2) + 1} = '';
   for await (const token of session.sendMessageStream(${JSON.stringify(userMessage.content)}, options)) {
     response${Math.floor(i/2) + 1} += token;
-  }
-  console.log('🤖 Assistant:', response${Math.floor(i/2) + 1});
-`;
+  }`;
         }
       }
-      
-      code += `
-  console.log('✅ Conversation replay completed');`;
   } else {
     code += `
-  // Example usage - replace with your own prompts
+  // Example - replace with your own prompts
   let response = '';
   for await (const token of session.sendMessageStream('Hello! How can you help me today?', options)) {
     response += token;
-  }
-  console.log('🤖 Assistant:', response);`;
+  }`;
   }
 
-  code += `  
-  // Clean up
+  code += `
+
   await session.end();
 } catch (error) {
-  console.error('❌ Error:', error);
-}
-`;
+  console.error('Error:', error);
+}`;
 
     return code;
   }
