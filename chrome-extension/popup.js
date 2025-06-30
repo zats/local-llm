@@ -4,6 +4,8 @@ class ChromeLLMPlayground {
     this.currentSessionId = null;
     this.isGenerating = false;
     this.streamingContent = '';
+    this.temperature = 0.8;
+    this.maxTokens = 1024;
     this.initializeElements();
     this.setupEventListeners();
     this.checkAvailability();
@@ -15,15 +17,24 @@ class ChromeLLMPlayground {
     this.promptInput = document.getElementById('promptInput');
     this.sendBtn = document.getElementById('sendBtn');
     this.newChatBtn = document.getElementById('newChatBtn');
-    this.temperatureSlider = document.getElementById('temperature');
+    this.settingsBtn = document.getElementById('settingsBtn');
+    this.backBtn = document.getElementById('backBtn');
+    this.settingsView = document.getElementById('settingsView');
     this.tempValueSpan = document.getElementById('tempValue');
-    this.maxTokensInput = document.getElementById('maxTokens');
+    this.tempUpBtn = document.getElementById('tempUp');
+    this.tempDownBtn = document.getElementById('tempDown');
+    this.tokensValueSpan = document.getElementById('tokensValue');
+    this.tokensUpBtn = document.getElementById('tokensUp');
+    this.tokensDownBtn = document.getElementById('tokensDown');
     this.samplingModeSelect = document.getElementById('samplingMode');
   }
 
   setupEventListeners() {
     this.sendBtn.addEventListener('click', () => this.sendMessage());
     this.newChatBtn.addEventListener('click', () => this.startNewChat());
+    this.settingsBtn.addEventListener('click', () => this.showSettings());
+    this.backBtn.addEventListener('click', () => this.hideSettings());
+    
     this.promptInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -31,9 +42,13 @@ class ChromeLLMPlayground {
       }
     });
     
-    this.temperatureSlider.addEventListener('input', (e) => {
-      this.tempValueSpan.textContent = e.target.value;
-    });
+    // Temperature stepper controls
+    this.tempUpBtn.addEventListener('click', () => this.adjustTemperature(0.1));
+    this.tempDownBtn.addEventListener('click', () => this.adjustTemperature(-0.1));
+    
+    // Max tokens stepper controls
+    this.tokensUpBtn.addEventListener('click', () => this.adjustMaxTokens(50));
+    this.tokensDownBtn.addEventListener('click', () => this.adjustMaxTokens(-50));
 
     // Listen for streaming messages from background
     chrome.runtime.onMessage.addListener((message) => {
@@ -52,14 +67,14 @@ class ChromeLLMPlayground {
       const response = await this.sendToBackground('checkAvailability');
       if (response.available) {
         this.statusEl.textContent = 'Ready';
-        this.statusEl.style.color = '#28a745';
+        this.statusEl.className = 'status ready';
       } else {
         this.statusEl.textContent = 'LLM not available';
-        this.statusEl.style.color = '#dc3545';
+        this.statusEl.className = 'status error';
       }
     } catch (error) {
-      this.statusEl.textContent = 'Connection error' + error.message;
-      this.statusEl.style.color = '#dc3545';
+      this.statusEl.textContent = 'Connection error: ' + error.message;
+      this.statusEl.className = 'status error';
     }
   }
 
@@ -82,10 +97,10 @@ class ChromeLLMPlayground {
       `;
       
       this.statusEl.textContent = 'New chat started';
-      this.statusEl.style.color = '#28a745';
+      this.statusEl.className = 'status ready';
     } catch (error) {
       this.statusEl.textContent = 'Failed to start new chat';
-      this.statusEl.style.color = '#dc3545';
+      this.statusEl.className = 'status error';
     }
   }
 
@@ -112,8 +127,8 @@ class ChromeLLMPlayground {
       const payload = {
         sessionId: this.currentSessionId,
         prompt: prompt,
-        temperature: parseFloat(this.temperatureSlider.value),
-        maximumResponseTokens: parseInt(this.maxTokensInput.value)
+        temperature: this.temperature,
+        maximumResponseTokens: this.maxTokens
       };
 
       // Send to background (streaming will be handled by message listener)
@@ -166,7 +181,7 @@ class ChromeLLMPlayground {
     this.isGenerating = false;
     this.sendBtn.disabled = false;
     this.statusEl.textContent = 'Ready';
-    this.statusEl.style.color = '#28a745';
+    this.statusEl.className = 'status ready';
     this.currentAssistantMessage = null;
   }
 
@@ -177,6 +192,33 @@ class ChromeLLMPlayground {
     this.chatContainer.appendChild(messageEl);
     this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     return messageEl;
+  }
+
+  showSettings() {
+    this.settingsView.classList.add('active');
+  }
+  
+  hideSettings() {
+    this.settingsView.classList.remove('active');
+  }
+  
+  adjustTemperature(delta) {
+    this.temperature = Math.max(0, Math.min(2, this.temperature + delta));
+    this.temperature = Math.round(this.temperature * 10) / 10; // Round to 1 decimal
+    this.tempValueSpan.textContent = this.temperature.toFixed(1);
+    
+    // Update button states
+    this.tempDownBtn.disabled = this.temperature <= 0;
+    this.tempUpBtn.disabled = this.temperature >= 2;
+  }
+  
+  adjustMaxTokens(delta) {
+    this.maxTokens = Math.max(1, Math.min(2048, this.maxTokens + delta));
+    this.tokensValueSpan.textContent = this.maxTokens;
+    
+    // Update button states
+    this.tokensDownBtn.disabled = this.maxTokens <= 1;
+    this.tokensUpBtn.disabled = this.maxTokens >= 2048;
   }
 
   sendToBackground(command, payload = {}) {
