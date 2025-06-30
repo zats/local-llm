@@ -76,9 +76,11 @@ struct ContentView: View {
                                 .offset(y: animateGradient ? -2 : 2)
                                 .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: animateGradient)
                             
-                            Image(systemName: "sparkles")
+                            Image(.brain)
                                 .font(.system(size: 32))
                                 .foregroundStyle(.white)
+                                .shadow(color: .black.opacity(0.6), radius: 10, y: 5)
+                                .shadow(color: .purple.opacity(0.6), radius: 3, y: 3)
                         }
                     }
                     
@@ -192,7 +194,7 @@ struct ContentView: View {
                 .padding(.horizontal, 32)
             }
         }
-        .frame(width: 420)
+        .frame(width: 420, height: 540)
         .onAppear {
             binaryManager.checkInstallationStatus()
             animateGradient = true
