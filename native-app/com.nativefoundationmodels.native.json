@@ -1,9 +1,0 @@
-{
-  "name": "com.nativefoundationmodels.native",
-  "description": "NativeFoundationModels Native Messaging Host",
-  "path": "/Users/zats/bin/nativefoundationmodels-native",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://gflhiakgkhmcpaiedkjkalbilplchpbe/"
-  ]
-}

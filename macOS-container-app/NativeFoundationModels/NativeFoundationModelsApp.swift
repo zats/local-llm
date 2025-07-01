@@ -184,18 +184,19 @@ class InstallationStepManager: ObservableObject {
         let hostDir = nativeMessagingHostURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: hostDir, withIntermediateDirectories: true)
         
-        let hostConfig = [
-            "name": "com.nativeFoundationModels.native",
-            "description": "Native Foundation Models Native Messaging Host",
-            "path": binaryURL.path,
-            "type": "stdio",
-            "allowed_origins": [
-                "chrome-extension://\(extensionId)/"
-            ]
-        ] as [String : Any]
-        
-        let jsonData = try JSONSerialization.data(withJSONObject: hostConfig, options: .prettyPrinted)
-        try jsonData.write(to: nativeMessagingHostURL)
+        // Generate clean native messaging host configuration
+        let hostConfigJSON = """
+{
+  "name": "com.nativefoundationmodels.native",
+  "description": "NativeFoundationModels Native Messaging Host",
+  "path": "\(binaryURL.path)",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://\(extensionId)/"
+  ]
+}
+"""
+        try hostConfigJSON.write(to: nativeMessagingHostURL, atomically: true, encoding: .utf8)
     }
     
     private func openExtensionStore() {

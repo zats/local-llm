@@ -53,13 +53,6 @@ The macOS installer application that sets up Native Foundation Models on your sy
 - Chrome extension installation guidance
 - System requirements verification
 
-### [`/NativeFoundationModels`](./NativeFoundationModels)
-The core native application that interfaces with Apple's FoundationModels framework. Written in Swift, this component:
-- Provides the native messaging host implementation
-- Handles communication between the browser and Apple's AI models
-- Manages model initialization and inference
-- Implements streaming responses
-
 ### [`/native-foundation-models-extension`](./native-foundation-models-extension)
 The Chrome extension that bridges web applications with the native host. Features include:
 - JavaScript API (`window.nativeFoundationModels`)
