@@ -108,6 +108,51 @@ class InstallationStepManager: ObservableObject {
         return binaryExists && hostExists
     }
     
+    func isBinaryInstalled() -> Bool {
+        return FileManager.default.fileExists(atPath: binaryURL.path)
+    }
+    
+    func isNativeMessagingHostInstalled() -> Bool {
+        return FileManager.default.fileExists(atPath: nativeMessagingHostURL.path)
+    }
+    
+    func revealBinaryInFinder() {
+        let binDir = binaryURL.deletingLastPathComponent()
+        
+        if isBinaryInstalled() {
+            // Reveal the specific binary file
+            NSWorkspace.shared.activateFileViewerSelecting([binaryURL])
+        } else {
+            // Open the ~/bin directory (create if needed)
+            do {
+                try FileManager.default.createDirectory(at: binDir, withIntermediateDirectories: true)
+                NSWorkspace.shared.open(binDir)
+            } catch {
+                // If can't create, just try to open home directory
+                NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser)
+            }
+        }
+    }
+    
+    func revealNativeMessagingHostInFinder() {
+        let hostDir = nativeMessagingHostURL.deletingLastPathComponent()
+        
+        if isNativeMessagingHostInstalled() {
+            // Reveal the specific JSON file
+            NSWorkspace.shared.activateFileViewerSelecting([nativeMessagingHostURL])
+        } else {
+            // Open the native messaging hosts directory (create if needed)
+            do {
+                try FileManager.default.createDirectory(at: hostDir, withIntermediateDirectories: true)
+                NSWorkspace.shared.open(hostDir)
+            } catch {
+                // If can't create, just try to open Application Support
+                let appSupport = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
+                NSWorkspace.shared.open(appSupport)
+            }
+        }
+    }
+    
     private func isExtensionInstalled() -> Bool {
         let browsers = [
             "Google/Chrome/Default/Extensions",

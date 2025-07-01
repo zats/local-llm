@@ -49,6 +49,7 @@ struct ContentView: View {
                         ) {
                             stepManager.executeStep(step)
                         }
+                        .environmentObject(stepManager)
                     }
                 }
                 .padding(.horizontal, 32)
@@ -56,7 +57,7 @@ struct ContentView: View {
                 Spacer()
             }
         }
-        .frame(width: 420, height: 660)
+        .frame(width: 420, height: 750)
         .onAppear {
             AppMover.moveIfNecessary()
             heartbeat = true
@@ -69,6 +70,7 @@ struct InstallationStepView: View {
     let isCompleted: Bool
     let isInProgress: Bool
     let onExecute: () -> Void
+    @EnvironmentObject var stepManager: InstallationStepManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -109,6 +111,26 @@ struct InstallationStepView: View {
                 }
                 
                 Spacer()
+            }
+            
+            // Show detailed status for Native Components step
+            if step == .installBinary {
+                VStack(spacing: 8) {
+                    ComponentStatusRow(
+                        title: "Binary",
+                        subtitle: "~/bin/nativefoundationmodels-native",
+                        isInstalled: stepManager.isBinaryInstalled(),
+                        onReveal: { stepManager.revealBinaryInFinder() }
+                    )
+                    
+                    ComponentStatusRow(
+                        title: "Native Messaging Host",
+                        subtitle: "~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json",
+                        isInstalled: stepManager.isNativeMessagingHostInstalled(),
+                        onReveal: { stepManager.revealNativeMessagingHostInFinder() }
+                    )
+                }
+                .padding(.leading, 44)
             }
             
             if !isCompleted {
@@ -182,6 +204,54 @@ struct InstallationStepView: View {
         case .installExtension:
             return "Open Store"
         }
+    }
+}
+
+struct ComponentStatusRow: View {
+    let title: String
+    let subtitle: String
+    let isInstalled: Bool
+    let onReveal: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(isInstalled ? Color(hex: "2ecc71") : Color(hex: "e74c3c"))
+                .frame(width: 8, height: 8)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white)
+                
+                Text(subtitle)
+                    .font(.system(size: 10).monospaced())
+                    .foregroundColor(Color.white.opacity(0.6))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            
+            Spacer()
+            
+            Button(action: onReveal) {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(Color.white.opacity(0.7))
+            }
+            .buttonStyle(PlainButtonStyle())
+            .focusable(false)
+            .help(isInstalled ? "Reveal in Finder" : "Open containing folder")
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
+        )
     }
 }
 
