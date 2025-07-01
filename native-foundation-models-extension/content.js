@@ -1,5 +1,13 @@
 // Content script that injects the website API and handles communication
 (function() {
+  // Inject the download dialog script
+  const dialogScript = document.createElement('script');
+  dialogScript.src = chrome.runtime.getURL('download-dialog.js');
+  dialogScript.onload = function() {
+    this.remove();
+  };
+  (document.head || document.documentElement).appendChild(dialogScript);
+
   // Inject the API script into the page
   const script = document.createElement('script');
   script.src = chrome.runtime.getURL('injected.js');
@@ -19,7 +27,9 @@
           requestId: event.data.requestId,
           success: !response.error,
           data: response.error ? null : response,
-          error: response.error
+          error: response.error,
+          errorType: response.errorType,
+          downloadUrl: response.downloadUrl
         }, '*');
       });
     }

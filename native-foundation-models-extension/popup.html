@@ -361,6 +361,7 @@
       font-weight: 500;
       color: #9ca2a9;
       letter-spacing: -0.41px;
+      padding-inline-end: 2em;
     }
     
     .stepper {
@@ -457,6 +458,8 @@
       backdrop-filter: blur(10px);
       font-weight: 500;
       letter-spacing: -0.08px;
+      margin-left: auto;
+      margin-right: auto;
     }
     
     .input-container {
@@ -599,7 +602,7 @@
           </div>
           
           <div class="setting-item">
-            <div class="setting-label">Sampling Mode</div>
+            <div class="setting-label">Sampling&nbsp;Mode</div>
             <select class="control-input" id="samplingMode">
               <option value="top-p">Top-P</option>
               <option value="top-k">Top-K</option>
@@ -608,17 +611,41 @@
           </div>
         </div>
         
+        <div class="setting-section">
+          <div class="setting-item">
+            <div class="setting-label">Troubleshooting</div>
+            <button class="stepper-btn" id="troubleshootingBtn" style="
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              border: none;
+              border-radius: 12px;
+              padding: 10px 20px;
+              font-size: 14px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              color: white;
+              box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+              width: auto;
+              height: auto;
+            "
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(102, 126, 234, 0.4)';"
+            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)';">
+              🔧 Troubleshooting
+            </button>
+          </div>
+        </div>
         
         <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 16px;">
         <div class="settings-warning">
           ⚠️ Saving changes will reset the current chat
         </div>
-          <button class="save-btn" id="saveBtn">Save Settings</button>
+          <button class="save-btn" id="saveBtn">Save</button>
         </div>
       </div>
     </div>
   </div>
   
+  <script src="download-dialog.js"></script>
   <script src="popup-api.js"></script>
   <script src="popup.js"></script>
 </body>

@@ -37,7 +37,11 @@ class NativeFoundationModelsBackground {
     const { requestId, command, payload } = message;
     
     if (!this.nativePort) {
-      sendResponse({ error: 'Native app not connected' });
+      sendResponse({ 
+        error: 'Native app not connected',
+        errorType: 'NATIVE_APP_NOT_FOUND',
+        downloadUrl: 'https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.app.zip'
+      });
       return true;
     }
 

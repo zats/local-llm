@@ -32,7 +32,7 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["injected.js", "prism.js/prism.js", "prism.js/prism.css"],
+      "resources": ["injected.js", "download-dialog.js", "brain.png", "prism.js/prism.js", "prism.js/prism.css"],
       "matches": ["<all_urls>"]
     }
   ]

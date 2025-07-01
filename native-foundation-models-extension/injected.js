@@ -9,7 +9,15 @@
     }
 
     async checkAvailability() {
-      return this.sendMessage('checkAvailability');
+      try {
+        return await this.sendMessage('checkAvailability');
+      } catch (error) {
+        // For checkAvailability, we always want to show the dialog on error
+        if (window.nfmDownloadDialog) {
+          window.nfmDownloadDialog.show();
+        }
+        throw error;
+      }
     }
 
     async createSession(options = {}) {
@@ -39,6 +47,14 @@
           const { success, data, error } = event.data;
           
           if (!success) {
+            // Check if it's a native app not found error
+            console.log('NativeFoundationModels streaming error:', error, 'errorType:', event.data.errorType);
+            if (event.data.errorType === 'NATIVE_APP_NOT_FOUND' && window.nfmDownloadDialog) {
+              window.nfmDownloadDialog.show();
+            } else if (error && error.toLowerCase().includes('not available') && window.nfmDownloadDialog) {
+              // Also show dialog for "LLM not available" errors
+              window.nfmDownloadDialog.show();
+            }
             streamError = new Error(error);
             streamComplete = true;
             // Wake up any waiting promises
@@ -124,6 +140,14 @@
                 resolve(data);
               }
             } else {
+              // Check if it's a native app not found error
+              console.log('NativeFoundationModels error:', error, 'errorType:', event.data.errorType);
+              if (event.data.errorType === 'NATIVE_APP_NOT_FOUND' && window.nfmDownloadDialog) {
+                window.nfmDownloadDialog.show();
+              } else if (error && error.toLowerCase().includes('not available') && window.nfmDownloadDialog) {
+                // Also show dialog for "LLM not available" errors
+                window.nfmDownloadDialog.show();
+              }
               reject(new Error(error, { cause: event.data }));
             }
           }

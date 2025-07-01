@@ -88,6 +88,14 @@ class NativeFoundationModelsPlayground {
       this.tempSettings.samplingMode = this.samplingModeSelect.value;
     });
 
+    // Troubleshooting button
+    this.troubleshootingBtn = document.getElementById('troubleshootingBtn');
+    this.troubleshootingBtn.addEventListener('click', () => {
+      if (window.nfmDownloadDialog) {
+        window.nfmDownloadDialog.show();
+      }
+    });
+
     // Streaming is now handled directly by the unified API
   }
 
@@ -129,6 +137,22 @@ class NativeFoundationModelsPlayground {
     }
   }
   
+  showDownloadPrompt() {
+    this.statusEl.innerHTML = `
+      <span style="color: #e74c3c;">Native app not found</span>
+      <button onclick="window.nfmDownloadDialog.show()" 
+         style="color: #3498db; background: none; border: none; margin-left: 8px; font-weight: 600; cursor: pointer; text-decoration: underline;">
+        Download →
+      </button>
+    `;
+    this.statusEl.className = 'status error';
+    
+    // Show the unified download dialog
+    if (window.nfmDownloadDialog) {
+      window.nfmDownloadDialog.show();
+    }
+  }
+
   async finalAvailabilityRetry() {
     try {
       const session = await this.api.createSession();
@@ -138,12 +162,11 @@ class NativeFoundationModelsPlayground {
         
         await session.end();
       } else {
-        this.statusEl.textContent = 'LLM not available';
-        this.statusEl.className = 'status error';
+        this.showDownloadPrompt();
       }
     } catch (error) {
-      this.statusEl.textContent = 'LLM not available';
-      this.statusEl.className = 'status error';
+      console.error('Availability check failed:', error);
+      this.showDownloadPrompt();
     }
   }
 
