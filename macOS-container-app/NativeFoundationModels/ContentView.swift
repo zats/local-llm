@@ -52,6 +52,7 @@ struct ModernButtonStyle: ButtonStyle {
 
 struct ContentView: View {
     @StateObject private var binaryManager = BinaryManager()
+    @State private var heartbeat = false
     
     var body: some View {
         ZStack {
@@ -63,6 +64,12 @@ struct ContentView: View {
                     .font(.system(size: 32))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+                    .scaleEffect(heartbeat ? 1.02 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 1.2)
+                        .repeatForever(autoreverses: true),
+                        value: heartbeat
+                    )
                     .padding(.top, 40)
                     .padding(.bottom, 32)
                 
@@ -190,6 +197,7 @@ struct ContentView: View {
         .onAppear {
             AppMover.moveIfNecessary()
             binaryManager.checkInstallationStatus()
+            heartbeat = true
         }
     }
     
