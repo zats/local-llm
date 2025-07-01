@@ -18,40 +18,8 @@ struct GradientBackground: View {
     }
 }
 
-struct ModernButtonStyle: ButtonStyle {
-    let isPrimary: Bool
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(isPrimary ? .white : Color(hex: "2c3e50"))
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(
-                Group {
-                    if isPrimary {
-                        LinearGradient(
-                            colors: [Color(hex: "667eea"), Color(hex: "764ba2")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    } else {
-                        Color.white
-                    }
-                }
-            )
-            .cornerRadius(25)
-            .shadow(
-                color: Color.black.opacity(0.2), 
-                radius: 8,
-                y: 4
-            )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-    }
-}
-
 struct ContentView: View {
-    @StateObject private var binaryManager = BinaryManager()
+    @StateObject private var stepManager = InstallationStepManager()
     @State private var heartbeat = false
     
     var body: some View {
@@ -59,7 +27,6 @@ struct ContentView: View {
             GradientBackground()
             
             VStack(spacing: 0) {
-
                 Image(.brain)
                     .font(.system(size: 32))
                     .foregroundStyle(.white)
@@ -73,155 +40,147 @@ struct ContentView: View {
                     .padding(.top, 40)
                     .padding(.bottom, 32)
                 
-                VStack(spacing: 24) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(spacing: 12) {
-                            Circle()
-                                .fill(binaryManager.isInstalled ? Color(hex: "2ecc71") : Color(hex: "e74c3c"))
-                                .frame(width: 12, height: 12)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.5), lineWidth: 2)
-                                        .frame(width: 18, height: 18)
-                                )
-                            
-                            Text("Installation Status")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                            
-                            Spacer()
+                VStack(spacing: 16) {
+                    ForEach(InstallationStep.allCases, id: \.rawValue) { step in
+                        InstallationStepView(
+                            step: step,
+                            isCompleted: stepManager.stepStatuses[step, default: false],
+                            isInProgress: stepManager.stepInProgress[step, default: false]
+                        ) {
+                            stepManager.executeStep(step)
                         }
-                        
-                        Text(binaryManager.statusMessage)
-                            .font(.system(size: 14))
-                            .foregroundColor(Color.white.opacity(0.9))
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.white.opacity(0.15))
-                            .background(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
-                    )
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 8) {
-                            Text("~/bin/nativefoundationmodels-native")
-                                .font(.caption.monospaced())
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.white.opacity(0.15))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                        )
-                                )
-                        }
-                        .overlay(alignment: .trailing) {
-                            Button(action: {
-                                revealBinaryLocation()
-                            }) {
-                                Image(systemName: "arrow.right.circle.fill")
-                                    .font(.title3)
-                                    .foregroundColor(.white.opacity(0.7))
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .focusable(false)
-                            .help(binaryManager.isInstalled ? "Reveal in Finder" : "Open ~/bin folder")
-                            .padding(.trailing, 4)
-                        }
-                        Text("Binary Location")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.5))
-                            .padding(.leading, 8)
-                        
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    // Action buttons with fixed layout
-                    VStack(spacing: 12) {
-                        HStack(spacing: 12) {
-                            if binaryManager.isInstalled {
-                                Button("Reinstall") {
-                                    binaryManager.reinstallBinary()
-                                }
-                                .buttonStyle(ModernButtonStyle(isPrimary: true))
-                                .disabled(binaryManager.isProcessing)
-                                .focusable(false)
-                                
-                                Button("Remove") {
-                                    binaryManager.removeBinary()
-                                }
-                                .buttonStyle(ModernButtonStyle(isPrimary: false))
-                                .disabled(binaryManager.isProcessing)
-                                .focusable(false)
-                            } else {
-                                Button("Install Binary") {
-                                    binaryManager.installBinary()
-                                }
-                                .buttonStyle(ModernButtonStyle(isPrimary: true))
-                                .disabled(binaryManager.isProcessing)
-                                .frame(maxWidth: .infinity)
-                                .focusable(false)
-                            }
-                        }
-                        .frame(height: 44) // Fixed height for button area
-                        
-                        // Fixed space for loading indicator to prevent layout shifts
-                        HStack(spacing: 8) {
-                            if binaryManager.isProcessing {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                Text("Processing...")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Color.white.opacity(0.8))
-                            } else {
-                                // Invisible placeholder to maintain layout
-                                Color.clear
-                                    .frame(height: 16)
-                            }
-                        }
-                        .frame(height: 20)
-                        .padding(.top, 4)
-                    }
-                                    }
+                }
                 .padding(.horizontal, 32)
+                
+                Spacer()
             }
         }
-        .frame(width: 420, height: 640)
+        .frame(width: 420, height: 660)
         .onAppear {
             AppMover.moveIfNecessary()
-            binaryManager.checkInstallationStatus()
             heartbeat = true
         }
     }
+}
+
+struct InstallationStepView: View {
+    let step: InstallationStep
+    let isCompleted: Bool
+    let isInProgress: Bool
+    let onExecute: () -> Void
     
-    private func revealBinaryLocation() {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let binDir = homeDir.appendingPathComponent("bin")
-        
-        if binaryManager.isInstalled {
-            // Reveal the specific binary file
-            let binaryPath = binDir.appendingPathComponent("nativefoundationmodels-native")
-            NSWorkspace.shared.activateFileViewerSelecting([binaryPath])
-        } else {
-            // Open the ~/bin directory (create if needed)
-            do {
-                try FileManager.default.createDirectory(at: binDir, withIntermediateDirectories: true)
-                NSWorkspace.shared.open(binDir)
-            } catch {
-                // If can't create, just try to open home directory
-                NSWorkspace.shared.open(homeDir)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(backgroundColor)
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                    
+                    if isCompleted {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                    } else if isInProgress {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("\(step.rawValue)")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(step.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    
+                    Text(step.description)
+                        .font(.system(size: 13))
+                        .foregroundColor(Color.white.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                
+                Spacer()
             }
+            
+            if !isCompleted {
+                Button(action: onExecute) {
+                    HStack(spacing: 8) {
+                        if isInProgress {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            Text("Processing...")
+                        } else {
+                            Image(systemName: stepIcon)
+                            Text(stepButtonText)
+                        }
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(hex: "667eea"), Color(hex: "764ba2")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.2), radius: 4, y: 2)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(isInProgress)
+                .focusable(false)
+                .padding(.leading, 44)
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.white.opacity(isCompleted ? 0.1 : 0.15))
+                .background(
+                    RoundedRectangle(cornerRadius: 15)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .opacity(isCompleted ? 0.7 : 1.0)
+    }
+    
+    private var backgroundColor: Color {
+        if isCompleted {
+            return Color(hex: "2ecc71")
+        } else if isInProgress {
+            return Color(hex: "f39c12")
+        } else {
+            return Color.white.opacity(0.2)
+        }
+    }
+    
+    private var stepIcon: String {
+        switch step {
+        case .installBinary:
+            return "terminal"
+        case .installExtension:
+            return "safari"
+        }
+    }
+    
+    private var stepButtonText: String {
+        switch step {
+        case .installBinary:
+            return "Install"
+        case .installExtension:
+            return "Open Store"
         }
     }
 }

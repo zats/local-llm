@@ -34,107 +34,176 @@ struct NativeFoundationModelsApp: App {
     
 }
 
-class BinaryManager: ObservableObject {
-    @Published var isInstalled: Bool = false
-    @Published var statusMessage: String = ""
-    @Published var isProcessing: Bool = false
+enum InstallationStep: Int, CaseIterable {
+    case installBinary = 1
+    case installExtension = 2
+    
+    var title: String {
+        switch self {
+        case .installBinary:
+            return "Native Compnents"
+        case .installExtension:
+            return "Chrome Extension"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .installBinary:
+            return "Installs the native binary to ~/bin and copies configuration"
+        case .installExtension:
+            return "Opens the Chrome Web Store to install the browser extension"
+        }
+    }
+}
+
+class InstallationStepManager: ObservableObject {
+    @Published var stepStatuses: [InstallationStep: Bool] = [:]
+    @Published var stepInProgress: [InstallationStep: Bool] = [:]
     
     private let binaryName = "nativefoundationmodels-native"
-    private var destinationURL: URL {
+    private let extensionId = "gflhiakgkhmcpaiedkjkalbilplchpbe"
+    private var monitoringTimer: Timer?
+    
+    private var binaryURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("bin")
             .appendingPathComponent(binaryName)
     }
     
+    private var nativeMessagingHostURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+    }
+    
     init() {
-        checkInstallationStatus()
+        InstallationStep.allCases.forEach { step in
+            stepStatuses[step] = false
+            stepInProgress[step] = false
+        }
+        checkAllSteps()
+        startMonitoring()
     }
     
-    func checkInstallationStatus() {
-        isProcessing = true
-        defer { isProcessing = false }
-        
-        let exists = FileManager.default.fileExists(atPath: destinationURL.path)
-        
+    deinit {
+        monitoringTimer?.invalidate()
+    }
+    
+    private func startMonitoring() {
+        monitoringTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+            self.checkAllSteps()
+        }
+    }
+    
+    func checkAllSteps() {
         DispatchQueue.main.async {
-            self.isInstalled = exists
-            if exists {
-                self.statusMessage = "Binary is installed"
-            } else {
-                self.statusMessage = "Binary is not installed"
+            self.stepStatuses[.installBinary] = self.isBinaryStepComplete()
+            self.stepStatuses[.installExtension] = self.isExtensionInstalled()
+        }
+    }
+    
+    private func isBinaryStepComplete() -> Bool {
+        let binaryExists = FileManager.default.fileExists(atPath: binaryURL.path)
+        let hostExists = FileManager.default.fileExists(atPath: nativeMessagingHostURL.path)
+        return binaryExists && hostExists
+    }
+    
+    private func isExtensionInstalled() -> Bool {
+        let browsers = [
+            "Google/Chrome/Default/Extensions",
+            "Microsoft Edge/Default/Extensions", 
+            "BraveSoftware/Brave-Browser/Default/Extensions",
+            "Arc/User Data/Default/Extensions",
+            "Vivaldi/Default/Extensions"
+        ]
+        
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser
+        let applicationSupport = homeDir.appendingPathComponent("Library/Application Support")
+        
+        for browserPath in browsers {
+            let extensionPath = applicationSupport
+                .appendingPathComponent(browserPath)
+                .appendingPathComponent(extensionId)
+            
+            if FileManager.default.fileExists(atPath: extensionPath.path) {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    func executeStep(_ step: InstallationStep) {
+        guard !stepStatuses[step, default: false] else { return }
+        
+        stepInProgress[step] = true
+        
+        switch step {
+        case .installBinary:
+            installBinaryAndHost()
+        case .installExtension:
+            openExtensionStore()
+        }
+    }
+    
+    private func installBinaryAndHost() {
+        Task {
+            do {
+                try await installBinary()
+                try await installNativeMessagingHost()
+                
+                DispatchQueue.main.async {
+                    self.stepInProgress[.installBinary] = false
+                    self.checkAllSteps()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.stepInProgress[.installBinary] = false
+                }
             }
         }
     }
     
-    func installBinary() {
+    private func installBinary() async throws {
         guard let bundlePath = Bundle.main.url(forResource: binaryName, withExtension: nil) else {
-            DispatchQueue.main.async {
-                self.statusMessage = "Error: Could not find binary in app bundle"
-            }
-            return
+            throw NSError(domain: "InstallationError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Binary not found in bundle"])
         }
         
-        isProcessing = true
+        let binDir = binaryURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: binDir, withIntermediateDirectories: true)
         
-        Task {
-            do {
-                let binDir = destinationURL.deletingLastPathComponent()
-                
-                // Create ~/bin directory if it doesn't exist
-                try FileManager.default.createDirectory(at: binDir, withIntermediateDirectories: true)
-                
-                // Remove existing binary if present
-                if FileManager.default.fileExists(atPath: destinationURL.path) {
-                    try FileManager.default.removeItem(at: destinationURL)
-                }
-                
-                // Copy the binary
-                try FileManager.default.copyItem(at: bundlePath, to: destinationURL)
-                
-                // Make it executable
-                try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destinationURL.path)
-                
-                DispatchQueue.main.async {
-                    self.isInstalled = true
-                    self.statusMessage = "Successfully installed binary"
-                    self.isProcessing = false
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.statusMessage = "Error installing binary: \(error.localizedDescription)"
-                    self.isProcessing = false
-                }
-            }
+        if FileManager.default.fileExists(atPath: binaryURL.path) {
+            try FileManager.default.removeItem(at: binaryURL)
         }
+        
+        try FileManager.default.copyItem(at: bundlePath, to: binaryURL)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binaryURL.path)
     }
     
-    func removeBinary() {
-        isProcessing = true
+    private func installNativeMessagingHost() async throws {
+        let hostDir = nativeMessagingHostURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: hostDir, withIntermediateDirectories: true)
         
-        Task {
-            do {
-                if FileManager.default.fileExists(atPath: destinationURL.path) {
-                    try FileManager.default.removeItem(at: destinationURL)
-                }
-                
-                DispatchQueue.main.async {
-                    self.isInstalled = false
-                    self.statusMessage = "Successfully removed binary"
-                    self.isProcessing = false
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.statusMessage = "Error removing binary: \(error.localizedDescription)"
-                    self.isProcessing = false
-                }
-            }
-        }
+        let hostConfig = [
+            "name": "com.nativeFoundationModels.native",
+            "description": "Native Foundation Models Native Messaging Host",
+            "path": binaryURL.path,
+            "type": "stdio",
+            "allowed_origins": [
+                "chrome-extension://\(extensionId)/"
+            ]
+        ] as [String : Any]
+        
+        let jsonData = try JSONSerialization.data(withJSONObject: hostConfig, options: .prettyPrinted)
+        try jsonData.write(to: nativeMessagingHostURL)
     }
     
-    func reinstallBinary() {
-        removeBinary()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.installBinary()
+    private func openExtensionStore() {
+        let url = URL(string: "https://chromewebstore.google.com/detail/native-foundation-models/jjmocainopehgedhgjpanckkalhiodmj")!
+        NSWorkspace.shared.open(url)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.stepInProgress[.installExtension] = false
         }
     }
 }

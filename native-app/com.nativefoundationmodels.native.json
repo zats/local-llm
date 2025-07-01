@@ -4,6 +4,6 @@
   "path": "/Users/zats/bin/nativefoundationmodels-native",
   "type": "stdio",
   "allowed_origins": [
-    "chrome-extension://YOUR_EXTENSION_ID_HERE/"
+    "chrome-extension://gflhiakgkhmcpaiedkjkalbilplchpbe/"
   ]
 }
