@@ -248,7 +248,7 @@
     startDownload() {
       // Create a temporary link to trigger download
       const downloadLink = document.createElement('a');
-      downloadLink.href = 'https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.app.zip';
+      downloadLink.href = 'https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.zip';
       downloadLink.download = 'NativeFoundationModels.app.zip';
       downloadLink.style.display = 'none';
       document.body.appendChild(downloadLink);
