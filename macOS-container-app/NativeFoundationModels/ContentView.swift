@@ -134,6 +134,7 @@ struct ContentView: View {
                                     .foregroundColor(.white.opacity(0.7))
                             }
                             .buttonStyle(PlainButtonStyle())
+                            .focusable(false)
                             .help(binaryManager.isInstalled ? "Reveal in Finder" : "Open ~/bin folder")
                             .padding(.trailing, 4)
                         }
@@ -154,12 +155,14 @@ struct ContentView: View {
                                 }
                                 .buttonStyle(ModernButtonStyle(isPrimary: true))
                                 .disabled(binaryManager.isProcessing)
+                                .focusable(false)
                                 
                                 Button("Remove") {
                                     binaryManager.removeBinary()
                                 }
                                 .buttonStyle(ModernButtonStyle(isPrimary: false))
                                 .disabled(binaryManager.isProcessing)
+                                .focusable(false)
                             } else {
                                 Button("Install Binary") {
                                     binaryManager.installBinary()
@@ -167,6 +170,7 @@ struct ContentView: View {
                                 .buttonStyle(ModernButtonStyle(isPrimary: true))
                                 .disabled(binaryManager.isProcessing)
                                 .frame(maxWidth: .infinity)
+                                .focusable(false)
                             }
                         }
                         .frame(height: 44) // Fixed height for button area
