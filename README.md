@@ -46,28 +46,28 @@ Clean, modern API with TypeScript support, comprehensive documentation, and easy
 
 This repository contains all the components needed to run Native Foundation Models on your Mac:
 
-### 📁 [`/macOS-container-app`](./macOS-container-app) - [README](./macOS-container-app/README.md)
+### 📁 [`/macOS-container-app`](./macOS-container-app)
 The macOS installer application that sets up Native Foundation Models on your system. This SwiftUI app handles:
 - Installation of the native binary to `~/bin`
 - Configuration of native messaging host
 - Chrome extension installation guidance
 - System requirements verification
 
-### 📁 [`/NativeFoundationModels`](./NativeFoundationModels) - [README](./NativeFoundationModels/README.md)
+### 📁 [`/NativeFoundationModels`](./NativeFoundationModels)
 The core native application that interfaces with Apple's FoundationModels framework. Written in Swift, this component:
 - Provides the native messaging host implementation
 - Handles communication between the browser and Apple's AI models
 - Manages model initialization and inference
 - Implements streaming responses
 
-### 📁 [`/native-foundation-models-extension`](./native-foundation-models-extension) - [README](./native-foundation-models-extension/README.md)
+### 📁 [`/native-foundation-models-extension`](./native-foundation-models-extension)
 The Chrome extension that bridges web applications with the native host. Features include:
 - JavaScript API (`window.nativeFoundationModels`)
 - Automatic connection management
 - Error handling and retries
 - TypeScript type definitions
 
-### 📁 [`/docs`](./docs) - [README](./docs/README.md)
+### 📁 [`/docs`](./docs)
 The project website and documentation, including:
 - Interactive demos
 - API documentation
