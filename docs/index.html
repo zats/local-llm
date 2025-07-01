@@ -216,6 +216,43 @@
             white-space: pre-wrap;
         }
         
+        .copy-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.7);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+        
+        .code-block:hover .copy-button {
+            opacity: 1;
+        }
+        
+        .copy-button:hover {
+            background: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.9);
+            border-color: rgba(255,255,255,0.3);
+        }
+        
+        .copy-button:active {
+            transform: scale(0.95);
+        }
+        
+        .copy-button.copied {
+            background: rgba(46,204,113,0.2);
+            border-color: rgba(46,204,113,0.4);
+            color: #2ecc71;
+        }
+        
         .code-block::before {
             content: attr(data-title);
             position: absolute;
@@ -496,6 +533,15 @@
             footer {
                 padding: 40px 0 30px !important;
             }
+            
+            .copy-button {
+                opacity: 1;
+                top: 10px;
+                right: 10px;
+                padding: 5px 10px;
+                font-size: 11px;
+                width: auto;
+            }
         }
     </style>
 </head>
@@ -593,7 +639,9 @@
                         <div class="code-section">
                 <h3>Simple. Powerful. Ready to Use.</h3>
                 <div class="code-examples">
-                    <div class="code-block" data-title="Check Availability"><pre><code class="language-javascript">// Verify NativeFoundationModels is ready
+                    <div class="code-block" data-title="Check Availability">
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                        <pre><code class="language-javascript">// Verify NativeFoundationModels is ready
 const isReady = await window.nativeFoundationModels
   .checkAvailability();
 
@@ -601,13 +649,17 @@ if (isReady.available) {
   console.log('NativeFoundationModels ready! 🚀');
 }</code></pre></div>
 
-                    <div class="code-block" data-title="Get Completion"><pre><code class="language-javascript">// Generate content instantly
+                    <div class="code-block" data-title="Get Completion">
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                        <pre><code class="language-javascript">// Generate content instantly
 const result = await window.nativeFoundationModels
   .getCompletion('Explain quantum computing');
 
 console.log(result.response);</code></pre></div>
 
-                    <div class="code-block" data-title="Stream Responses"><pre><code class="language-javascript">// Real-time streaming
+                    <div class="code-block" data-title="Stream Responses">
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                        <pre><code class="language-javascript">// Real-time streaming
 const stream = await window.nativeFoundationModels
   .getCompletionStream('Write a story');
 
@@ -615,7 +667,9 @@ for await (const token of stream) {
   updateUI(token); // Live updates
 }</code></pre></div>
 
-                    <div class="code-block" data-title="Advanced Options"><pre><code class="language-javascript">// Configure behavior
+                    <div class="code-block" data-title="Advanced Options">
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                        <pre><code class="language-javascript">// Configure behavior
 const result = await window.nativeFoundationModels
   .getCompletion(prompt, {
     temperature: 0.8,
@@ -767,6 +821,40 @@ const result = await window.nativeFoundationModels
                 }
             }, 1000);
         });
+        
+        // Copy code functionality
+        function copyCode(button) {
+            const codeBlock = button.parentElement;
+            const code = codeBlock.querySelector('code').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = code;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
     </script>
     <script src="prism.js"></script>
 </body>
