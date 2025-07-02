@@ -75,16 +75,23 @@ The project website and documentation, including:
 4. **Start coding**: Use the simple JavaScript API in your web applications
 
 ```javascript
-// Check if Native Foundation Models is available
-const isReady = await window.nativeFoundationModels.checkAvailability();
+// Check if Native Foundation Models is available (OpenAI-compatible)
+const status = await window.nativeFoundationModels.checkAvailability();
+if (status.available) {
+  console.log('Ready to use!');
+}
 
-// Generate content
+// Generate content (OpenAI-compatible format)
 const result = await window.nativeFoundationModels.getCompletion('Explain quantum computing');
+console.log(result.choices[0].message.content);
 
-// Stream responses
+// Stream responses (yields OpenAI-compatible chunks)
 const stream = await window.nativeFoundationModels.getCompletionStream('Write a story');
-for await (const token of stream) {
-  updateUI(token);
+for await (const chunk of stream) {
+  const content = chunk.choices[0]?.delta?.content;
+  if (content) {
+    updateUI(content); // Extract content from chunk
+  }
 }
 ```
 

@@ -642,11 +642,14 @@
                     <div class="code-block" data-title="Check Availability">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
                         <pre><code class="language-javascript">// Verify NativeFoundationModels is ready
-const isReady = await window.nativeFoundationModels
+const status = await window.nativeFoundationModels
   .checkAvailability();
 
-if (isReady.available) {
+if (status.available) {
   console.log('NativeFoundationModels ready! 🚀');
+  console.log('Status:', status);
+  // { id: "availability-...", object: "availability.check", 
+  //   created: 1234567890, available: true, reason: "Ready" }
 }</code></pre></div>
 
                     <div class="code-block" data-title="Get Completion">
@@ -655,16 +658,24 @@ if (isReady.available) {
 const result = await window.nativeFoundationModels
   .getCompletion('Explain quantum computing');
 
-console.log(result.response);</code></pre></div>
+console.log(result.choices[0].message.content);
+// Full response: { id: "chatcmpl-...", object: "chat.completion",
+//   created: 1234567890, choices: [...] }</code></pre></div>
 
                     <div class="code-block" data-title="Stream Responses">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// Real-time streaming
+                        <pre><code class="language-javascript">// Real-time streaming - yields OpenAI-compatible chunks
 const stream = await window.nativeFoundationModels
   .getCompletionStream('Write a story');
 
-for await (const token of stream) {
-  updateUI(token); // Live updates
+for await (const chunk of stream) {
+  const content = chunk.choices[0]?.delta?.content;
+  if (content) {
+    updateUI(content); // Live updates
+  }
+  console.log(chunk);
+  // { id: "chatcmpl-...", object: "chat.completion.chunk", 
+  //   created: 1234567890, choices: [{delta: {content: "..."}}] }
 }</code></pre></div>
 
                     <div class="code-block" data-title="Advanced Options">
@@ -673,7 +684,7 @@ for await (const token of stream) {
 const result = await window.nativeFoundationModels
   .getCompletion(prompt, {
     temperature: 0.8,
-    maxTokens: 500
+    maximumResponseTokens: 500
   });</code></pre></div>
                 </div>
             </div>
@@ -796,9 +807,14 @@ const result = await window.nativeFoundationModels
                 output.innerHTML += `[${timestamp}] <span class="info">🌊 Streaming live:</span>\n`;
                 output.innerHTML += `<span id="${streamingLineId}" class="success"></span>\n`;
                 
-                for await (const token of stream) {
-                    document.getElementById(streamingLineId).textContent = token;
-                    output.scrollTop = output.scrollHeight;
+                let result = '';
+                for await (const chunk of stream) {
+                    const content = chunk.choices?.[0]?.delta?.content;
+                    if (content) {
+                        result += content;
+                        document.getElementById(streamingLineId).textContent = result;
+                        output.scrollTop = output.scrollHeight;
+                    }
                 }
                 
                 log('✅ Streaming completed successfully!', 'success');

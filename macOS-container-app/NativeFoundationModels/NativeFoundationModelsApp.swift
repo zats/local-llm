@@ -62,7 +62,7 @@ class InstallationStepManager: ObservableObject {
     @Published var stepInProgress: [InstallationStep: Bool] = [:]
     
     private let binaryName = "nativefoundationmodels-native"
-    private let extensionId = "gflhiakgkhmcpaiedkjkalbilplchpbe"
+    private let extensionId = "jjmocainopehgedhgjpanckkalhiodmj"
     private var monitoringTimer: Timer?
     
     private var binaryURL: URL {
@@ -146,9 +146,7 @@ class InstallationStepManager: ObservableObject {
                 try FileManager.default.createDirectory(at: hostDir, withIntermediateDirectories: true)
                 NSWorkspace.shared.open(hostDir)
             } catch {
-                // If can't create, just try to open Application Support
-                let appSupport = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
-                NSWorkspace.shared.open(appSupport)
+                NSWorkspace.shared.open(URL.applicationSupportDirectory)
             }
         }
     }
@@ -162,9 +160,7 @@ class InstallationStepManager: ObservableObject {
             "Vivaldi/Default/Extensions"
         ]
         
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let applicationSupport = homeDir.appendingPathComponent("Library/Application Support")
-        
+        let applicationSupport = URL.applicationSupportDirectory
         for browserPath in browsers {
             let extensionPath = applicationSupport
                 .appendingPathComponent(browserPath)

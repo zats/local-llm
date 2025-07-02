@@ -131,6 +131,9 @@ class NativeMessagingApp: @unchecked Sendable {
             "requestId": requestId,
             "type": "availabilityResponse",
             "payload": [
+                "id": "availability-\(UUID().uuidString)",
+                "object": "availability.check",
+                "created": Int(Date().timeIntervalSince1970),
                 "available": available,
                 "reason": available ? "Ready" : "LLM framework not available"
             ]
@@ -160,7 +163,16 @@ class NativeMessagingApp: @unchecked Sendable {
                     "requestId": requestIdCopy,
                     "type": "completionResponse", 
                     "payload": [
-                        "response": response
+                        "id": "chatcmpl-\(UUID().uuidString)",
+                        "object": "chat.completion",
+                        "created": Int(Date().timeIntervalSince1970),
+                        "choices": [[
+                            "message": [
+                                "role": "assistant",
+                                "content": response
+                            ],
+                            "finish_reason": "stop"
+                        ]]
                     ]
                 ]
                 
@@ -187,22 +199,67 @@ class NativeMessagingApp: @unchecked Sendable {
             do {
                 // Use streamResponseDirect for API calls (no conversation history)
                 let session = try LanguageModelSession()
+                let streamId = "chatcmpl-\(UUID().uuidString)"
+                let createdTime = Int(Date().timeIntervalSince1970)
                 
-                for try await token in session.streamResponseDirect(to: promptCopy, options: options) {
-                    let chunkMessage: [String: Any] = [
-                        "requestId": requestIdCopy,
-                        "type": "streamChunk",
-                        "payload": [
-                            "token": token
+                var previousContent = ""
+                var isFirstChunk = true
+                for try await accumulatedContent in session.streamResponseDirect(to: promptCopy, options: options) {
+                    // Calculate the delta (new content only)
+                    let deltaContent = String(accumulatedContent.dropFirst(previousContent.count))
+                    previousContent = accumulatedContent
+                    
+                    // Send role in first chunk if we have content
+                    if isFirstChunk && !deltaContent.isEmpty {
+                        // First send role-only chunk
+                        let roleChunkMessage: [String: Any] = [
+                            "requestId": requestIdCopy,
+                            "type": "streamChunk",
+                            "payload": [
+                                "id": streamId,
+                                "object": "chat.completion.chunk",
+                                "created": createdTime,
+                                "choices": [[
+                                    "delta": ["role": "assistant"],
+                                    "finish_reason": NSNull()
+                                ]]
+                            ]
                         ]
-                    ]
-                    sendMessage(chunkMessage)
+                        sendMessage(roleChunkMessage)
+                        isFirstChunk = false
+                    }
+                    
+                    // Send content chunk (if we have content)
+                    if !deltaContent.isEmpty {
+                        let chunkMessage: [String: Any] = [
+                            "requestId": requestIdCopy,
+                            "type": "streamChunk",
+                            "payload": [
+                                "id": streamId,
+                                "object": "chat.completion.chunk",
+                                "created": createdTime,
+                                "choices": [[
+                                    "delta": ["content": deltaContent],
+                                    "finish_reason": NSNull()
+                                ]]
+                            ]
+                        ]
+                        sendMessage(chunkMessage)
+                    }
                 }
                 
                 let endMessage: [String: Any] = [
                     "requestId": requestIdCopy,
                     "type": "streamEnd",
-                    "payload": [:]
+                    "payload": [
+                        "id": streamId,
+                        "object": "chat.completion.chunk",
+                        "created": createdTime,
+                        "choices": [[
+                            "delta": [:],
+                            "finish_reason": "stop"
+                        ]]
+                    ]
                 ]
                 sendMessage(endMessage)
                 
@@ -255,24 +312,69 @@ class NativeMessagingApp: @unchecked Sendable {
         
         Task {
             do {
+                let streamId = "chatcmpl-\(UUID().uuidString)"
+                let createdTime = Int(Date().timeIntervalSince1970)
                 
-                for try await token in session.streamResponse(to: promptCopy, options: options) {
-                    let chunkMessage: [String: Any] = [
-                        "requestId": requestIdCopy,
-                        "type": "streamChunk",
-                        "payload": [
-                            "sessionId": sessionIdCopy,
-                            "token": token
+                var previousContent = ""
+                var isFirstChunk = true
+                for try await accumulatedContent in session.streamResponse(to: promptCopy, options: options) {
+                    // Calculate the delta (new content only)
+                    let deltaContent = String(accumulatedContent.dropFirst(previousContent.count))
+                    previousContent = accumulatedContent
+                    
+                    // Send role in first chunk if we have content
+                    if isFirstChunk && !deltaContent.isEmpty {
+                        // First send role-only chunk
+                        let roleChunkMessage: [String: Any] = [
+                            "requestId": requestIdCopy,
+                            "type": "streamChunk",
+                            "payload": [
+                                "sessionId": sessionIdCopy,
+                                "id": streamId,
+                                "object": "chat.completion.chunk",
+                                "created": createdTime,
+                                "choices": [[
+                                    "delta": ["role": "assistant"],
+                                    "finish_reason": NSNull()
+                                ]]
+                            ]
                         ]
-                    ]
-                    sendMessage(chunkMessage)
+                        sendMessage(roleChunkMessage)
+                        isFirstChunk = false
+                    }
+                    
+                    // Send content chunk (if we have content)
+                    if !deltaContent.isEmpty {
+                        let chunkMessage: [String: Any] = [
+                            "requestId": requestIdCopy,
+                            "type": "streamChunk",
+                            "payload": [
+                                "sessionId": sessionIdCopy,
+                                "id": streamId,
+                                "object": "chat.completion.chunk",
+                                "created": createdTime,
+                                "choices": [[
+                                    "delta": ["content": deltaContent],
+                                    "finish_reason": NSNull()
+                                ]]
+                            ]
+                        ]
+                        sendMessage(chunkMessage)
+                    }
                 }
                 
                 let endMessage: [String: Any] = [
                     "requestId": requestIdCopy,
                     "type": "streamEnd",
                     "payload": [
-                        "sessionId": sessionIdCopy
+                        "sessionId": sessionIdCopy,
+                        "id": streamId,
+                        "object": "chat.completion.chunk",
+                        "created": createdTime,
+                        "choices": [[
+                            "delta": [:],
+                            "finish_reason": "stop"
+                        ]]
                     ]
                 ]
                 sendMessage(endMessage)
@@ -365,8 +467,12 @@ class NativeMessagingApp: @unchecked Sendable {
         var errorMessage: [String: Any] = [
             "type": "error",
             "payload": [
-                "message": message,
-                "code": "native_error"
+                "error": [
+                    "message": message,
+                    "type": "native_error",
+                    "param": NSNull(),
+                    "code": "native_error"
+                ]
             ]
         ]
         
@@ -411,9 +517,12 @@ class NativeMessagingApp: @unchecked Sendable {
             "requestId": requestId,
             "type": "error",
             "payload": [
-                "message": userMessage,
-                "code": errorCode,
-                "technical_details": error.localizedDescription
+                "error": [
+                    "message": userMessage,
+                    "type": errorCode,
+                    "param": NSNull(),
+                    "code": errorCode
+                ]
             ]
         ]
         
@@ -455,9 +564,12 @@ class NativeMessagingApp: @unchecked Sendable {
             "type": "error",
             "payload": [
                 "sessionId": sessionId,
-                "message": userMessage,
-                "code": errorCode,
-                "technical_details": error.localizedDescription
+                "error": [
+                    "message": userMessage,
+                    "type": errorCode,
+                    "param": NSNull(),
+                    "code": errorCode
+                ]
             ]
         ]
         

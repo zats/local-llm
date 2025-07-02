@@ -10,13 +10,22 @@
 
     async checkAvailability() {
       try {
-        return await this.sendMessage('checkAvailability');
+        const response = await this.sendMessage('checkAvailability');
+        // Return OpenAI-compatible availability response
+        return response.payload;
       } catch (error) {
         // For checkAvailability, we always want to show the dialog on error
         if (window.nfmDownloadDialog) {
           window.nfmDownloadDialog.show();
         }
-        throw error;
+        // Return OpenAI-compatible error format
+        throw {
+          error: {
+            message: error.message,
+            type: 'availability_error',
+            code: 'availability_check_failed'
+          }
+        };
       }
     }
 
@@ -31,16 +40,29 @@
     }
 
     async getCompletion(prompt, options = {}) {
-      return this.sendMessage('getCompletion', { prompt, ...options });
+      try {
+        const response = await this.sendMessage('getCompletion', { prompt, ...options });
+        // Return the full OpenAI-compatible response format
+        return response.payload;
+      } catch (error) {
+        // Return OpenAI-compatible error format
+        throw {
+          error: {
+            message: error.message,
+            type: 'completion_error',
+            code: 'completion_failed'
+          }
+        };
+      }
     }
 
     async* getCompletionStream(prompt, options = {}) {
       const requestId = this.generateRequestId();
       
-      const tokens = [];
+      const chunks = [];
       let streamComplete = false;
       let streamError = null;
-      let tokenWaiters = [];
+      let chunkWaiters = [];
       
       const messageHandler = (event) => {
         if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
@@ -55,30 +77,45 @@
               // Also show dialog for "LLM not available" errors
               window.nfmDownloadDialog.show();
             }
-            streamError = new Error(error);
+            streamError = {
+              error: {
+                message: error,
+                type: 'stream_error',
+                code: 'stream_failed'
+              }
+            };
             streamComplete = true;
             // Wake up any waiting promises
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
             return;
           }
           
           if (data.type === 'streamChunk') {
-            tokens.push(data.payload.token);
+            // Yield the full OpenAI-compatible chunk
+            chunks.push(data.payload);
             // Wake up any waiting promises
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           } else if (data.type === 'streamEnd') {
+            // Yield the final chunk
+            chunks.push(data.payload);
             streamComplete = true;
             // Wake up any waiting promises
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           } else if (data.type === 'error') {
-            streamError = new Error(data.payload.message);
+            streamError = {
+              error: {
+                message: data.payload.error?.message || data.payload.message,
+                type: 'stream_error',
+                code: 'stream_failed'
+              }
+            };
             streamComplete = true;
             // Wake up any waiting promises
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           }
         }
       };
@@ -94,27 +131,27 @@
           payload: { prompt, ...options }
         }, '*');
         
-        // Yield tokens as they arrive
-        let tokenIndex = 0;
+        // Yield OpenAI-compatible chunks as they arrive
+        let chunkIndex = 0;
         while (true) {
           if (streamError) {
             throw streamError;
           }
           
-          // Yield any new tokens that have arrived
-          while (tokenIndex < tokens.length) {
-            yield tokens[tokenIndex];
-            tokenIndex++;
+          // Yield any new chunks that have arrived
+          while (chunkIndex < chunks.length) {
+            yield chunks[chunkIndex];
+            chunkIndex++;
           }
           
-          // If we've yielded all tokens and stream is complete, we're done
-          if (streamComplete && tokenIndex >= tokens.length) {
+          // If we've yielded all chunks and stream is complete, we're done
+          if (streamComplete && chunkIndex >= chunks.length) {
             break;
           }
           
-          // Wait for more tokens to arrive
+          // Wait for more chunks to arrive
           await new Promise(resolve => {
-            tokenWaiters.push(resolve);
+            chunkWaiters.push(resolve);
           });
         }
         
@@ -133,12 +170,7 @@
             
             const { success, data, error } = event.data;
             if (success) {
-              // For getCompletion, extract the response text from payload
-              if (command === 'getCompletion' && data.payload && data.payload.response) {
-                resolve({ response: data.payload.response });
-              } else {
-                resolve(data);
-              }
+              resolve(data);
             } else {
               // Check if it's a native app not found error
               console.log('NativeFoundationModels error:', error, 'errorType:', event.data.errorType);
@@ -192,13 +224,25 @@
         throw new Error('Cannot send message to an ended session');
       }
 
-      const result = await this.api.sendMessage('sendPlaygroundMessage', {
-        sessionId: this.id,
-        prompt,
-        ...options
-      });
-      
-      return result.payload?.response || result;
+      try {
+        const result = await this.api.sendMessage('sendPlaygroundMessage', {
+          sessionId: this.id,
+          prompt,
+          ...options
+        });
+        
+        // Return OpenAI-compatible format (remove sessionId for API compatibility)
+        const { sessionId, ...openAIResponse } = result.payload;
+        return openAIResponse;
+      } catch (error) {
+        throw {
+          error: {
+            message: error.message,
+            type: 'session_completion_error',
+            code: 'session_completion_failed'
+          }
+        };
+      }
     }
 
     async* sendMessageStream(prompt, options = {}) {
@@ -208,36 +252,53 @@
 
       const requestId = this.api.generateRequestId();
       
-      const tokens = [];
+      const chunks = [];
       let streamComplete = false;
       let streamError = null;
-      let tokenWaiters = [];
+      let chunkWaiters = [];
       
       const messageHandler = (event) => {
         if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
           const { success, data, error } = event.data;
           
           if (!success) {
-            streamError = new Error(error);
+            streamError = {
+              error: {
+                message: error,
+                type: 'session_stream_error',
+                code: 'session_stream_failed'
+              }
+            };
             streamComplete = true;
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
             return;
           }
           
           if (data.type === 'streamChunk' && data.payload.sessionId === this.id) {
-            tokens.push(data.payload.token);
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            // Yield the full OpenAI-compatible chunk (excluding sessionId for API compatibility)
+            const { sessionId, ...openAIChunk } = data.payload;
+            chunks.push(openAIChunk);
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           } else if (data.type === 'streamEnd' && data.payload.sessionId === this.id) {
+            // Yield the final chunk (excluding sessionId)
+            const { sessionId, ...openAIChunk } = data.payload;
+            chunks.push(openAIChunk);
             streamComplete = true;
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           } else if (data.type === 'error' && data.payload.sessionId === this.id) {
-            streamError = new Error(data.payload.message);
+            streamError = {
+              error: {
+                message: data.payload.error?.message || data.payload.message,
+                type: 'session_stream_error',
+                code: 'session_stream_failed'
+              }
+            };
             streamComplete = true;
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           }
         }
       };
@@ -253,24 +314,24 @@
           payload: { sessionId: this.id, prompt, ...options }
         }, '*');
         
-        // Yield tokens as they arrive
-        let tokenIndex = 0;
+        // Yield OpenAI-compatible chunks as they arrive
+        let chunkIndex = 0;
         while (true) {
           if (streamError) {
             throw streamError;
           }
           
-          while (tokenIndex < tokens.length) {
-            yield tokens[tokenIndex];
-            tokenIndex++;
+          while (chunkIndex < chunks.length) {
+            yield chunks[chunkIndex];
+            chunkIndex++;
           }
           
-          if (streamComplete && tokenIndex >= tokens.length) {
+          if (streamComplete && chunkIndex >= chunks.length) {
             break;
           }
           
           await new Promise(resolve => {
-            tokenWaiters.push(resolve);
+            chunkWaiters.push(resolve);
           });
         }
         
