@@ -8,8 +8,16 @@
 import SwiftUI
 import Foundation
 import Combine
+import Sparkle
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    fileprivate let updaterController: SPUStandardUpdaterController
+    
+    override init() {
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        super.init()
+    }
+    
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
     }
@@ -29,6 +37,9 @@ struct NativeFoundationModelsApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView(updater: appDelegate.updaterController.updater)
+            }
         }
     }
     

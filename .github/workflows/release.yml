@@ -1,0 +1,143 @@
+name: Build and Release
+# 
+# REQUIREMENTS:
+# - This app requires macOS 26.0+ and Xcode 26+
+# - GitHub Actions runners may not have Xcode 26 beta yet
+# - Manual releases may be needed until Xcode 26 becomes stable
+#
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest  # Use latest available macOS runner
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for changelog
+      
+      - name: Check Available Xcode Versions
+        run: |
+          ls /Applications/Xcode*
+          xcodebuild -version
+      
+      - name: Set up Xcode 26 (Beta)
+        run: |
+          # Try to use Xcode 26 if available, otherwise use latest
+          if [ -d "/Applications/Xcode_26.0.0-Beta.app" ]; then
+            sudo xcode-select -switch /Applications/Xcode_26.0.0-Beta.app
+            echo "Using Xcode 26 Beta"
+          elif [ -d "/Applications/Xcode-26.0.0-Beta.app" ]; then
+            sudo xcode-select -switch /Applications/Xcode-26.0.0-Beta.app
+            echo "Using Xcode 26 Beta"
+          else
+            echo "Xcode 26 not available, using latest stable"
+            echo "WARNING: macOS 26 target may not be supported"
+          fi
+          xcodebuild -version
+      
+      - name: Import Certificates
+        env:
+          CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
+          CERTIFICATES_P12_PASSWORD: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          
+          # Import certificates
+          echo "$CERTIFICATES_P12" | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$CERTIFICATES_P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+      
+      - name: Build and Archive
+        run: |
+          cd macOS-container-app
+          xcodebuild -project NativeFoundationModels.xcodeproj \
+            -scheme NativeFoundationModels \
+            -configuration Release \
+            -archivePath $PWD/build/NativeFoundationModels.xcarchive \
+            archive
+      
+      - name: Export Archive
+        run: |
+          cd macOS-container-app
+          xcodebuild -exportArchive \
+            -archivePath $PWD/build/NativeFoundationModels.xcarchive \
+            -exportPath $PWD/build \
+            -exportOptionsPlist ExportOptions.plist
+      
+      - name: Notarize App
+        env:
+          NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
+          NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
+          NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
+        run: |
+          cd macOS-container-app/build
+          
+          # Create ZIP for notarization
+          ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
+          
+          # Notarize
+          xcrun notarytool submit "NativeFoundationModels.zip" \
+            --apple-id "$NOTARIZATION_APPLE_ID" \
+            --team-id "$NOTARIZATION_TEAM_ID" \
+            --password "$NOTARIZATION_PASSWORD" \
+            --wait
+          
+          # Staple the ticket
+          xcrun stapler staple "NativeFoundationModels.app"
+          
+          # Re-create ZIP with stapled app
+          rm "NativeFoundationModels.zip"
+          ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
+      
+      - name: Generate Appcast
+        run: |
+          # Install Sparkle tools if needed
+          if ! command -v generate_appcast &> /dev/null; then
+            curl -L https://github.com/sparkle-project/Sparkle/releases/latest/download/Sparkle-2.7.1.tar.xz | tar xz
+            export PATH="$PWD/Sparkle/bin:$PATH"
+          fi
+          
+          # Copy release to updates directory
+          mkdir -p docs/updates
+          cp macOS-container-app/build/NativeFoundationModels.zip docs/updates/
+          
+          # Generate appcast
+          generate_appcast docs/updates -o docs/appcast.xml
+      
+      - name: Create Release Notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          cat > docs/release-notes/$VERSION.md << EOF
+          ## What's New in v$VERSION
+          
+          $(git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD | grep -E "^- (feat|fix|perf):" || echo "- General improvements and bug fixes")
+          
+          ### Full Changelog
+          $(git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD)
+          EOF
+      
+      - name: Commit Appcast Updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/appcast.xml docs/updates/ docs/release-notes/
+          git commit -m "Update appcast for version ${GITHUB_REF#refs/tags/}" || true
+          git push origin HEAD:main
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: macOS-container-app/build/NativeFoundationModels.zip
+          body_path: docs/release-notes/${{ github.ref_name }}.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

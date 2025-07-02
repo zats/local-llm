@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>NativeFoundationModels Updates</title>
+    <description>Most recent updates to NativeFoundationModels</description>
+    <language>en</language>
+    <link>https://zats.github.io/native-foundation-models/</link>
+    
+    <!-- Template for new releases - copy and modify this item for each release -->
+    <item>
+      <title>Version 1.0.0</title>
+      <pubDate>Tue, 01 Jul 2025 12:00:00 +0000</pubDate>
+      <sparkle:version>1.0.0</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/zats/native-foundation-models/releases/download/v1.0.0/NativeFoundationModels.zip"
+                 sparkle:edSignature="REPLACE_WITH_SIGNATURE"
+                 length="0"
+                 type="application/octet-stream"/>
+      <sparkle:releaseNotesLink>
+        https://zats.github.io/native-foundation-models/release-notes/1.0.0.html
+      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <h2>What's New in v1.0.0</h2>
+        <ul>
+          <li>Initial release of NativeFoundationModels</li>
+          <li>OpenAI-compatible API responses</li>
+          <li>Real-time streaming support</li>
+          <li>Native macOS integration</li>
+        </ul>
+      ]]></description>
+    </item>
+    
+  </channel>
+</rss>

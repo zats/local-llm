@@ -1,5 +1,6 @@
 # Build artifacts
 .build/
+build/
 *.dSYM/
 
 # IDE files
@@ -40,3 +41,7 @@ logs/
 
 # Sapling/Source control
 .sl/
+
+# Sparkle signing keys (keep these secret!)
+.sparkle-keys/
+Sparkle/
