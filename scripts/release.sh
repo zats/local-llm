@@ -122,8 +122,21 @@ cp "$BUILD_DIR/NativeFoundationModels.zip" "$UPDATES_DIR/"
 
 # Generate appcast using Sparkle tools
 log "Generating appcast..."
+GENERATE_APPCAST_PATH=""
+
+# Look for generate_appcast in common locations
 if command -v generate_appcast &> /dev/null; then
-    generate_appcast "$UPDATES_DIR" -o "$APPCAST_PATH"
+    GENERATE_APPCAST_PATH="generate_appcast"
+elif [[ -f "$BUILD_DIR/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast" ]]; then
+    GENERATE_APPCAST_PATH="$BUILD_DIR/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast"
+elif [[ -f "$BUILD_DIR/DerivedData/SourcePackages/checkouts/Sparkle/generate_appcast" ]]; then
+    GENERATE_APPCAST_PATH="$BUILD_DIR/DerivedData/SourcePackages/checkouts/Sparkle/generate_appcast"
+fi
+
+if [[ -n "$GENERATE_APPCAST_PATH" ]]; then
+    log "Using generate_appcast at: $GENERATE_APPCAST_PATH"
+    "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH"
+    log "Appcast generated successfully!"
 else
     warn "generate_appcast not found. You'll need to install Sparkle tools:"
     warn "Download from: https://github.com/sparkle-project/Sparkle/releases"
