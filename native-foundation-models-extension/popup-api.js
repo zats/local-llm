@@ -28,26 +28,29 @@
     async* getCompletionStream(prompt, options = {}) {
       const requestId = this.generateRequestId();
       
-      const tokens = [];
+      const chunks = [];
       let streamComplete = false;
       let streamError = null;
-      let tokenWaiters = [];
+      let chunkWaiters = [];
       
       const messageHandler = (message) => {
         if (message.requestId === requestId) {
           if (message.type === 'streamChunk') {
-            tokens.push(message.payload.token);
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            // Store the full OpenAI-compatible chunk
+            chunks.push(message.payload);
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           } else if (message.type === 'streamEnd') {
+            // Store the final OpenAI-compatible chunk
+            chunks.push(message.payload);
             streamComplete = true;
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           } else if (message.type === 'error') {
             streamError = new Error(message.payload.message);
             streamComplete = true;
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           }
         }
       };
@@ -58,24 +61,24 @@
         // Send the streaming request
         await this.sendToBackground('getCompletionStream', { prompt, ...options }, requestId);
         
-        // Yield tokens as they arrive
-        let tokenIndex = 0;
+        // Yield chunks as they arrive
+        let chunkIndex = 0;
         while (true) {
           if (streamError) {
             throw streamError;
           }
           
-          while (tokenIndex < tokens.length) {
-            yield tokens[tokenIndex];
-            tokenIndex++;
+          while (chunkIndex < chunks.length) {
+            yield chunks[chunkIndex];
+            chunkIndex++;
           }
           
-          if (streamComplete && tokenIndex >= tokens.length) {
+          if (streamComplete && chunkIndex >= chunks.length) {
             break;
           }
           
           await new Promise(resolve => {
-            tokenWaiters.push(resolve);
+            chunkWaiters.push(resolve);
           });
         }
         
@@ -145,45 +148,31 @@
 
       const requestId = this.api.generateRequestId();
       
-      const tokens = [];
+      const chunks = [];
       let streamComplete = false;
       let streamError = null;
-      let tokenWaiters = [];
+      let chunkWaiters = [];
       
       const messageHandler = (message) => {
         if (message.requestId === requestId) {
           if (message.type === 'streamChunk' && message.payload.sessionId === this.id) {
-            const newToken = message.payload.token;
-            const currentContent = tokens.join('');
-            
-            // Check if this is cumulative or incremental
-            if (tokens.length === 0) {
-              // First token
-              tokens.push(newToken);
-            } else {
-              // Check if it's cumulative (contains previous content)
-              if (newToken.startsWith(currentContent)) {
-                // It's cumulative - extract only the new part
-                const newPart = newToken.slice(currentContent.length);
-                if (newPart) {
-                  tokens.push(newPart);
-                }
-              } else {
-                // It's incremental
-                tokens.push(newToken);
-              }
-            }
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            // Store the full OpenAI-compatible chunk (excluding sessionId for API compatibility)
+            const { sessionId, ...openAIChunk } = message.payload;
+            chunks.push(openAIChunk);
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           } else if (message.type === 'streamEnd' && message.payload.sessionId === this.id) {
+            // Store the final OpenAI-compatible chunk (excluding sessionId)
+            const { sessionId, ...openAIChunk } = message.payload;
+            chunks.push(openAIChunk);
             streamComplete = true;
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           } else if (message.type === 'error' && message.payload.sessionId === this.id) {
             streamError = new Error(message.payload.message);
             streamComplete = true;
-            tokenWaiters.forEach(resolve => resolve());
-            tokenWaiters = [];
+            chunkWaiters.forEach(resolve => resolve());
+            chunkWaiters = [];
           }
         }
       };
@@ -198,24 +187,24 @@
           ...options
         }, requestId);
         
-        // Yield tokens as they arrive
-        let tokenIndex = 0;
+        // Yield chunks as they arrive
+        let chunkIndex = 0;
         while (true) {
           if (streamError) {
             throw streamError;
           }
           
-          while (tokenIndex < tokens.length) {
-            yield tokens[tokenIndex];
-            tokenIndex++;
+          while (chunkIndex < chunks.length) {
+            yield chunks[chunkIndex];
+            chunkIndex++;
           }
           
-          if (streamComplete && tokenIndex >= tokens.length) {
+          if (streamComplete && chunkIndex >= chunks.length) {
             break;
           }
           
           await new Promise(resolve => {
-            tokenWaiters.push(resolve);
+            chunkWaiters.push(resolve);
           });
         }
         

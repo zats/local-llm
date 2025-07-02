@@ -48,6 +48,9 @@ class NativeFoundationModelsBackground {
     // Store response handler
     this.requestHandlers.set(requestId, sendResponse);
     
+    // Log what we're sending to the LLM
+    console.log('Sending to LLM:', { command, payload });
+    
     // Forward to native app
     this.nativePort.postMessage({ requestId, command, payload });
     
@@ -56,24 +59,9 @@ class NativeFoundationModelsBackground {
 
   handleNativeMessage(message) {
     const { requestId, type, payload } = message;
+    console.log('Received message from native app:', message);
     
-    if (type === 'streamChunk' || type === 'streamEnd' || type === 'error') {
-      // Forward streaming messages to popup if it's listening
-      chrome.runtime.sendMessage({ requestId, type, payload }).catch(() => {
-        // Popup might not be open, ignore error
-      });
-      
-      // Forward streaming messages to content scripts
-      chrome.tabs.query({}, (tabs) => {
-        tabs.forEach(tab => {
-          chrome.tabs.sendMessage(tab.id, message).catch(() => {
-            // Content script might not be active, ignore error
-          });
-        });
-      });
-    }
-    
-    // Handle regular responses
+    // Handle regular responses and streaming via sendResponse callback
     if (requestId && this.requestHandlers.has(requestId)) {
       const sendResponse = this.requestHandlers.get(requestId);
       sendResponse(message);
@@ -82,6 +70,17 @@ class NativeFoundationModelsBackground {
       if (type !== 'streamChunk') {
         this.requestHandlers.delete(requestId);
       }
+    }
+    
+    // Forward streaming messages to content scripts (for website injection)
+    if (type === 'streamChunk' || type === 'streamEnd' || type === 'error') {
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+          chrome.tabs.sendMessage(tab.id, message).catch(() => {
+            // Content script might not be active, ignore error
+          });
+        });
+      });
     }
   }
 

@@ -242,10 +242,14 @@ class NativeFoundationModelsPlayground {
       this.streamingContent = '';
       
       // Stream the response using the unified API
-      for await (const token of this.currentSession.sendMessageStream(prompt, options)) {
-        this.currentAssistantMessage.textContent += token;
-        this.streamingContent += token;
-        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      for await (const chunk of this.currentSession.sendMessageStream(prompt, options)) {
+        // Extract content from OpenAI-compatible chunk format
+        const content = chunk.choices?.[0]?.delta?.content;
+        if (content) {
+          this.currentAssistantMessage.textContent += content;
+          this.streamingContent += content;
+          this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+        }
       }
       
       // Add assistant response to conversation history
