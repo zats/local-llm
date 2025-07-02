@@ -311,7 +311,7 @@ read -p "Push changes and tag to GitHub now? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     log "Pushing to GitHub..."
-    git push origin main
+    git push origin HEAD:main
     git push origin "v$VERSION"
     
     log "Creating GitHub release..."
