@@ -32,6 +32,36 @@ if [[ -n $(git status --porcelain) ]]; then
     error "Git working directory is not clean. Commit or stash changes first."
 fi
 
+# Load credentials if available (for local releases)
+PROJECT_CREDS_FILE="$PROJECT_DIR/.release-credentials"
+GLOBAL_CREDS_FILE="$HOME/.apple-notarization-creds/config"
+
+if [[ -z "$CI" ]]; then
+    # Try project-specific credentials first
+    if [[ -f "$PROJECT_CREDS_FILE" ]]; then
+        log "Loading project credentials..."
+        source "$PROJECT_CREDS_FILE"
+    # Fall back to global credentials (read-only)
+    elif [[ -f "$GLOBAL_CREDS_FILE" ]]; then
+        log "Loading global credentials..."
+        source "$GLOBAL_CREDS_FILE"
+    fi
+fi
+
+# Function to save credentials for future use (project-specific only)
+function save_credentials() {
+    if [[ -z "$CI" ]]; then
+        log "Saving credentials to project directory..."
+        cat > "$PROJECT_CREDS_FILE" << EOF
+# Native Foundation Models Release Credentials
+export APPLE_ID="$APPLE_ID"
+export APPLE_TEAM_ID="$APPLE_TEAM_ID"
+export APPLE_APP_PASSWORD="$APPLE_APP_PASSWORD"
+EOF
+        chmod 600 "$PROJECT_CREDS_FILE"
+    fi
+}
+
 # Get version from command line or prompt
 if [[ -z $1 ]]; then
     echo "Current version: $(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags yet')"
@@ -86,10 +116,26 @@ log "Code signing application..."
 # Find the Developer ID Application certificate
 SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
 if [[ -n "$SIGNING_IDENTITY" ]]; then
-    codesign --force --sign "$SIGNING_IDENTITY" --options runtime "$BUILD_DIR/NativeFoundationModels.app"
+    log "Signing with certificate: $SIGNING_IDENTITY"
+    
+    # Sign all nested components first
+    find "$BUILD_DIR/NativeFoundationModels.app" -type f \( -name "*.dylib" -o -name "*.framework" -o -name "nativefoundationmodels-native" \) -exec codesign --force --sign "$SIGNING_IDENTITY" --options runtime {} \;
+    
+    # Sign the main app bundle
+    codesign --force --sign "$SIGNING_IDENTITY" --options runtime --deep "$BUILD_DIR/NativeFoundationModels.app"
+    
+    # Verify signature
+    log "Verifying code signature..."
+    if codesign --verify --deep --strict "$BUILD_DIR/NativeFoundationModels.app"; then
+        log "Code signature verified successfully"
+    else
+        warn "Code signature verification failed"
+    fi
+    
     log "Signed with: $SIGNING_IDENTITY"
 else
     warn "No Developer ID Application certificate found. App will not be signed."
+    warn "Notarization will likely fail without proper code signing."
 fi
 
 # Notarize app (requires Apple ID credentials)
@@ -97,30 +143,83 @@ log "Creating ZIP for distribution..."
 cd "$BUILD_DIR"
 ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
 
+# Check for notarization credentials and prompt if needed (local only)
+if [[ -z "$CI" && (-z "$APPLE_ID" || -z "$APPLE_TEAM_ID" || -z "$APPLE_APP_PASSWORD") ]]; then
+    echo ""
+    warn "Notarization credentials needed for production release:"
+    
+    if [[ -z "$APPLE_ID" ]]; then
+        read -p "Apple ID (email): " APPLE_ID
+    fi
+    
+    if [[ -z "$APPLE_TEAM_ID" ]]; then
+        read -p "Apple Team ID (10 characters): " APPLE_TEAM_ID
+    fi
+    
+    if [[ -z "$APPLE_APP_PASSWORD" ]]; then
+        echo "App-specific password (create at appleid.apple.com):"
+        read -s APPLE_APP_PASSWORD
+        echo ""
+    fi
+    
+    save_credentials
+fi
+
 if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
     log "Notarizing application..."
-    xcrun notarytool submit "NativeFoundationModels.zip" \
+    
+    # Submit for notarization and capture the submission ID
+    SUBMIT_OUTPUT=$(xcrun notarytool submit "NativeFoundationModels.zip" \
         --apple-id "$APPLE_ID" \
         --team-id "$APPLE_TEAM_ID" \
         --password "$APPLE_APP_PASSWORD" \
-        --wait
+        --wait \
+        --output-format json 2>&1)
     
-    log "Stapling notarization ticket..."
-    xcrun stapler staple "NativeFoundationModels.app"
+    SUBMIT_EXIT_CODE=$?
+    echo "$SUBMIT_OUTPUT"
     
-    # Re-create ZIP with stapled app
-    rm "NativeFoundationModels.zip"
-    ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
+    if [[ $SUBMIT_EXIT_CODE -eq 0 ]]; then
+        # Extract submission ID for detailed logs if needed
+        SUBMISSION_ID=$(echo "$SUBMIT_OUTPUT" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | head -1)
+        log "Notarization completed. Submission ID: $SUBMISSION_ID"
+        
+        # Check if notarization was successful
+        if echo "$SUBMIT_OUTPUT" | grep -q '"status":"Accepted"'; then
+            log "Notarization successful! Stapling ticket..."
+            xcrun stapler staple "NativeFoundationModels.app"
+            
+            # Re-create ZIP with stapled app
+            rm "NativeFoundationModels.zip"
+            ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
+        else
+            warn "Notarization failed or invalid. Check the logs:"
+            # Get detailed logs if submission ID is available
+            if [[ -n "$SUBMISSION_ID" ]]; then
+                xcrun notarytool log "$SUBMISSION_ID" \
+                    --apple-id "$APPLE_ID" \
+                    --team-id "$APPLE_TEAM_ID" \
+                    --password "$APPLE_APP_PASSWORD"
+            fi
+        fi
+    else
+        error "Failed to submit for notarization. Check your credentials and network connection."
+    fi
 else
     warn "Notarization credentials not provided. App will not be notarized."
-    warn "Set APPLE_ID, APPLE_TEAM_ID, and APPLE_APP_PASSWORD environment variables."
+    if [[ -n "$CI" ]]; then
+        warn "Set APPLE_ID, APPLE_TEAM_ID, and APPLE_APP_PASSWORD secrets."
+    else
+        warn "Run with credentials or set APPLE_ID, APPLE_TEAM_ID, and APPLE_APP_PASSWORD."
+    fi
 fi
 
-# Copy release to updates directory
+# Copy release to updates directory temporarily (for appcast generation)
 log "Preparing update files..."
+mkdir -p "$UPDATES_DIR"
 cp "$BUILD_DIR/NativeFoundationModels.zip" "$UPDATES_DIR/"
 
-# Generate appcast using Sparkle tools
+# Generate appcast using Sparkle tools (with GitHub Releases URLs)
 log "Generating appcast..."
 GENERATE_APPCAST_PATH=""
 
@@ -135,8 +234,27 @@ fi
 
 if [[ -n "$GENERATE_APPCAST_PATH" ]]; then
     log "Using generate_appcast at: $GENERATE_APPCAST_PATH"
-    "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH"
+    
+    # Use the private key file if it exists
+    PRIVATE_KEY_FILE="$PROJECT_DIR/.sparkle-keys/sparkle_private_key.pem"
+    DOWNLOAD_URL_PREFIX="https://github.com/zats/native-foundation-models/releases/download/v$VERSION/"
+    
+    if [[ -f "$PRIVATE_KEY_FILE" ]]; then
+        log "Using EdDSA private key file: $PRIVATE_KEY_FILE"
+        log "Using GitHub Releases URL prefix: $DOWNLOAD_URL_PREFIX"
+        "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
+            --ed-key-file "$PRIVATE_KEY_FILE" \
+            --download-url-prefix "$DOWNLOAD_URL_PREFIX"
+    else
+        log "No private key file found, using keychain"
+        "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
+            --download-url-prefix "$DOWNLOAD_URL_PREFIX"
+    fi
     log "Appcast generated successfully!"
+    
+    # Remove the ZIP from updates directory (it will be uploaded to GitHub Releases)
+    log "Cleaning up temporary files..."
+    rm -f "$UPDATES_DIR/NativeFoundationModels.zip"
 else
     warn "generate_appcast not found. You'll need to install Sparkle tools:"
     warn "Download from: https://github.com/sparkle-project/Sparkle/releases"
