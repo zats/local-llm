@@ -3,6 +3,14 @@
     <channel>
         <title>NativeFoundationModels</title>
         <item>
+            <title>1.3.4</title>
+            <pubDate>Wed, 02 Jul 2025 12:02:03 -0400</pubDate>
+            <sparkle:version>13</sparkle:version>
+            <sparkle:shortVersionString>1.3.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/zats/native-foundation-models/releases/download/v1.3.4/NativeFoundationModels.zip" length="3254335" type="application/octet-stream" sparkle:edSignature="AN5TxY3tnWpsr+HALQE5cKCzpUk/bD9D6XXPg1FYmLVfsEEhEcV5MJ3sDafq8Yq6MSUY9GD0NHmmdIWabSq7AQ=="/>
+        </item>
+        <item>
             <title>1.3.3</title>
             <pubDate>Wed, 02 Jul 2025 10:07:36 -0400</pubDate>
             <sparkle:version>12</sparkle:version>
