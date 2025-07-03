@@ -234,52 +234,9 @@ else
     fi
 fi
 
-# Copy release to updates directory temporarily (for appcast generation)
+# Prepare updates directory for later appcast generation
 log "Preparing update files..."
 mkdir -p "$UPDATES_DIR"
-cp "$BUILD_DIR/NativeFoundationModels.zip" "$UPDATES_DIR/"
-
-# Generate appcast using Sparkle tools (with GitHub Releases URLs)
-log "Generating appcast..."
-GENERATE_APPCAST_PATH=""
-
-# Look for generate_appcast in common locations
-if command -v generate_appcast &> /dev/null; then
-    GENERATE_APPCAST_PATH="generate_appcast"
-elif [[ -f "$BUILD_DIR/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast" ]]; then
-    GENERATE_APPCAST_PATH="$BUILD_DIR/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast"
-elif [[ -f "$BUILD_DIR/DerivedData/SourcePackages/checkouts/Sparkle/generate_appcast" ]]; then
-    GENERATE_APPCAST_PATH="$BUILD_DIR/DerivedData/SourcePackages/checkouts/Sparkle/generate_appcast"
-fi
-
-if [[ -n "$GENERATE_APPCAST_PATH" ]]; then
-    log "Using generate_appcast at: $GENERATE_APPCAST_PATH"
-    
-    # Use the private key file if it exists
-    PRIVATE_KEY_FILE="$PROJECT_DIR/.sparkle-keys/sparkle_private_key.pem"
-    DOWNLOAD_URL_PREFIX="https://github.com/zats/native-foundation-models/releases/download/v$VERSION/"
-    
-    if [[ -f "$PRIVATE_KEY_FILE" ]]; then
-        log "Using EdDSA private key file: $PRIVATE_KEY_FILE"
-        log "Using GitHub Releases URL prefix: $DOWNLOAD_URL_PREFIX"
-        "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
-            --ed-key-file "$PRIVATE_KEY_FILE" \
-            --download-url-prefix "$DOWNLOAD_URL_PREFIX"
-    else
-        log "No private key file found, using keychain"
-        "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
-            --download-url-prefix "$DOWNLOAD_URL_PREFIX"
-    fi
-    log "Appcast generated successfully!"
-    
-    # Remove the ZIP from updates directory (it will be uploaded to GitHub Releases)
-    log "Cleaning up temporary files..."
-    rm -f "$UPDATES_DIR/NativeFoundationModels.zip"
-else
-    warn "generate_appcast not found. You'll need to install Sparkle tools:"
-    warn "Download from: https://github.com/sparkle-project/Sparkle/releases"
-    warn "Or install via: brew install --cask sparkle"
-fi
 
 # Create release notes
 log "Creating release notes..."
@@ -312,24 +269,17 @@ git commit -m "Release version $VERSION
 log "Creating git tag..."
 git tag -a "v$VERSION" -m "Release version $VERSION"
 
-echo ""
-log "Release preparation complete! 🎉"
-echo ""
-echo "Next steps:"
-echo "1. Push changes and tag: git push origin main && git push origin v$VERSION"
-echo "2. Create GitHub release with the ZIP file: $BUILD_DIR/NativeFoundationModels.zip"
-echo "3. Verify appcast is accessible: https://zats.github.io/native-foundation-models/appcast.xml"
-echo ""
-echo "Files created:"
-echo "- Release ZIP: $BUILD_DIR/NativeFoundationModels.zip"
-echo "- Appcast: $APPCAST_PATH"
-echo "- Release notes: $RELEASE_NOTES_DIR/$VERSION.md"
-echo ""
+# Determine if we should auto-publish (successful notarization or no credentials provided)
+SHOULD_AUTO_PUBLISH=false
+if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
+    # If we have credentials and got this far, notarization was successful
+    SHOULD_AUTO_PUBLISH=true
+elif [[ -z $APPLE_ID || -z $APPLE_TEAM_ID || -z $APPLE_APP_PASSWORD ]]; then
+    # If no credentials, still auto-publish the unnotarized build
+    SHOULD_AUTO_PUBLISH=true
+fi
 
-# Ask if user wants to push automatically
-read -p "Push changes and tag to GitHub now? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
     log "Pushing to GitHub..."
     git push origin HEAD:main
     git push origin "v$VERSION"
@@ -341,10 +291,69 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             --title "Release v$VERSION" \
             --notes-file "$RELEASE_NOTES_DIR/$VERSION.md"
         log "GitHub release created successfully!"
+        
+        # Generate appcast after GitHub release is created
+        log "Generating appcast with live GitHub release URLs..."
+        
+        # Copy release to updates directory temporarily (for appcast generation)
+        cp "$BUILD_DIR/NativeFoundationModels.zip" "$UPDATES_DIR/"
+        
+        # Look for generate_appcast in common locations
+        GENERATE_APPCAST_PATH=""
+        if command -v generate_appcast &> /dev/null; then
+            GENERATE_APPCAST_PATH="generate_appcast"
+        elif [[ -f "$BUILD_DIR/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast" ]]; then
+            GENERATE_APPCAST_PATH="$BUILD_DIR/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast"
+        elif [[ -f "$BUILD_DIR/DerivedData/SourcePackages/checkouts/Sparkle/generate_appcast" ]]; then
+            GENERATE_APPCAST_PATH="$BUILD_DIR/DerivedData/SourcePackages/checkouts/Sparkle/generate_appcast"
+        fi
+        
+        if [[ -n "$GENERATE_APPCAST_PATH" ]]; then
+            log "Using generate_appcast at: $GENERATE_APPCAST_PATH"
+            
+            # Use the private key file if it exists
+            PRIVATE_KEY_FILE="$PROJECT_DIR/.sparkle-keys/sparkle_private_key.pem"
+            DOWNLOAD_URL_PREFIX="https://github.com/zats/native-foundation-models/releases/download/v$VERSION/"
+            
+            if [[ -f "$PRIVATE_KEY_FILE" ]]; then
+                log "Using EdDSA private key file: $PRIVATE_KEY_FILE"
+                log "Using GitHub Releases URL prefix: $DOWNLOAD_URL_PREFIX"
+                "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
+                    --ed-key-file "$PRIVATE_KEY_FILE" \
+                    --download-url-prefix "$DOWNLOAD_URL_PREFIX"
+            else
+                log "No private key file found, using keychain"
+                "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
+                    --download-url-prefix "$DOWNLOAD_URL_PREFIX"
+            fi
+            
+            # Clean up temporary files
+            rm -f "$UPDATES_DIR/NativeFoundationModels.zip"
+            
+            # Commit and push updated appcast
+            log "Updating appcast..."
+            git add "$APPCAST_PATH"
+            git commit -m "Update appcast for v$VERSION release"
+            git push origin HEAD:main
+            
+            log "Appcast updated successfully!"
+        else
+            warn "generate_appcast not found. Install Sparkle tools to generate appcast:"
+            warn "brew install --cask sparkle"
+        fi
+        
     else
-        warn "GitHub CLI not found. Create release manually at:"
-        warn "https://github.com/zats/native-foundation-models/releases/new?tag=v$VERSION"
+        warn "GitHub CLI not found. Cannot create release automatically."
+        warn "Install with: brew install gh"
     fi
+else
+    echo ""
+    log "Release preparation complete! 🎉"
+    echo ""
+    warn "Manual steps required:"
+    echo "1. Push changes and tag: git push origin main && git push origin v$VERSION"
+    echo "2. Create GitHub release with ZIP file: $BUILD_DIR/NativeFoundationModels.zip"
+    echo "3. Update appcast manually after release is live"
 fi
 
 log "Release process completed! ✨"
