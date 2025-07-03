@@ -21,40 +21,104 @@ struct GradientBackground: View {
 struct ContentView: View {
     @StateObject private var stepManager = InstallationStepManager()
     @State private var heartbeat = false
+    @State private var selectedBrowser: Browser?
+    @State private var showBrowserSelector = true
+    @Namespace private var animation
+    
+    var filteredSteps: [InstallationStep] {
+        guard let browser = stepManager.selectedBrowser else {
+            return InstallationStep.allCases
+        }
+        
+        if browser == .safari {
+            // Only show extension step for Safari
+            return [.installExtension]
+        } else {
+            return InstallationStep.allCases
+        }
+    }
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             GradientBackground()
             
             VStack(spacing: 0) {
+                if !showBrowserSelector {
+                    HStack {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.5)) {
+                                showBrowserSelector = true
+                                selectedBrowser = nil
+                                stepManager.selectedBrowser = nil
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.white.opacity(0.1))
+                            )
+                            .transition(.move(edge: .top))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .focusable(false)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 32)
+                    .padding(.top, 20)
+                }
+                
                 Image(.brain)
                     .font(.system(size: 32))
                     .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+                    .shadow(color: .black.opacity(0.3), radius: showBrowserSelector ? 8 : 16, y: 4)
                     .scaleEffect(heartbeat ? 1.02 : 1.0)
                     .animation(
                         .easeInOut(duration: 1.2)
                         .repeatForever(autoreverses: true),
                         value: heartbeat
                     )
-                    .padding(.top, 40)
-                    .padding(.bottom, 32)
-                
-                VStack(spacing: 16) {
-                    ForEach(InstallationStep.allCases, id: \.rawValue) { step in
-                        InstallationStepView(
-                            step: step,
-                            isCompleted: stepManager.stepStatuses[step, default: false],
-                            isInProgress: stepManager.stepInProgress[step, default: false]
-                        ) {
-                            stepManager.executeStep(step)
+                    .background(alignment: .bottomLeading) {
+                        if !showBrowserSelector, let browser = stepManager.selectedBrowser, let icon = browser.icon {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .matchedGeometryEffect(id: "browserIcon-\(browser.rawValue)", in: animation)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 120, height: 120)
+                                .offset(x: 40, y: -20)
                         }
-                        .environmentObject(stepManager)
                     }
+                if showBrowserSelector {
+                    BrowserSelectorView(selectedBrowser: $selectedBrowser, animationNamespace: animation) {
+                        if let browser = selectedBrowser {
+                            stepManager.selectedBrowser = browser
+                            withAnimation(.easeInOut(duration: 0.5)) {
+                                showBrowserSelector = false
+                            }
+                        }
+                    }
+                } else {
+                    VStack(spacing: 16) {
+                        ForEach(filteredSteps, id: \.rawValue) { step in
+                            InstallationStepView(
+                                step: step,
+                                title: step == .installBinary || selectedBrowser == .safari ? "1" : "2",
+                                isCompleted: stepManager.stepStatuses[step, default: false],
+                                isInProgress: stepManager.stepInProgress[step, default: false]
+                            ) {
+                                stepManager.executeStep(step)
+                            }
+                            .environmentObject(stepManager)
+                        }
+                    }
+                    .padding(.horizontal, 32)
                 }
-                .padding(.horizontal, 32)
-                
-                Spacer()
             }
         }
         .frame(width: 420, height: 750)
@@ -67,10 +131,45 @@ struct ContentView: View {
 
 struct InstallationStepView: View {
     let step: InstallationStep
+    let title: String
     let isCompleted: Bool
     let isInProgress: Bool
     let onExecute: () -> Void
     @EnvironmentObject var stepManager: InstallationStepManager
+    
+    var browserSpecificTitle: String {
+        guard let browser = stepManager.selectedBrowser else { return step.title }
+        
+        switch step {
+        case .installBinary:
+            if browser == .safari {
+                return "Native Components"
+            }
+            return step.title
+        case .installExtension:
+            if browser == .safari {
+                return "Enable Safari Extension"
+            }
+            return "\(browser.displayName) Extension"
+        }
+    }
+    
+    var browserSpecificDescription: String {
+        guard let browser = stepManager.selectedBrowser else { return step.description }
+        
+        switch step {
+        case .installBinary:
+            if browser == .safari {
+                return "Safari extensions don't require native components"
+            }
+            return step.description
+        case .installExtension:
+            if browser == .safari {
+                return "Opens Safari settings to enable the extension and allow access to all websites"
+            }
+            return "Opens the \(browser.displayName) extension store to install the browser extension"
+        }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -86,26 +185,26 @@ struct InstallationStepView: View {
                     
                     if isCompleted {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.callout.bold())
                             .foregroundColor(.white)
                     } else if isInProgress {
                         ProgressView()
                             .scaleEffect(0.6)
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     } else {
-                        Text("\(step.rawValue)")
-                            .font(.system(size: 16, weight: .bold))
+                        Text("\(title)")
+                            .font(.callout.bold())
                             .foregroundColor(.white)
                     }
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(step.title)
-                        .font(.system(size: 16, weight: .semibold))
+                    Text(browserSpecificTitle)
+                        .font(.callout.weight(.semibold))
                         .foregroundColor(.white)
                     
-                    Text(step.description)
-                        .font(.system(size: 13))
+                    Text(browserSpecificDescription)
+                        .font(.caption)
                         .foregroundColor(Color.white.opacity(0.8))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -123,12 +222,14 @@ struct InstallationStepView: View {
                         onReveal: { stepManager.revealBinaryInFinder() }
                     )
                     
-                    ComponentStatusRow(
-                        title: "Native Messaging Host",
-                        subtitle: "~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json",
-                        isInstalled: stepManager.isNativeMessagingHostInstalled(),
-                        onReveal: { stepManager.revealNativeMessagingHostInFinder() }
-                    )
+                    if let browser = stepManager.selectedBrowser {
+                        ComponentStatusRow(
+                            title: "Native Messaging Host (\(browser.displayName))",
+                            subtitle: getNativeMessagingHostPath(for: browser),
+                            isInstalled: stepManager.isNativeMessagingHostInstalled(),
+                            onReveal: { stepManager.revealNativeMessagingHostInFinder() }
+                        )
+                    }
                 }
                 .padding(.leading, 44)
             }
@@ -146,7 +247,7 @@ struct InstallationStepView: View {
                             Text(stepButtonText)
                         }
                     }
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
@@ -189,27 +290,60 @@ struct InstallationStepView: View {
     }
     
     private var stepIcon: String {
+        guard let browser = stepManager.selectedBrowser else {
+            switch step {
+            case .installBinary: return "terminal"
+            case .installExtension: return "safari"
+            }
+        }
+        
         switch step {
         case .installBinary:
-            return "terminal"
+            return browser == .safari ? "checkmark.circle" : "terminal"
         case .installExtension:
-            return "safari"
+            return browser == .safari ? "gearshape" : "safari"
         }
     }
     
     private var stepButtonText: String {
+        guard let browser = stepManager.selectedBrowser else {
+            switch step {
+            case .installBinary: return "Install"
+            case .installExtension: return "Open Store"
+            }
+        }
+        
         switch step {
         case .installBinary:
-            return "Install"
+            return browser == .safari ? "Skip" : "Install"
         case .installExtension:
-            return "Open Store"
+            return browser == .safari ? "Open Safari Settings" : "Open Store"
+        }
+    }
+    
+    private func getNativeMessagingHostPath(for browser: Browser) -> String? {
+        switch browser {
+        case .chrome, .dia:
+            return "~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+        case .edge:
+            return "~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+        case .brave:
+            return "~/Library/Application Support/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+        case .arc:
+            return "~/Library/Application Support/Arc/User Data/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+        case .vivaldi:
+            return "~/Library/Application Support/Vivaldi/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+        case .safari:
+            return nil
+        case .firefox:
+            return "~/Library/Application Support/Mozilla/NativeMessagingHosts/com.nativeFoundationModels.native.json"
         }
     }
 }
 
 struct ComponentStatusRow: View {
     let title: String
-    let subtitle: String
+    let subtitle: String?
     let isInstalled: Bool
     let onReveal: () -> Void
     
@@ -221,21 +355,23 @@ struct ComponentStatusRow: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.caption.weight(.medium))
                     .foregroundColor(.white)
                 
-                Text(subtitle)
-                    .font(.system(size: 10).monospaced())
-                    .foregroundColor(Color.white.opacity(0.6))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2.monospaced())
+                        .foregroundColor(Color.white.opacity(0.6))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
             
             Spacer()
             
             Button(action: onReveal) {
                 Image(systemName: "arrow.right.circle.fill")
-                    .font(.system(size: 16))
+                    .font(.callout)
                     .foregroundColor(Color.white.opacity(0.7))
             }
             .buttonStyle(PlainButtonStyle())
@@ -252,6 +388,23 @@ struct ComponentStatusRow: View {
                         .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
         )
+    }
+}
+
+// View modifier to disable focus rings
+struct NoFocusRing: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .focusable(false)
+            .onAppear {
+                NSWindow.allowsAutomaticWindowTabbing = false
+            }
+    }
+}
+
+extension View {
+    func noFocusRing() -> some View {
+        modifier(NoFocusRing())
     }
 }
 

@@ -9,6 +9,7 @@ import SwiftUI
 import Foundation
 import Combine
 import Sparkle
+import SafariServices
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     fileprivate let updaterController: SPUStandardUpdaterController
@@ -32,6 +33,12 @@ struct NativeFoundationModelsApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // Disable focus ring globally
+                    NSApplication.shared.windows.forEach { window in
+                        window.styleMask.remove(.fullSizeContentView)
+                    }
+                }
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
@@ -52,9 +59,9 @@ enum InstallationStep: Int, CaseIterable {
     var title: String {
         switch self {
         case .installBinary:
-            return "Native Compnents"
+            return "Native Components"
         case .installExtension:
-            return "Chrome Extension"
+            return "Browser Extension"
         }
     }
     
@@ -63,7 +70,7 @@ enum InstallationStep: Int, CaseIterable {
         case .installBinary:
             return "Installs the native binary to ~/bin and copies configuration"
         case .installExtension:
-            return "Opens the Chrome Web Store to install the browser extension"
+            return "Opens the extension store to install the browser extension"
         }
     }
 }
@@ -71,9 +78,11 @@ enum InstallationStep: Int, CaseIterable {
 class InstallationStepManager: ObservableObject {
     @Published var stepStatuses: [InstallationStep: Bool] = [:]
     @Published var stepInProgress: [InstallationStep: Bool] = [:]
+    @Published var selectedBrowser: Browser?
     
     private let binaryName = "nativefoundationmodels-native"
     private let extensionId = "jjmocainopehgedhgjpanckkalhiodmj"
+    private let safariExtensionBundleIdentifier = "com.zats.NativeFoundationModels.SafariExtension"
     private var monitoringTimer: Timer?
     
     private var binaryURL: URL {
@@ -82,9 +91,24 @@ class InstallationStepManager: ObservableObject {
             .appendingPathComponent(binaryName)
     }
     
-    private var nativeMessagingHostURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+    private func nativeMessagingHostURL(for browser: Browser) -> URL? {
+        let baseURL = URL.applicationSupportDirectory
+        switch browser {
+        case .chrome, .dia, .arc:
+            return baseURL.appendingPathComponent("Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+        case .edge:
+            return baseURL.appendingPathComponent("Microsoft Edge/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+        case .brave:
+            return baseURL.appendingPathComponent("BraveSoftware/Brave-Browser/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+        case .vivaldi:
+            return baseURL.appendingPathComponent("Vivaldi/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+        case .safari:
+            // Safari uses a different mechanism, will be handled separately
+            return nil
+        case .firefox:
+            // Firefox uses a different path
+            return baseURL.appendingPathComponent("Mozilla/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+        }
     }
     
     init() {
@@ -114,8 +138,21 @@ class InstallationStepManager: ObservableObject {
     }
     
     private func isBinaryStepComplete() -> Bool {
+        guard let browser = selectedBrowser else { return false }
+        
+        // Safari doesn't need binary or native messaging host
+        if browser == .safari {
+            return true
+        }
+        
         let binaryExists = FileManager.default.fileExists(atPath: binaryURL.path)
-        let hostExists = FileManager.default.fileExists(atPath: nativeMessagingHostURL.path)
+        
+        // Check if native messaging host exists for the selected browser
+        guard let hostURL = nativeMessagingHostURL(for: browser) else {
+            return binaryExists
+        }
+        
+        let hostExists = FileManager.default.fileExists(atPath: hostURL.path)
         return binaryExists && hostExists
     }
     
@@ -124,7 +161,11 @@ class InstallationStepManager: ObservableObject {
     }
     
     func isNativeMessagingHostInstalled() -> Bool {
-        return FileManager.default.fileExists(atPath: nativeMessagingHostURL.path)
+        guard let browser = selectedBrowser,
+              let hostURL = nativeMessagingHostURL(for: browser) else {
+            return false
+        }
+        return FileManager.default.fileExists(atPath: hostURL.path)
     }
     
     func revealBinaryInFinder() {
@@ -146,11 +187,16 @@ class InstallationStepManager: ObservableObject {
     }
     
     func revealNativeMessagingHostInFinder() {
-        let hostDir = nativeMessagingHostURL.deletingLastPathComponent()
+        guard let browser = selectedBrowser,
+              let hostURL = nativeMessagingHostURL(for: browser) else {
+            return
+        }
+        
+        let hostDir = hostURL.deletingLastPathComponent()
         
         if isNativeMessagingHostInstalled() {
             // Reveal the specific JSON file
-            NSWorkspace.shared.activateFileViewerSelecting([nativeMessagingHostURL])
+            NSWorkspace.shared.activateFileViewerSelecting([hostURL])
         } else {
             // Open the native messaging hosts directory (create if needed)
             do {
@@ -192,9 +238,21 @@ class InstallationStepManager: ObservableObject {
         
         switch step {
         case .installBinary:
-            installBinaryAndHost()
+            if selectedBrowser == .safari {
+                // Safari doesn't need binary installation
+                DispatchQueue.main.async {
+                    self.stepInProgress[.installBinary] = false
+                    self.checkAllSteps()
+                }
+            } else {
+                installBinaryAndHost()
+            }
         case .installExtension:
-            openExtensionStore()
+            if selectedBrowser == .safari {
+                openSafariExtensionPreferences()
+            } else {
+                openExtensionStore()
+            }
         }
     }
     
@@ -233,7 +291,12 @@ class InstallationStepManager: ObservableObject {
     }
     
     private func installNativeMessagingHost() async throws {
-        let hostDir = nativeMessagingHostURL.deletingLastPathComponent()
+        guard let browser = selectedBrowser,
+              let hostURL = nativeMessagingHostURL(for: browser) else {
+            throw NSError(domain: "InstallationError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Browser not selected or not supported"])
+        }
+        
+        let hostDir = hostURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: hostDir, withIntermediateDirectories: true)
         
         // Generate clean native messaging host configuration
@@ -248,12 +311,35 @@ class InstallationStepManager: ObservableObject {
   ]
 }
 """
-        try hostConfigJSON.write(to: nativeMessagingHostURL, atomically: true, encoding: .utf8)
+        try hostConfigJSON.write(to: hostURL, atomically: true, encoding: .utf8)
+    }
+    
+    private func openSafariExtensionPreferences() {
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: safariExtensionBundleIdentifier) { error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error opening Safari extension preferences: \(error)")
+                }
+                self.stepInProgress[.installExtension] = false
+            }
+        }
     }
     
     private func openExtensionStore() {
-        let url = URL(string: "https://chromewebstore.google.com/detail/native-foundation-models/jjmocainopehgedhgjpanckkalhiodmj")!
-        NSWorkspace.shared.open(url)
+        guard let browser = selectedBrowser else { return }
+        
+        var url: URL?
+        
+        switch browser {
+        case .chrome, .edge, .brave, .arc, .vivaldi, .dia:
+            url = URL(string: "https://chromewebstore.google.com/detail/native-foundation-models/jjmocainopehgedhgjpanckkalhiodmj")
+        case .safari, .firefox:
+            break
+        }
+        
+        if let url = url {
+            NSWorkspace.shared.open(url)
+        }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.stepInProgress[.installExtension] = false
