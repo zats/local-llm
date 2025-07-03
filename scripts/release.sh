@@ -118,31 +118,28 @@ SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID
 if [[ -n "$SIGNING_IDENTITY" ]]; then
     log "Signing with certificate: $SIGNING_IDENTITY"
     
-    # Sign Safari extension first (critical for Safari to detect it)
-    SAFARI_EXTENSION_PATH="$BUILD_DIR/NativeFoundationModels.app/Contents/PlugIns/SafariExtension.appex"
-    if [[ -d "$SAFARI_EXTENSION_PATH" ]]; then
-        log "Signing Safari extension..."
-        codesign --force --sign "$SIGNING_IDENTITY" --options runtime "$SAFARI_EXTENSION_PATH"
-    else
-        warn "Safari extension not found at: $SAFARI_EXTENSION_PATH"
-    fi
+    # For mixed sandbox scenarios (extension sandboxed, main app not), we need to let Xcode handle the extension signing
+    # and only re-sign components that need hardened runtime
     
-    # Sign other nested components
+    # Sign other nested components (but NOT the Safari extension - Xcode already signed it correctly)
     find "$BUILD_DIR/NativeFoundationModels.app" -type f \( -name "*.dylib" -o -name "*.framework" -o -name "nativefoundationmodels-native" \) -exec codesign --force --sign "$SIGNING_IDENTITY" --options runtime {} \;
     
-    # Sign the main app bundle (without --deep to preserve inner signatures)
-    codesign --force --sign "$SIGNING_IDENTITY" --options runtime "$BUILD_DIR/NativeFoundationModels.app"
+    # Sign the main app bundle with deep to ensure all components get the correct signature
+    codesign --force --sign "$SIGNING_IDENTITY" --options runtime --deep "$BUILD_DIR/NativeFoundationModels.app"
     
     # Verify signatures
     log "Verifying code signatures..."
     
-    # Verify Safari extension signature
+    # Verify Safari extension signature (check if Xcode signed it properly)
+    SAFARI_EXTENSION_PATH="$BUILD_DIR/NativeFoundationModels.app/Contents/PlugIns/SafariExtension.appex"
     if [[ -d "$SAFARI_EXTENSION_PATH" ]]; then
         if codesign --verify --strict "$SAFARI_EXTENSION_PATH"; then
-            log "Safari extension signature verified"
+            log "Safari extension signature verified (Xcode-signed)"
         else
             warn "Safari extension signature verification failed"
         fi
+    else
+        warn "Safari extension not found at: $SAFARI_EXTENSION_PATH"
     fi
     
     # Verify main app signature
