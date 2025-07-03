@@ -294,7 +294,6 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
         
         # Clean up any existing files to avoid conflicts
         rm -f "$UPDATES_DIR/NativeFoundationModels.zip"
-        rm -f "$UPDATES_DIR/old_updates/NativeFoundationModels.zip"
         
         # Copy release to updates directory temporarily (for appcast generation)
         cp "$BUILD_DIR/NativeFoundationModels.zip" "$UPDATES_DIR/"
@@ -333,7 +332,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             
             # Commit and push updated appcast (ensure we're on main branch)
             log "Updating appcast..."
-            git checkout main 2>/dev/null || git checkout -b main
+            git checkout main
             git add "$APPCAST_PATH"
             if git commit -m "Update appcast for v$VERSION release"; then
                 git push origin main
