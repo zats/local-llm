@@ -358,6 +358,12 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             <enclosure url=\"$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
         </item>"
                 
+                # Show what the new entry will look like
+                echo ""
+                log "New appcast entry to be added:"
+                echo "$NEW_ITEM"
+                echo ""
+                
                 # Use awk to insert after the title line
                 awk -v new_item="$NEW_ITEM" '
                     /<title>NativeFoundationModels<\/title>/ {
