@@ -332,8 +332,9 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             
             # Commit and push updated appcast (ensure we're on main branch)
             log "Updating appcast..."
+            cd "$PROJECT_DIR"
             git checkout main
-            git add "$APPCAST_PATH"
+            git add docs/appcast.xml
             if git commit -m "Update appcast for v$VERSION release"; then
                 git push origin main
                 log "Appcast committed and pushed successfully!"
