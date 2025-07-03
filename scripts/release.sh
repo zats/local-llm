@@ -358,25 +358,26 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             <enclosure url=\"$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
         </item>"
                 
-                # Insert new entry after the <title> line using BSD sed syntax
-                # Create a temporary sed script file for multi-line insertion
-                TEMP_SED_SCRIPT=$(mktemp)
-                cat > "$TEMP_SED_SCRIPT" << 'EOF'
-/<title>NativeFoundationModels<\/title>/ a\
-        <item>\
-            <title>REPLACE_VERSION</title>\
-            <pubDate>REPLACE_DATE</pubDate>\
-            <sparkle:version>REPLACE_BUILD</sparkle:version>\
-            <sparkle:shortVersionString>REPLACE_VERSION</sparkle:shortVersionString>\
-            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>\
-            <enclosure url="REPLACE_URL" length="REPLACE_SIZE" type="application/octet-stream"/>\
-        </item>
-EOF
+                # Insert new entry after the <title> line using awk
+                # Create the new entry
+                NEW_ITEM="        <item>
+            <title>$VERSION</title>
+            <pubDate>$(date -R)</pubDate>
+            <sparkle:version>$BUILD_NUMBER</sparkle:version>
+            <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url=\"$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
+        </item>"
                 
-                # Replace placeholders and apply the sed script
-                sed "s/REPLACE_VERSION/$VERSION/g; s/REPLACE_DATE/$(date -R)/g; s/REPLACE_BUILD/$BUILD_NUMBER/g; s|REPLACE_URL|$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip|g; s/REPLACE_SIZE/$ZIP_SIZE/g" "$TEMP_SED_SCRIPT" > "$TEMP_SED_SCRIPT.final"
-                sed -i '' -f "$TEMP_SED_SCRIPT.final" "$APPCAST_PATH"
-                rm "$TEMP_SED_SCRIPT" "$TEMP_SED_SCRIPT.final"
+                # Use awk to insert after the title line
+                awk -v new_item="$NEW_ITEM" '
+                    /<title>NativeFoundationModels<\/title>/ {
+                        print $0
+                        print new_item
+                        next
+                    }
+                    { print }
+                ' "$APPCAST_PATH" > "$APPCAST_PATH.tmp" && mv "$APPCAST_PATH.tmp" "$APPCAST_PATH"
                 
                 log "Appcast updated manually (unsigned entry)"
             fi
