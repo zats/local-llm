@@ -89,71 +89,81 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 mkdir -p "$UPDATES_DIR"
 
-# Build application directly (simpler approach for Xcode 26)
-log "Building application..."
-xcodebuild -project NativeFoundationModels.xcodeproj \
+# Build and archive the application
+log "Building application archive..."
+ARCHIVE_PATH="$BUILD_DIR/NativeFoundationModels.xcarchive"
+xcodebuild archive \
+    -project NativeFoundationModels.xcodeproj \
     -scheme NativeFoundationModels \
     -configuration Release \
-    -derivedDataPath "$BUILD_DIR/DerivedData" \
+    -archivePath "$ARCHIVE_PATH" \
     ARCHS="arm64 x86_64" \
-    build
+    ONLY_ACTIVE_ARCH=NO
 
-# Copy app from build products
-log "Copying application..."
-BUILT_APP_PATH="$BUILD_DIR/DerivedData/Build/Products/Release/NativeFoundationModels.app"
-if [[ -d "$BUILT_APP_PATH" ]]; then
-    cp -R "$BUILT_APP_PATH" "$BUILD_DIR/"
-else
-    error "App build failed. Expected app at: $BUILT_APP_PATH"
+# Check if archive was created successfully
+if [[ ! -d "$ARCHIVE_PATH" ]]; then
+    error "Archive creation failed."
 fi
 
-# Check if app was copied successfully
+# Export the archive for Developer ID distribution
+log "Exporting application for distribution..."
+EXPORT_OPTIONS_PLIST="$BUILD_DIR/ExportOptions.plist"
+
+# Create export options plist for Developer ID distribution
+cat > "$EXPORT_OPTIONS_PLIST" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>developer-id</string>
+    <key>teamID</key>
+    <string>5KE88HWMKJ</string>
+    <key>signingStyle</key>
+    <string>automatic</string>
+</dict>
+</plist>
+EOF
+
+xcodebuild -exportArchive \
+    -archivePath "$ARCHIVE_PATH" \
+    -exportPath "$BUILD_DIR" \
+    -exportOptionsPlist "$EXPORT_OPTIONS_PLIST"
+
+# Check if app was exported successfully
 if [[ ! -d "$BUILD_DIR/NativeFoundationModels.app" ]]; then
-    error "App copy failed."
+    error "App export failed."
 fi
 
-# Sign the app manually since we bypassed the export process
-log "Code signing application..."
-# Find the Developer ID Application certificate
-SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
-if [[ -n "$SIGNING_IDENTITY" ]]; then
-    log "Signing with certificate: $SIGNING_IDENTITY"
-    
-    # For mixed sandbox scenarios (extension sandboxed, main app not), we need to let Xcode handle the extension signing
-    # and only re-sign components that need hardened runtime
-    
-    # Sign other nested components (but NOT the Safari extension - Xcode already signed it correctly)
-    find "$BUILD_DIR/NativeFoundationModels.app" -type f \( -name "*.dylib" -o -name "*.framework" -o -name "nativefoundationmodels-native" \) -exec codesign --force --sign "$SIGNING_IDENTITY" --options runtime {} \;
-    
-    # Sign the main app bundle WITHOUT deep to preserve nested signatures (especially Safari extension)
-    codesign --force --sign "$SIGNING_IDENTITY" --options runtime "$BUILD_DIR/NativeFoundationModels.app"
-    
-    # Verify signatures
-    log "Verifying code signatures..."
-    
-    # Verify Safari extension signature (check if Xcode signed it properly)
-    SAFARI_EXTENSION_PATH="$BUILD_DIR/NativeFoundationModels.app/Contents/PlugIns/SafariExtension.appex"
-    if [[ -d "$SAFARI_EXTENSION_PATH" ]]; then
-        if codesign --verify --strict "$SAFARI_EXTENSION_PATH"; then
-            log "Safari extension signature verified (Xcode-signed)"
-        else
-            warn "Safari extension signature verification failed"
-        fi
+# The app should now be properly signed by Xcode with Developer ID certificates
+log "Application exported successfully with proper code signatures"
+
+# Verify signatures
+log "Verifying code signatures..."
+
+# Verify Safari extension signature
+SAFARI_EXTENSION_PATH="$BUILD_DIR/NativeFoundationModels.app/Contents/PlugIns/SafariExtension.appex"
+if [[ -d "$SAFARI_EXTENSION_PATH" ]]; then
+    if codesign --verify --strict "$SAFARI_EXTENSION_PATH"; then
+        log "Safari extension signature verified"
+        # Check architecture
+        SAFARI_ARCH=$(lipo -info "$SAFARI_EXTENSION_PATH/Contents/MacOS/SafariExtension" 2>/dev/null | grep -o 'x86_64\|arm64' | sort -u | tr '\n' ' ')
+        log "Safari extension architectures: $SAFARI_ARCH"
     else
-        warn "Safari extension not found at: $SAFARI_EXTENSION_PATH"
+        warn "Safari extension signature verification failed"
     fi
-    
-    # Verify main app signature
-    if codesign --verify --deep --strict "$BUILD_DIR/NativeFoundationModels.app"; then
-        log "Main app signature verified successfully"
-    else
-        warn "Main app signature verification failed"
-    fi
-    
-    log "Signed with: $SIGNING_IDENTITY"
 else
-    warn "No Developer ID Application certificate found. App will not be signed."
-    warn "Notarization will likely fail without proper code signing."
+    warn "Safari extension not found at: $SAFARI_EXTENSION_PATH"
+fi
+
+# Verify main app signature
+if codesign --verify --deep --strict "$BUILD_DIR/NativeFoundationModels.app"; then
+    log "Main app signature verified successfully"
+    # Check architecture
+    MAIN_ARCH=$(lipo -info "$BUILD_DIR/NativeFoundationModels.app/Contents/MacOS/NativeFoundationModels" 2>/dev/null | grep -o 'x86_64\|arm64' | sort -u | tr '\n' ' ')
+    log "Main app architectures: $MAIN_ARCH"
+else
+    warn "Main app signature verification failed"
 fi
 
 # Notarize app (requires Apple ID credentials)
