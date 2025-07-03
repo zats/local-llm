@@ -95,6 +95,7 @@ xcodebuild -project NativeFoundationModels.xcodeproj \
     -scheme NativeFoundationModels \
     -configuration Release \
     -derivedDataPath "$BUILD_DIR/DerivedData" \
+    ARCHS="arm64 x86_64" \
     build
 
 # Copy app from build products
@@ -359,7 +360,8 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
                 
                 # Insert new entry after the <title> line
                 sed -i '' "/<title>NativeFoundationModels<\/title>/a\\
-$NEW_ENTRY" "$APPCAST_PATH"
+$NEW_ENTRY
+" "$APPCAST_PATH"
                 
                 log "Appcast updated manually (unsigned entry)"
             fi
