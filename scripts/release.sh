@@ -363,6 +363,11 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
                 log "New appcast entry to be added:"
                 echo "$NEW_ITEM"
                 echo ""
+                warn "⚠️  UNSIGNED ENTRY: This appcast entry lacks sparkle:edSignature attribute!"
+                warn "   Without EdDSA signature, Sparkle will not verify this update's authenticity."
+                warn "   Users may see security warnings or updates may be rejected."
+                warn "   Consider adding a proper EdDSA private key to sign the appcast."
+                echo ""
                 
                 # Use awk to insert after the title line
                 awk -v new_item="$NEW_ITEM" '
