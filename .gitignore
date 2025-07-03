@@ -47,10 +47,12 @@ logs/
 .sparkle-keys/
 Sparkle/
 
-# Release artifacts (don't commit large binaries)
-docs/updates/*.zip
-docs/updates/*.dmg
-docs/updates/*.pkg
+# Release artifacts (don't commit large binaries) - NEVER COMMIT THESE!
+*.zip
+*.dmg
+*.pkg
+docs/updates/
+build/
 
 # Local credentials (keep these secret!)
 .native-foundation-models-creds

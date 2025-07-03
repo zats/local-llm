@@ -295,8 +295,8 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
         # Clean up any existing files to avoid conflicts
         rm -f "$UPDATES_DIR/NativeFoundationModels.zip"
         
-        # Copy release to updates directory temporarily (for appcast generation)
-        cp "$BUILD_DIR/NativeFoundationModels.zip" "$UPDATES_DIR/"
+        # Copy release to updates directory with version in filename (for appcast generation)
+        cp "$BUILD_DIR/NativeFoundationModels.zip" "$UPDATES_DIR/NativeFoundationModels-$VERSION.zip"
         
         # Look for generate_appcast in common locations
         GENERATE_APPCAST_PATH=""
@@ -315,26 +315,58 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             PRIVATE_KEY_FILE="$PROJECT_DIR/.sparkle-keys/sparkle_private_key.pem"
             DOWNLOAD_URL_PREFIX="https://github.com/zats/native-foundation-models/releases/download/v$VERSION/"
             
+            # Debug: show what files are in the updates directory
+            log "Files in updates directory:"
+            ls -la "$UPDATES_DIR/"
+            
             if [[ -f "$PRIVATE_KEY_FILE" ]]; then
                 log "Using EdDSA private key file: $PRIVATE_KEY_FILE"
                 log "Using GitHub Releases URL prefix: $DOWNLOAD_URL_PREFIX"
                 "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
                     --ed-key-file "$PRIVATE_KEY_FILE" \
-                    --download-url-prefix "$DOWNLOAD_URL_PREFIX"
+                    --download-url-prefix "$DOWNLOAD_URL_PREFIX" \
+                    --maximum-versions 10 \
+                    --verbose
             else
                 log "No private key file found, using keychain"
                 "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
-                    --download-url-prefix "$DOWNLOAD_URL_PREFIX"
+                    --download-url-prefix "$DOWNLOAD_URL_PREFIX" \
+                    --maximum-versions 10 \
+                    --verbose
+            fi
+            
+            # Check if appcast was actually updated
+            if git diff --quiet docs/appcast.xml; then
+                warn "Appcast was not updated by generate_appcast"
+            else
+                log "Appcast was successfully updated"
             fi
             
             # Clean up temporary files
-            rm -f "$UPDATES_DIR/NativeFoundationModels.zip"
+            rm -f "$UPDATES_DIR/NativeFoundationModels-$VERSION.zip"
             
             # Commit and push updated appcast (ensure we're on main branch)
             log "Updating appcast..."
             cd "$PROJECT_DIR"
             git checkout main
+            
+            # CRITICAL: Ensure no ZIP files are staged for commit
+            git reset HEAD -- "*.zip" 2>/dev/null || true
+            git reset HEAD -- "*/*.zip" 2>/dev/null || true
+            git reset HEAD -- "docs/updates/*.zip" 2>/dev/null || true
+            
+            # Only add the appcast file
             git add docs/appcast.xml
+            
+            # Double-check what we're about to commit
+            log "Files staged for commit:"
+            git diff --cached --name-only
+            
+            # Verify no ZIP files are staged
+            if git diff --cached --name-only | grep -q "\.zip$"; then
+                error "ZIP files detected in staged changes! Aborting commit."
+            fi
+            
             if git commit -m "Update appcast for v$VERSION release"; then
                 git push origin main
                 log "Appcast committed and pushed successfully!"
