@@ -348,17 +348,6 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
                 # Get current build number from Xcode project
                 BUILD_NUMBER=$(agvtool what-version -terse || echo "1")
                 
-                # Create new entry XML
-                NEW_ENTRY="        <item>
-            <title>$VERSION</title>
-            <pubDate>$(date -R)</pubDate>
-            <sparkle:version>$BUILD_NUMBER</sparkle:version>
-            <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-            <enclosure url=\"$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
-        </item>"
-                
-                # Insert new entry after the <title> line using awk
                 # Create the new entry
                 NEW_ITEM="        <item>
             <title>$VERSION</title>
@@ -392,33 +381,41 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             # Clean up temporary files
             rm -f "$UPDATES_DIR/NativeFoundationModels-$VERSION.zip"
             
-            # Commit and push updated appcast (ensure we're on main branch)
+            # Commit and push updated appcast
             log "Updating appcast..."
             cd "$PROJECT_DIR"
-            git checkout main
             
-            # CRITICAL: Ensure no ZIP files are staged for commit
-            git reset HEAD -- "*.zip" 2>/dev/null || true
-            git reset HEAD -- "*/*.zip" 2>/dev/null || true
-            git reset HEAD -- "docs/updates/*.zip" 2>/dev/null || true
-            
-            # Only add the appcast file
-            git add docs/appcast.xml
-            
-            # Double-check what we're about to commit
-            log "Files staged for commit:"
-            git diff --cached --name-only
-            
-            # Verify no ZIP files are staged
-            if git diff --cached --name-only | grep -q "\.zip$"; then
-                error "ZIP files detected in staged changes! Aborting commit."
-            fi
-            
-            if git commit -m "Update appcast for v$VERSION release"; then
-                git push origin main
-                log "Appcast committed and pushed successfully!"
+            # Check if appcast was actually modified
+            if git diff --quiet docs/appcast.xml; then
+                log "No changes to appcast detected - file was not modified"
             else
-                log "No changes to appcast detected"
+                log "Appcast changes detected, committing..."
+                
+                # CRITICAL: Ensure no ZIP files are staged for commit
+                git reset HEAD -- "*.zip" 2>/dev/null || true
+                git reset HEAD -- "*/*.zip" 2>/dev/null || true
+                git reset HEAD -- "docs/updates/*.zip" 2>/dev/null || true
+                
+                # Only add the appcast file
+                git add docs/appcast.xml
+                
+                # Double-check what we're about to commit
+                log "Files staged for commit:"
+                git diff --cached --name-only
+                
+                # Verify no ZIP files are staged
+                if git diff --cached --name-only | grep -q "\.zip$"; then
+                    error "ZIP files detected in staged changes! Aborting commit."
+                fi
+                
+                # Verify we actually have changes to commit
+                if git diff --cached --quiet; then
+                    log "No staged changes for appcast"
+                else
+                    git commit -m "Update appcast for v$VERSION release"
+                    git push origin main
+                    log "Appcast committed and pushed successfully!"
+                fi
             fi
             
             log "Appcast updated successfully!"
