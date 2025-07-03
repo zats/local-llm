@@ -65,9 +65,9 @@
       let chunkWaiters = [];
       
       const messageHandler = (event) => {
+          console.log("💬 Message received:", event.data);
         if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
           const { success, data, error } = event.data;
-          
           if (!success) {
             // Check if it's a native app not found error
             console.log('NativeFoundationModels streaming error:', error, 'errorType:', event.data.errorType);
