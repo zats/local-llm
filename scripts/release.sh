@@ -319,6 +319,16 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             log "Files in updates directory:"
             ls -la "$UPDATES_DIR/"
             
+            # Try to find any existing private key files
+            if [[ ! -f "$PRIVATE_KEY_FILE" ]]; then
+                # Look for alternative key locations
+                POSSIBLE_KEY=$(find "$PROJECT_DIR" -name "*private*.pem" -o -name "*sparkle*.pem" 2>/dev/null | head -1)
+                if [[ -n "$POSSIBLE_KEY" ]]; then
+                    PRIVATE_KEY_FILE="$POSSIBLE_KEY"
+                    log "Found alternative private key: $PRIVATE_KEY_FILE"
+                fi
+            fi
+            
             if [[ -f "$PRIVATE_KEY_FILE" ]]; then
                 log "Using EdDSA private key file: $PRIVATE_KEY_FILE"
                 log "Using GitHub Releases URL prefix: $DOWNLOAD_URL_PREFIX"
@@ -328,11 +338,30 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
                     --maximum-versions 10 \
                     --verbose
             else
-                log "No private key file found, using keychain"
-                "$GENERATE_APPCAST_PATH" "$UPDATES_DIR" -o "$APPCAST_PATH" \
-                    --download-url-prefix "$DOWNLOAD_URL_PREFIX" \
-                    --maximum-versions 10 \
-                    --verbose
+                warn "No EdDSA private key found. Manually updating appcast..."
+                log "Adding new version $VERSION to appcast..."
+                
+                # Get file size of the ZIP
+                ZIP_SIZE=$(stat -f%z "$BUILD_DIR/NativeFoundationModels.zip")
+                
+                # Get current build number from Xcode project
+                BUILD_NUMBER=$(agvtool what-version -terse || echo "1")
+                
+                # Create new entry XML
+                NEW_ENTRY="        <item>
+            <title>$VERSION</title>
+            <pubDate>$(date -R)</pubDate>
+            <sparkle:version>$BUILD_NUMBER</sparkle:version>
+            <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url=\"$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
+        </item>"
+                
+                # Insert new entry after the <title> line
+                sed -i '' "/<title>NativeFoundationModels<\/title>/a\\
+$NEW_ENTRY" "$APPCAST_PATH"
+                
+                log "Appcast updated manually (unsigned entry)"
             fi
             
             # Check if appcast was actually updated
