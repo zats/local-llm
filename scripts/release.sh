@@ -118,18 +118,38 @@ SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID
 if [[ -n "$SIGNING_IDENTITY" ]]; then
     log "Signing with certificate: $SIGNING_IDENTITY"
     
-    # Sign all nested components first
+    # Sign Safari extension first (critical for Safari to detect it)
+    SAFARI_EXTENSION_PATH="$BUILD_DIR/NativeFoundationModels.app/Contents/PlugIns/SafariExtension.appex"
+    if [[ -d "$SAFARI_EXTENSION_PATH" ]]; then
+        log "Signing Safari extension..."
+        codesign --force --sign "$SIGNING_IDENTITY" --options runtime "$SAFARI_EXTENSION_PATH"
+    else
+        warn "Safari extension not found at: $SAFARI_EXTENSION_PATH"
+    fi
+    
+    # Sign other nested components
     find "$BUILD_DIR/NativeFoundationModels.app" -type f \( -name "*.dylib" -o -name "*.framework" -o -name "nativefoundationmodels-native" \) -exec codesign --force --sign "$SIGNING_IDENTITY" --options runtime {} \;
     
-    # Sign the main app bundle
-    codesign --force --sign "$SIGNING_IDENTITY" --options runtime --deep "$BUILD_DIR/NativeFoundationModels.app"
+    # Sign the main app bundle (without --deep to preserve inner signatures)
+    codesign --force --sign "$SIGNING_IDENTITY" --options runtime "$BUILD_DIR/NativeFoundationModels.app"
     
-    # Verify signature
-    log "Verifying code signature..."
+    # Verify signatures
+    log "Verifying code signatures..."
+    
+    # Verify Safari extension signature
+    if [[ -d "$SAFARI_EXTENSION_PATH" ]]; then
+        if codesign --verify --strict "$SAFARI_EXTENSION_PATH"; then
+            log "Safari extension signature verified"
+        else
+            warn "Safari extension signature verification failed"
+        fi
+    fi
+    
+    # Verify main app signature
     if codesign --verify --deep --strict "$BUILD_DIR/NativeFoundationModels.app"; then
-        log "Code signature verified successfully"
+        log "Main app signature verified successfully"
     else
-        warn "Code signature verification failed"
+        warn "Main app signature verification failed"
     fi
     
     log "Signed with: $SIGNING_IDENTITY"
