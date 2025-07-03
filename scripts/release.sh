@@ -125,8 +125,8 @@ if [[ -n "$SIGNING_IDENTITY" ]]; then
     # Sign other nested components (but NOT the Safari extension - Xcode already signed it correctly)
     find "$BUILD_DIR/NativeFoundationModels.app" -type f \( -name "*.dylib" -o -name "*.framework" -o -name "nativefoundationmodels-native" \) -exec codesign --force --sign "$SIGNING_IDENTITY" --options runtime {} \;
     
-    # Sign the main app bundle with deep to ensure all components get the correct signature
-    codesign --force --sign "$SIGNING_IDENTITY" --options runtime --deep "$BUILD_DIR/NativeFoundationModels.app"
+    # Sign the main app bundle WITHOUT deep to preserve nested signatures (especially Safari extension)
+    codesign --force --sign "$SIGNING_IDENTITY" --options runtime "$BUILD_DIR/NativeFoundationModels.app"
     
     # Verify signatures
     log "Verifying code signatures..."
@@ -328,6 +328,8 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
                     PRIVATE_KEY_FILE="$POSSIBLE_KEY"
                     log "Found alternative private key: $PRIVATE_KEY_FILE"
                 fi
+            else
+                log "Using existing private key: $PRIVATE_KEY_FILE"            
             fi
             
             if [[ -f "$PRIVATE_KEY_FILE" ]]; then
