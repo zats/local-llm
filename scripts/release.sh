@@ -358,10 +358,25 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             <enclosure url=\"$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
         </item>"
                 
-                # Insert new entry after the <title> line
-                sed -i '' "/<title>NativeFoundationModels<\/title>/a\\
-$NEW_ENTRY
-" "$APPCAST_PATH"
+                # Insert new entry after the <title> line using BSD sed syntax
+                # Create a temporary sed script file for multi-line insertion
+                TEMP_SED_SCRIPT=$(mktemp)
+                cat > "$TEMP_SED_SCRIPT" << 'EOF'
+/<title>NativeFoundationModels<\/title>/ a\
+        <item>\
+            <title>REPLACE_VERSION</title>\
+            <pubDate>REPLACE_DATE</pubDate>\
+            <sparkle:version>REPLACE_BUILD</sparkle:version>\
+            <sparkle:shortVersionString>REPLACE_VERSION</sparkle:shortVersionString>\
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>\
+            <enclosure url="REPLACE_URL" length="REPLACE_SIZE" type="application/octet-stream"/>\
+        </item>
+EOF
+                
+                # Replace placeholders and apply the sed script
+                sed "s/REPLACE_VERSION/$VERSION/g; s/REPLACE_DATE/$(date -R)/g; s/REPLACE_BUILD/$BUILD_NUMBER/g; s|REPLACE_URL|$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip|g; s/REPLACE_SIZE/$ZIP_SIZE/g" "$TEMP_SED_SCRIPT" > "$TEMP_SED_SCRIPT.final"
+                sed -i '' -f "$TEMP_SED_SCRIPT.final" "$APPCAST_PATH"
+                rm "$TEMP_SED_SCRIPT" "$TEMP_SED_SCRIPT.final"
                 
                 log "Appcast updated manually (unsigned entry)"
             fi
