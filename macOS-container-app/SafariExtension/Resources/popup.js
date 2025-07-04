@@ -36,7 +36,6 @@ class NativeFoundationModelsPlayground {
     this.settingsBtn = document.getElementById('settingsBtn');
     this.exportCodeBtn = document.getElementById('exportCodeBtn');
     this.openPlaygroundBtn = document.getElementById('openPlaygroundBtn');
-    this.openPopupBtn = document.getElementById('openPopupBtn');
     this.cancelBtn = document.getElementById('cancelBtn');
     this.saveBtn = document.getElementById('saveBtn');
     this.settingsView = document.getElementById('settingsView');
@@ -77,9 +76,6 @@ class NativeFoundationModelsPlayground {
     if (this.exportCodeBtn) this.exportCodeBtn.addEventListener('click', () => this.exportCode());
     if (this.openPlaygroundBtn) {
       this.openPlaygroundBtn.addEventListener('click', () => this.openPlayground());
-    }
-    if (this.openPopupBtn) {
-      this.openPopupBtn.addEventListener('click', () => this.openPopup());
     }
     if (this.cancelBtn) this.cancelBtn.addEventListener('click', () => this.cancelSettings());
     if (this.saveBtn) this.saveBtn.addEventListener('click', () => this.saveSettings());
@@ -877,15 +873,6 @@ try {
         window.open(playgroundUrl, '_blank');
       }
     });
-  }
-
-  openPopup() {
-    // Open the popup view in a smaller window
-    const runtime = typeof browser !== 'undefined' ? browser : chrome;
-    const popupUrl = runtime.runtime.getURL('popup.html');
-    
-    // Open in a smaller popup window
-    window.open(popupUrl, 'NFM_Popup', 'width=420,height=600,resizable=yes,scrollbars=yes');
   }
 }
 

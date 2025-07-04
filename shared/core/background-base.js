@@ -13,30 +13,8 @@ class UnifiedBackground {
   }
   
   init() {
-    this.setupNativeMessaging();
     this.setupMessageHandlers();
     this.setupActionHandler();
-    this.setupInstallHandlers();
-  }
-  
-  setupInstallHandlers() {
-    // Handle extension installation/startup
-    const runtime = this.config.browser === 'chrome' ? chrome.runtime : browser.runtime;
-    
-    runtime.onInstalled.addListener(() => {
-      console.log('Native Foundation Models extension installed/updated');
-    });
-    
-    if (runtime.onStartup) {
-      runtime.onStartup.addListener(() => {
-        console.log('Native Foundation Models extension started');
-      });
-    }
-  }
-  
-  setupNativeMessaging() {
-    // For Chrome, we'll establish connection on-demand rather than at startup
-    // Safari uses message-based approach, no persistent connection needed
   }
   
   setupPersistentConnection() {
@@ -45,13 +23,10 @@ class UnifiedBackground {
     }
     
     try {
-      console.log(`Attempting to connect to native app: ${this.config.nativeMessaging.appId}`);
       this.nativePort = chrome.runtime.connectNative(this.config.nativeMessaging.appId);
       this.nativePort.onMessage.addListener(this.handleNativeMessage.bind(this));
       this.nativePort.onDisconnect.addListener(this.handleNativeDisconnect.bind(this));
-      console.log('Native messaging port established successfully.');
     } catch (error) {
-      console.error('Failed to connect to native app. Error details:', error.message, error.stack);
       throw error;
     }
   }
@@ -73,11 +48,8 @@ class UnifiedBackground {
   }
   
   handleExtensionMessage(message, sender, sendResponse) {
-    console.log('🔧 Background received extension message:', message);
-    
     // Handle legacy greeting
     if (message.greeting === "hello") {
-      console.log('🔧 Handling legacy greeting');
       sendResponse({ farewell: "goodbye" });
       return;
     }
@@ -87,11 +59,8 @@ class UnifiedBackground {
         (message.command && message.requestId) || 
         message.action) {
       
-      console.log('🔧 Handling Native Foundation Models request');
       return this.handleNativeFoundationModelsRequest(message, sender, sendResponse);
     }
-    
-    console.log('🔧 Message not handled by background script');
   }
   
   handleNativeFoundationModelsRequest(message, sender, sendResponse) {
@@ -122,22 +91,20 @@ class UnifiedBackground {
     }
     
     if (this.config.nativeMessaging.supportsPersistentConnection) {
-      return this.handleChromeNativeRequest(nativeRequest, sendResponse);
+      return this.handleChromeNativeRequest(nativeRequest, sendResponse, sender);
     } else {
       return this.handleSafariNativeRequest(nativeRequest, sendResponse);
     }
   }
   
-  handleChromeNativeRequest(nativeRequest, sendResponse) {
+  handleChromeNativeRequest(nativeRequest, sendResponse, sender) {
     const { requestId } = nativeRequest;
-    console.log('🔧 Handling Chrome native request:', nativeRequest);
-    
+
     // Establish connection on-demand if not already connected
     if (!this.nativePort) {
       try {
         this.setupPersistentConnection();
       } catch (error) {
-        console.error('Failed to establish native connection:', error);
         sendResponse({ 
           error: 'Native app not connected',
           errorType: 'NATIVE_APP_NOT_FOUND',
@@ -147,19 +114,19 @@ class UnifiedBackground {
       }
     }
     
-    // Store response handler
+    // Store response handler and sender info for streaming
     if (requestId) {
-      console.log('🔧 Storing response handler for requestId:', requestId);
-      this.requestHandlers.set(requestId, sendResponse);
+      this.requestHandlers.set(requestId, { 
+        sendResponse,
+        sender,
+        isStreaming: nativeRequest.command === 'getCompletionStream'
+      });
     }
     
     // Send to native app
     try {
-      console.log('🔧 Sending message to native app:', nativeRequest);
       this.nativePort.postMessage(nativeRequest);
-      console.log('🔧 Message sent successfully to native app');
     } catch (error) {
-      console.error('Failed to send message to native app:', error);
       sendResponse({ 
         error: error.message,
         errorType: 'MESSAGING_ERROR'
@@ -171,25 +138,19 @@ class UnifiedBackground {
   }
   
   handleSafariNativeRequest(nativeRequest, sendResponse) {
-    // Safari uses direct native messaging, not persistent connections
-    console.log('🔧 Handling Safari native request:', nativeRequest);
-    
+    // Safari uses direct native messaging, not persistent connections    
     // Transform message format for Safari Swift handler
     const safariMessage = {
       action: nativeRequest.command,  // Safari expects "action", not "command"
       requestId: nativeRequest.requestId,
       data: nativeRequest.payload
     };
-    
-    console.log('🔧 Sending to Safari native handler:', safariMessage);
-    
+        
     browser.runtime.sendNativeMessage(this.config.nativeMessaging.appId, safariMessage)
       .then(response => {
-        console.log('🔧 Safari native response:', response);
         sendResponse(response);
       })
       .catch(error => {
-        console.error('Safari native messaging error:', error);
         sendResponse({
           error: 'Native app not connected',
           errorType: 'NATIVE_APP_NOT_FOUND',
@@ -202,18 +163,54 @@ class UnifiedBackground {
   
   handleNativeMessage(message) {
     // Handle response from native app (Chrome only)
-    console.log('🔧 Received message from native app:', message);
     const { requestId } = message;
-    
     if (requestId && this.requestHandlers.has(requestId)) {
-      console.log('🔧 Found response handler for requestId:', requestId);
-      const sendResponse = this.requestHandlers.get(requestId);
-      console.log('🔧 Sending response back to content script:', message);
-      sendResponse(message);
-      this.requestHandlers.delete(requestId);
-    } else {
-      console.log('🔧 No response handler found for requestId:', requestId);
-      console.log('🔧 Available handlers:', Array.from(this.requestHandlers.keys()));
+      const handlerInfo = this.requestHandlers.get(requestId);
+      const sendResponse = typeof handlerInfo === 'function' ? handlerInfo : handlerInfo.sendResponse;
+      const sender = handlerInfo.sender;
+      const isStreaming = handlerInfo.isStreaming;
+      // For streaming, send responses directly to content script
+      if (isStreaming && sender && sender.tab) {
+        if (this.config.browser === 'chrome') {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            type: 'streamingResponse',
+            requestId: message.requestId,
+            data: message
+          }).catch(error => {
+            console.error('Error sending streaming message to content script:', error);
+          });
+        } else {
+          browser.tabs.sendMessage(sender.tab.id, {
+            type: 'streamingResponse',
+            requestId: message.requestId,
+            data: message
+          }).catch(error => {
+            console.error('Error sending streaming message to content script:', error);
+          });
+        }
+        
+        // Only call sendResponse for the first chunk to establish the connection
+        if (message.type === 'streamChunk' && !handlerInfo.firstChunkSent) {
+          handlerInfo.firstChunkSent = true;
+          try {
+            sendResponse(message);
+          } catch (error) {
+            console.error('Error calling sendResponse for first chunk:', error);
+          }
+        }
+      } else {
+        // For non-streaming, use normal sendResponse
+        try {
+          sendResponse(message);
+        } catch (error) {
+          console.error('Error calling sendResponse:', error);
+        }
+      }
+      
+      // Only delete handler for non-streaming responses or when stream ends
+      if (message.type !== 'streamChunk') {
+        this.requestHandlers.delete(requestId);
+      }
     }
   }
   
@@ -222,8 +219,6 @@ class UnifiedBackground {
     const error = chrome.runtime.lastError;
     if (error) {
       console.error('Native messaging host disconnected:', error.message);
-    } else {
-      console.log('Native messaging host disconnected normally');
     }
     
     this.nativePort = null;

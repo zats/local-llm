@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Native Foundation Models - On-Device LLM",
+  "name": "Native Foundation Models",
   "version": "1.0.0",
   "description": "Provides on-device LLM capabilities to websites with built-in playground",
   

@@ -798,7 +798,7 @@ const result = await window.nativeFoundationModels
             }
             
             try {
-                const stream = await window.nativeFoundationModels.getCompletionStream('Write three motivational quote about technology and innovation.');
+                const stream = await window.nativeFoundationModels.getCompletionStream('Write three motivational quotes about technology and innovation.');
                 
                 // Create streaming display
                 const output = document.getElementById('output');
@@ -808,7 +808,9 @@ const result = await window.nativeFoundationModels
                 output.innerHTML += `<span id="${streamingLineId}" class="success"></span>\n`;
                 
                 let result = '';
+                let chunkCount = 0;
                 for await (const chunk of stream) {
+                    chunkCount++;
                     const content = chunk.choices?.[0]?.delta?.content;
                     if (content) {
                         result += content;
@@ -817,7 +819,7 @@ const result = await window.nativeFoundationModels
                     }
                 }
                 
-                log('✅ Streaming completed successfully!', 'success');
+                log(`✅ Streaming completed successfully! Received ${chunkCount} chunks.`, 'success');
                 setButtonStatus('streaming-status', 'success');
             } catch (error) {
                 log(`❌ Streaming failed: ${error.message}`, 'error');

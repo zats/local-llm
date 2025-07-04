@@ -20,9 +20,7 @@
 
     async checkAvailability() {
       try {
-        const response = await this.sendMessage('checkAvailability');
-        console.log('🔧 checkAvailability response:', response);
-        
+        const response = await this.sendMessage('checkAvailability');        
         // Handle different response formats between Chrome and Safari
         if (response.payload) {
           // Chrome format: {type: 'availabilityResponse', payload: {...}}
@@ -51,7 +49,10 @@
 
     async createSession(options = {}) {
       const result = await this.sendMessage('startPlaygroundSession', options);
-      const sessionId = result.payload.sessionId;
+      
+      // Handle different response formats between Chrome and Safari
+      const responseData = result.payload || result.data || result;
+      const sessionId = responseData.sessionId;
       
       const session = new Session(sessionId, this);
       this.sessions.set(sessionId, session);
@@ -86,6 +87,11 @@
     }
 
     async* getCompletionStream(prompt, options = {}) {
+      // This function is designed to handle two scenarios:
+      // 1. True streaming: The native connection supports sending multiple "chunks" over time (e.g., Chrome).
+      // 2. Simulated streaming: The native connection is one-shot and returns a single, complete response (e.g., Safari).
+      // The generator will yield the single response as if it were a one-chunk stream in the second case.
+      
       const requestId = this.generateRequestId();
       
       const chunks = [];
@@ -103,40 +109,37 @@
             } else if (error && error.toLowerCase().includes('not available') && window.nfmDownloadDialog) {
               window.nfmDownloadDialog.show();
             }
-            streamError = {
-              error: {
-                message: error,
-                type: 'stream_error',
-                code: 'stream_failed'
-              }
-            };
+            streamError = { error: { message: error, type: 'stream_error', code: 'stream_failed' } };
             streamComplete = true;
             chunkWaiters.forEach(resolve => resolve());
             chunkWaiters = [];
             return;
           }
           
-          if (data.type === 'streamChunk') {
-            chunks.push(data.payload);
-            chunkWaiters.forEach(resolve => resolve());
-            chunkWaiters = [];
-          } else if (data.type === 'streamEnd') {
-            chunks.push(data.payload);
+          const responseData = data.payload || data.data || data;
+          
+          // Check if this is a streaming chunk or a single complete response
+          if (responseData.object === 'chat.completion.chunk') {
+            // This is a standard streaming chunk
+            chunks.push(responseData);
+          } else if (responseData.object === 'chat.completion') {
+            // This is a single, complete response (Safari behavior).
+            // We simulate a stream by treating it as the only chunk.
+            chunks.push({
+              ...responseData,
+              object: 'chat.completion.chunk', // Normalize to a chunk object
+            });
             streamComplete = true;
-            chunkWaiters.forEach(resolve => resolve());
-            chunkWaiters = [];
-          } else if (data.type === 'error') {
-            streamError = {
-              error: {
-                message: data.payload.error?.message || data.payload.message,
-                type: 'stream_error',
-                code: 'stream_failed'
-              }
-            };
-            streamComplete = true;
-            chunkWaiters.forEach(resolve => resolve());
-            chunkWaiters = [];
           }
+          
+          // Handle stream end signal
+          if (data.type === 'streamEnd') {
+            streamComplete = true;
+          }
+          
+          // Wake up the generator loop
+          chunkWaiters.forEach(resolve => resolve());
+          chunkWaiters = [];
         }
       };
       
@@ -144,12 +147,13 @@
       
       try {
         // Send unified message format
-        window.postMessage({
+        const requestMessage = {
           type: this.config.messaging.requestType,
           requestId,
           command: 'getCompletionStream',
           payload: { prompt, ...options }
-        }, '*');
+        };
+        window.postMessage(requestMessage, '*');
         
         // Yield chunks as they arrive
         let chunkIndex = 0;
@@ -171,7 +175,6 @@
             chunkWaiters.push(resolve);
           });
         }
-        
       } finally {
         window.removeEventListener('message', messageHandler);
       }
@@ -245,7 +248,9 @@
           ...options
         });
         
-        const { sessionId, ...openAIResponse } = result.payload;
+        // Handle different response formats between Chrome and Safari
+        const responseData = result.payload || result.data || result;
+        const { sessionId, ...openAIResponse } = responseData;
         return openAIResponse;
       } catch (error) {
         throw {
@@ -288,21 +293,24 @@
             return;
           }
           
-          if (data.type === 'streamChunk' && data.payload.sessionId === this.id) {
-            const { sessionId, ...openAIChunk } = data.payload;
+          // Handle different response formats between Chrome and Safari
+          const sessionData = data.payload || data.data || data;
+          
+          if ((data.type === 'streamChunk' || data.data?.type === 'streamChunk') && sessionData.sessionId === this.id) {
+            const { sessionId, ...openAIChunk } = sessionData;
             chunks.push(openAIChunk);
             chunkWaiters.forEach(resolve => resolve());
             chunkWaiters = [];
-          } else if (data.type === 'streamEnd' && data.payload.sessionId === this.id) {
-            const { sessionId, ...openAIChunk } = data.payload;
+          } else if ((data.type === 'streamEnd' || data.data?.type === 'streamEnd') && sessionData.sessionId === this.id) {
+            const { sessionId, ...openAIChunk } = sessionData;
             chunks.push(openAIChunk);
             streamComplete = true;
             chunkWaiters.forEach(resolve => resolve());
             chunkWaiters = [];
-          } else if (data.type === 'error' && data.payload.sessionId === this.id) {
+          } else if ((data.type === 'error' || data.data?.type === 'error') && sessionData.sessionId === this.id) {
             streamError = {
               error: {
-                message: data.payload.error?.message || data.payload.message,
+                message: sessionData.error?.message || sessionData.message || 'Session stream error',
                 type: 'session_stream_error',
                 code: 'session_stream_failed'
               }
