@@ -2,6 +2,11 @@
 
 set -e
 
+# Usage: ./scripts/release.sh [VERSION] [--dry-run]
+# 
+# VERSION: Version number in format X.Y.Z (e.g., 1.1.0)
+# --dry-run: Build and notarize the app without making any git changes
+
 # Configuration
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$PROJECT_DIR/build"
@@ -62,12 +67,31 @@ EOF
     fi
 }
 
+# Parse command line arguments
+DRY_RUN=false
+VERSION=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        *)
+            if [[ -z "$VERSION" ]]; then
+                VERSION=$1
+            else
+                error "Unknown argument: $1"
+            fi
+            shift
+            ;;
+    esac
+done
+
 # Get version from command line or prompt
-if [[ -z $1 ]]; then
+if [[ -z $VERSION ]]; then
     echo "Current version: $(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags yet')"
     read -p "Enter new version (e.g., 1.1.0): " VERSION
-else
-    VERSION=$1
 fi
 
 # Validate version format
@@ -75,13 +99,22 @@ if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     error "Version must be in format X.Y.Z (e.g., 1.1.0)"
 fi
 
-log "Starting release process for version $VERSION"
+if [[ "$DRY_RUN" == "true" ]]; then
+    log "Starting DRY RUN release process for version $VERSION (no git operations)"
+else
+    log "Starting release process for version $VERSION"
+fi
 
 # Update version in Xcode project
-log "Updating version numbers..."
-cd "$PROJECT_DIR/macOS-container-app"
-agvtool new-marketing-version $VERSION
-agvtool next-version -all
+if [[ "$DRY_RUN" == "true" ]]; then
+    log "Skipping version number updates (dry run mode)"
+    cd "$PROJECT_DIR/macOS-container-app"
+else
+    log "Updating version numbers..."
+    cd "$PROJECT_DIR/macOS-container-app"
+    agvtool new-marketing-version $VERSION
+    agvtool next-version -all
+fi
 
 # Create build directory
 log "Preparing build directory..."
@@ -247,11 +280,14 @@ log "Preparing update files..."
 mkdir -p "$UPDATES_DIR"
 
 # Create release notes
-log "Creating release notes..."
-RELEASE_NOTES_DIR="$PROJECT_DIR/docs/release-notes"
-mkdir -p "$RELEASE_NOTES_DIR"
+if [[ "$DRY_RUN" == "true" ]]; then
+    log "Skipping release notes creation (dry run mode)"
+else
+    log "Creating release notes..."
+    RELEASE_NOTES_DIR="$PROJECT_DIR/docs/release-notes"
+    mkdir -p "$RELEASE_NOTES_DIR"
 
-cat > "$RELEASE_NOTES_DIR/$VERSION.md" << EOF
+    cat > "$RELEASE_NOTES_DIR/$VERSION.md" << EOF
 # What's New in v$VERSION
 
 $(git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "HEAD~10")..HEAD | grep -E "^- (feat|fix|perf):" || echo "- General improvements and bug fixes")
@@ -262,24 +298,32 @@ $(git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^ 2>/
 ---
 Download: [NativeFoundationModels.zip](https://github.com/zats/native-foundation-models/releases/download/v$VERSION/NativeFoundationModels.zip)
 EOF
+fi
 
 # Commit version changes
-log "Committing version changes..."
-cd "$PROJECT_DIR"
-git add -A
-git commit -m "Release version $VERSION
+if [[ "$DRY_RUN" == "true" ]]; then
+    log "Skipping git commit and tagging (dry run mode)"
+else
+    log "Committing version changes..."
+    cd "$PROJECT_DIR"
+    git add -A
+    git commit -m "Release version $VERSION
 
 - Update version numbers to $VERSION
 - Add release notes for $VERSION
 - Update appcast for automatic updates"
 
-# Create and push git tag
-log "Creating git tag..."
-git tag -a "v$VERSION" -m "Release version $VERSION"
+    # Create and push git tag
+    log "Creating git tag..."
+    git tag -a "v$VERSION" -m "Release version $VERSION"
+fi
 
 # Determine if we should auto-publish (successful notarization or no credentials provided)
 SHOULD_AUTO_PUBLISH=false
-if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
+if [[ "$DRY_RUN" == "true" ]]; then
+    # Never auto-publish in dry run mode
+    SHOULD_AUTO_PUBLISH=false
+elif [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
     # If we have credentials and got this far, notarization was successful
     SHOULD_AUTO_PUBLISH=true
 elif [[ -z $APPLE_ID || -z $APPLE_TEAM_ID || -z $APPLE_APP_PASSWORD ]]; then
@@ -453,12 +497,20 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
     fi
 else
     echo ""
-    log "Release preparation complete! 🎉"
-    echo ""
-    warn "Manual steps required:"
-    echo "1. Push changes and tag: git push origin main && git push origin v$VERSION"
-    echo "2. Create GitHub release with ZIP file: $BUILD_DIR/NativeFoundationModels.zip"
-    echo "3. Update appcast manually after release is live"
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "Dry run completed! 🎉"
+        echo ""
+        log "Build artifacts available at: $BUILD_DIR/NativeFoundationModels.zip"
+        warn "No git operations were performed (dry run mode)"
+        echo "To create actual release, run: ./scripts/release.sh $VERSION"
+    else
+        log "Release preparation complete! 🎉"
+        echo ""
+        warn "Manual steps required:"
+        echo "1. Push changes and tag: git push origin main && git push origin v$VERSION"
+        echo "2. Create GitHub release with ZIP file: $BUILD_DIR/NativeFoundationModels.zip"
+        echo "3. Update appcast manually after release is live"
+    fi
 fi
 
 log "Release process completed! ✨"
