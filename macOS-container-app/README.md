@@ -36,7 +36,7 @@ The app performs two main installation steps:
 - Copies the native binary with executable permissions
 - Creates native messaging host configuration at:
   ```
-  ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json
+  ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.nativefoundationmodels.native.json
   ```
 
 ### Step 2: Chrome Extension

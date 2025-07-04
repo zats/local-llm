@@ -35,13 +35,15 @@ class UnifiedBackground {
   }
   
   setupNativeMessaging() {
-    if (this.config.nativeMessaging.supportsPersistentConnection) {
-      this.setupPersistentConnection();
-    }
+    // For Chrome, we'll establish connection on-demand rather than at startup
     // Safari uses message-based approach, no persistent connection needed
   }
   
   setupPersistentConnection() {
+    if (this.nativePort) {
+      return; // Already connected
+    }
+    
     try {
       console.log(`Attempting to connect to native app: ${this.config.nativeMessaging.appId}`);
       this.nativePort = chrome.runtime.connectNative(this.config.nativeMessaging.appId);
@@ -50,6 +52,7 @@ class UnifiedBackground {
       console.log('Native messaging port established successfully.');
     } catch (error) {
       console.error('Failed to connect to native app. Error details:', error.message, error.stack);
+      throw error;
     }
   }
   
@@ -95,13 +98,17 @@ class UnifiedBackground {
     } else if (message.command && message.requestId) {
       // Popup API format
       nativeRequest = {
-        action: message.command,
+        command: message.command,
         requestId: message.requestId,
-        data: message.payload
+        payload: message.payload
       };
     } else if (message.action) {
-      // Direct API format
-      nativeRequest = message;
+      // Direct API format - convert action to command for native app
+      nativeRequest = {
+        command: message.action,
+        requestId: message.requestId,
+        payload: message.payload
+      };
     }
     
     if (this.config.nativeMessaging.supportsPersistentConnection) {
@@ -114,13 +121,19 @@ class UnifiedBackground {
   handleChromeNativeRequest(nativeRequest, sendResponse) {
     const { requestId } = nativeRequest;
     
+    // Establish connection on-demand if not already connected
     if (!this.nativePort) {
-      sendResponse({ 
-        error: 'Native app not connected',
-        errorType: 'NATIVE_APP_NOT_FOUND',
-        downloadUrl: this.config.ui.downloadUrl
-      });
-      return true;
+      try {
+        this.setupPersistentConnection();
+      } catch (error) {
+        console.error('Failed to establish native connection:', error);
+        sendResponse({ 
+          error: 'Native app not connected',
+          errorType: 'NATIVE_APP_NOT_FOUND',
+          downloadUrl: this.config.ui.downloadUrl
+        });
+        return true;
+      }
     }
     
     // Store response handler

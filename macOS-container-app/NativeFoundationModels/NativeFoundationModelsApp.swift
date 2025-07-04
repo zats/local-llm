@@ -99,23 +99,27 @@ class InstallationStepManager: ObservableObject {
     }
     
     private func nativeMessagingHostURL(for browser: Browser) -> URL? {
-        let baseURL = URL.applicationSupportDirectory
-        switch browser {
+        let intermediatePath: String? = switch browser {
         case .chrome, .dia, .arc:
-            return baseURL.appendingPathComponent("Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+            "Google/Chrome"
         case .edge:
-            return baseURL.appendingPathComponent("Microsoft Edge/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+            "Microsoft Edge"
         case .brave:
-            return baseURL.appendingPathComponent("BraveSoftware/Brave-Browser/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+            "BraveSoftware/Brave-Browser"
         case .vivaldi:
-            return baseURL.appendingPathComponent("Vivaldi/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+            "Vivaldi"
         case .safari:
             // Safari uses a different mechanism, will be handled separately
-            return nil
+            nil
         case .firefox:
             // Firefox uses a different path
-            return baseURL.appendingPathComponent("Mozilla/NativeMessagingHosts/com.nativeFoundationModels.native.json")
+            "Mozilla"
         }
+        guard let path = intermediatePath else { return nil }
+        return URL.applicationSupportDirectory
+            .appendingPathComponent(path)
+            .appendingPathComponent("NativeMessagingHosts")
+            .appendingPathComponent("com.nativefoundationmodels.native.json")
     }
     
     init() {

@@ -337,22 +337,28 @@ struct InstallationStepView: View {
     }
     
     private func getNativeMessagingHostPath(for browser: Browser) -> String? {
-        switch browser {
+        let intermediatePath: String? = switch browser {
         case .chrome, .dia:
-            return "~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+            "Google/Chrome"
         case .edge:
-            return "~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+            "Microsoft Edge"
         case .brave:
-            return "~/Library/Application Support/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+            "BraveSoftware/Brave-Browser"
         case .arc:
-            return "~/Library/Application Support/Arc/User Data/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+            "Arc/User Data"
         case .vivaldi:
-            return "~/Library/Application Support/Vivaldi/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+            "Vivaldi"
         case .safari:
-            return nil
+            nil
         case .firefox:
-            return "~/Library/Application Support/Mozilla/NativeMessagingHosts/com.nativeFoundationModels.native.json"
+            "Mozilla"
         }
+        guard let intermediatePath else { return nil }
+        return URL
+            .applicationSupportDirectory
+            .appendingPathComponent(intermediatePath)
+            .appendingPathComponent("NativeMessagingHosts/com.nativefoundationmodels.native.json")
+            .path
     }
 }
 

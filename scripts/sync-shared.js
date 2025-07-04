@@ -7,17 +7,15 @@
 
 const fs = require('fs-extra');
 const path = require('path');
+const { getGeneratedFilesPaths, getGeneratedFiles, PROJECT_ROOT, CHROME_DIR, SAFARI_DIR } = require('./shared-files-util');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..');
 const SHARED_DIR = path.join(PROJECT_ROOT, 'shared');
-const CHROME_DIR = path.join(PROJECT_ROOT, 'native-foundation-models-extension');
-const SAFARI_DIR = path.join(PROJECT_ROOT, 'macOS-container-app', 'SafariExtension', 'Resources');
+const GITIGNORE_PATH = path.join(PROJECT_ROOT, '.gitignore');
 
 // Files that should NOT be removed from extension directories (platform-specific)
 const PLATFORM_SPECIFIC_FILES = {
   chrome: [
     'manifest.json',
-    'injected.js',
     'popup.html',
     'popup.js',
     'popup-api.js',
@@ -25,7 +23,6 @@ const PLATFORM_SPECIFIC_FILES = {
   ],
   safari: [
     'manifest.json',
-    'inject.js',
     'playground.html',
     'popup.html',
     'popup.js',
@@ -37,15 +34,8 @@ const PLATFORM_SPECIFIC_FILES = {
   ]
 };
 
-// Files that are generated from shared sources
-const GENERATED_FILES = [
-  'background.js',
-  'content.js',
-  'browser-compat.js',
-  'download-dialog.js',
-  'brain.png',
-  'prism.js'
-];
+// Files that are generated from shared sources (now centralized)
+const GENERATED_FILES = getGeneratedFiles();
 
 async function syncSharedFiles() {
   console.log('🔄 Syncing shared files to browser extensions...');
@@ -66,6 +56,12 @@ async function syncSharedFiles() {
     
     // Generate platform-specific content scripts
     await generateContentScripts();
+    
+    // Generate platform-specific injected scripts
+    await generateInjectedScripts();
+    
+    // Update .gitignore with current generated files
+    await updateGitignore();
     
     console.log('✅ Sync completed successfully!');
     console.log('📁 Chrome extension: native-foundation-models-extension/');
@@ -222,6 +218,94 @@ const contentScript = new UnifiedContentScript(SafariConfig);
   
   console.log('  ✅ Generated Chrome content.js');
   console.log('  ✅ Generated Safari content.js');
+}
+
+async function generateInjectedScripts() {
+  console.log('🔧 Generating platform-specific injected scripts...');
+  
+  // Read shared files
+  const injectedBaseCode = await fs.readFile(path.join(SHARED_DIR, 'core', 'injected-base.js'), 'utf8');
+  const chromeConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'chrome-config.js'), 'utf8');
+  const safariConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'safari-config.js'), 'utf8');
+
+  // Chrome injected script wrapper
+  const chromeInjected = `// Auto-generated Chrome injected script
+// This file integrates shared components - do not edit directly
+// Edit the original files in the shared/ directory
+
+// Load Chrome configuration
+${chromeConfigCode}
+
+// Load shared injected script logic
+${injectedBaseCode}
+
+// Initialize with Chrome configuration and expose API
+window.nativeFoundationModels = new UnifiedInjectedScript.NativeFoundationModels(ChromeConfig);
+`;
+
+  // Safari injected script wrapper
+  const safariInjected = `// Auto-generated Safari injected script
+// This file integrates shared components - do not edit directly
+// Edit the original files in the shared/ directory
+
+// Load Safari configuration
+${safariConfigCode}
+
+// Load shared injected script logic
+${injectedBaseCode}
+
+// Initialize with Safari configuration and expose API
+window.nativeFoundationModels = new UnifiedInjectedScript.NativeFoundationModels(SafariConfig);
+`;
+
+  // Write generated files
+  await fs.writeFile(path.join(CHROME_DIR, 'injected.js'), chromeInjected);
+  await fs.writeFile(path.join(SAFARI_DIR, 'inject.js'), safariInjected);
+  
+  console.log('  ✅ Generated Chrome injected.js');
+  console.log('  ✅ Generated Safari inject.js');
+}
+
+async function updateGitignore() {
+  console.log('📝 Updating .gitignore with generated files...');
+  
+  let gitignoreContent = '';
+  
+  // Read existing .gitignore if it exists
+  if (await fs.pathExists(GITIGNORE_PATH)) {
+    gitignoreContent = await fs.readFile(GITIGNORE_PATH, 'utf8');
+  }
+  
+  // Remove existing generated files section if it exists
+  const lines = gitignoreContent.split('\n');
+  const startIndex = lines.findIndex(line => line.includes('# Generated files from shared sources'));
+  
+  if (startIndex !== -1) {
+    // Find the end of the generated files section (next comment or end of file)
+    let endIndex = lines.length;
+    for (let i = startIndex + 1; i < lines.length; i++) {
+      if (lines[i].startsWith('#') && !lines[i].includes('Generated files from shared sources')) {
+        endIndex = i;
+        break;
+      }
+    }
+    
+    // Remove the old section
+    lines.splice(startIndex, endIndex - startIndex);
+    gitignoreContent = lines.join('\n');
+  }
+  
+  // Add current generated files section
+  const generatedFilesPaths = getGeneratedFilesPaths();
+  
+  if (!gitignoreContent.endsWith('\n') && gitignoreContent.length > 0) {
+    gitignoreContent += '\n';
+  }
+  
+  gitignoreContent += '\n' + generatedFilesPaths.join('\n') + '\n';
+  
+  await fs.writeFile(GITIGNORE_PATH, gitignoreContent);
+  console.log('  ✅ Updated .gitignore with current generated files');
 }
 
 // Run the sync

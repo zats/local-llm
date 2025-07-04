@@ -4,13 +4,7 @@
   "description": "Cross-browser extension for Native Foundation Models with shared codebase",
   "main": "index.js",
   "scripts": {
-    "dev": "node scripts/setup.js && node scripts/watch-shared.js",
-    "sync": "node scripts/sync-shared.js",
-    "build:chrome": "node scripts/build-chrome.js",
-    "build:safari": "node scripts/build-safari.js",
-    "build": "pnpm run build:chrome && pnpm run build:safari",
-    "watch": "node scripts/watch-shared.js",
-    "setup": "node scripts/setup.js"
+    "dev": "node scripts/sync-shared.js && node scripts/watch-shared.js"
   },
   "keywords": [
     "browser-extension",

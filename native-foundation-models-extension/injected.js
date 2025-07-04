@@ -1,24 +1,103 @@
-// Injected script that provides the website-facing API
+// Auto-generated Chrome injected script
+// This file integrates shared components - do not edit directly
+// Edit the original files in the shared/ directory
+
+// Load Chrome configuration
+/**
+ * Chrome-specific configuration for Native Foundation Models extension
+ */
+
+const ChromeConfig = {
+  browser: 'chrome',
+  
+  // Native messaging configuration
+  nativeMessaging: {
+    type: 'persistent',
+    appId: 'com.nativefoundationmodels.native',
+    supportsPersistentConnection: true
+  },
+  
+  // Extension scripts and resources
+  resources: {
+    injectedScript: 'injected.js',
+    downloadDialog: 'download-dialog.js',
+    webAccessibleResources: [
+      'injected.js', 
+      'download-dialog.js', 
+      'brain.png', 
+      'prism.js/prism.js', 
+      'prism.js/prism.css'
+    ]
+  },
+  
+  // Message types and protocols
+  messaging: {
+    requestType: 'nativefoundationmodels-request',
+    responseType: 'nativefoundationmodels-response'
+  },
+  
+  // UI configuration
+  ui: {
+    hasPlaygroundTab: false,
+    hasPopupWindow: false,
+    hasToolbarIcon: true,
+    openInNewTab: true,
+    playgroundUrl: 'popup.html',
+    downloadUrl: 'https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.app.zip'
+  },
+  
+  // Manifest configuration
+  manifest: {
+    version: 3,
+    backgroundType: 'service_worker',
+    backgroundScript: 'background.js',
+    permissions: [
+      'nativeMessaging',
+      'storage'
+    ],
+    hostPermissions: ['<all_urls>']
+  }
+};
+
+// Make available globally for both Chrome and Safari
+if (typeof self !== 'undefined') {
+  self.ChromeConfig = ChromeConfig;
+} else if (typeof window !== 'undefined') {
+  window.ChromeConfig = ChromeConfig;
+} else if (typeof global !== 'undefined') {
+  global.ChromeConfig = ChromeConfig;
+}
+
+// Load shared injected script logic
+/**
+ * Unified injected script for Native Foundation Models extension
+ * Provides consistent website-facing API across Chrome and Safari
+ */
+
 (function() {
   'use strict';
 
+  // Prevent duplicate loading
+  if (typeof window.nativeFoundationModels !== 'undefined') {
+    return;
+  }
+
   class NativeFoundationModels {
-    constructor() {
-      // Extension ID not needed in injected script
+    constructor(config) {
+      this.config = config;
       this.sessions = new Map(); // Track active sessions
+      this.requestCounter = 0;
     }
 
     async checkAvailability() {
       try {
         const response = await this.sendMessage('checkAvailability');
-        // Return OpenAI-compatible availability response
         return response.payload;
       } catch (error) {
-        // For checkAvailability, we always want to show the dialog on error
+        // Show download dialog on error
         if (window.nfmDownloadDialog) {
           window.nfmDownloadDialog.show();
         }
-        // Return OpenAI-compatible error format
         throw {
           error: {
             message: error.message,
@@ -42,10 +121,8 @@
     async getCompletion(prompt, options = {}) {
       try {
         const response = await this.sendMessage('getCompletion', { prompt, ...options });
-        // Return the full OpenAI-compatible response format
         return response.payload;
       } catch (error) {
-        // Return OpenAI-compatible error format
         throw {
           error: {
             message: error.message,
@@ -65,16 +142,13 @@
       let chunkWaiters = [];
       
       const messageHandler = (event) => {
-          console.log("💬 Message received:", event.data);
-        if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
+        if (event.data && event.data.type === this.config.messaging.responseType && event.data.requestId === requestId) {
           const { success, data, error } = event.data;
+          
           if (!success) {
-            // Check if it's a native app not found error
-            console.log('NativeFoundationModels streaming error:', error, 'errorType:', event.data.errorType);
             if (event.data.errorType === 'NATIVE_APP_NOT_FOUND' && window.nfmDownloadDialog) {
               window.nfmDownloadDialog.show();
             } else if (error && error.toLowerCase().includes('not available') && window.nfmDownloadDialog) {
-              // Also show dialog for "LLM not available" errors
               window.nfmDownloadDialog.show();
             }
             streamError = {
@@ -85,23 +159,18 @@
               }
             };
             streamComplete = true;
-            // Wake up any waiting promises
             chunkWaiters.forEach(resolve => resolve());
             chunkWaiters = [];
             return;
           }
           
           if (data.type === 'streamChunk') {
-            // Yield the full OpenAI-compatible chunk
             chunks.push(data.payload);
-            // Wake up any waiting promises
             chunkWaiters.forEach(resolve => resolve());
             chunkWaiters = [];
           } else if (data.type === 'streamEnd') {
-            // Yield the final chunk
             chunks.push(data.payload);
             streamComplete = true;
-            // Wake up any waiting promises
             chunkWaiters.forEach(resolve => resolve());
             chunkWaiters = [];
           } else if (data.type === 'error') {
@@ -113,7 +182,6 @@
               }
             };
             streamComplete = true;
-            // Wake up any waiting promises
             chunkWaiters.forEach(resolve => resolve());
             chunkWaiters = [];
           }
@@ -123,33 +191,30 @@
       window.addEventListener('message', messageHandler);
       
       try {
-        // Start the streaming request
+        // Send unified message format
         window.postMessage({
-          type: 'nativefoundationmodels-request',
+          type: this.config.messaging.requestType,
           requestId,
           command: 'getCompletionStream',
           payload: { prompt, ...options }
         }, '*');
         
-        // Yield OpenAI-compatible chunks as they arrive
+        // Yield chunks as they arrive
         let chunkIndex = 0;
         while (true) {
           if (streamError) {
             throw streamError;
           }
           
-          // Yield any new chunks that have arrived
           while (chunkIndex < chunks.length) {
             yield chunks[chunkIndex];
             chunkIndex++;
           }
           
-          // If we've yielded all chunks and stream is complete, we're done
           if (streamComplete && chunkIndex >= chunks.length) {
             break;
           }
           
-          // Wait for more chunks to arrive
           await new Promise(resolve => {
             chunkWaiters.push(resolve);
           });
@@ -165,19 +230,16 @@
       
       return new Promise((resolve, reject) => {
         const messageHandler = (event) => {
-          if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
+          if (event.data.type === this.config.messaging.responseType && event.data.requestId === requestId) {
             window.removeEventListener('message', messageHandler);
             
             const { success, data, error } = event.data;
             if (success) {
               resolve(data);
             } else {
-              // Check if it's a native app not found error
-              console.log('NativeFoundationModels error:', error, 'errorType:', event.data.errorType);
               if (event.data.errorType === 'NATIVE_APP_NOT_FOUND' && window.nfmDownloadDialog) {
                 window.nfmDownloadDialog.show();
               } else if (error && error.toLowerCase().includes('not available') && window.nfmDownloadDialog) {
-                // Also show dialog for "LLM not available" errors
                 window.nfmDownloadDialog.show();
               }
               reject(new Error(error, { cause: event.data }));
@@ -187,8 +249,9 @@
         
         window.addEventListener('message', messageHandler);
         
+        // Send unified message format
         window.postMessage({
-          type: 'nativefoundationmodels-request',
+          type: this.config.messaging.requestType,
           requestId,
           command,
           payload
@@ -206,7 +269,6 @@
       return 'req-' + Math.random().toString(36).substr(2, 9);
     }
 
-    // Internal method to clean up session
     _removeSession(sessionId) {
       this.sessions.delete(sessionId);
     }
@@ -231,7 +293,6 @@
           ...options
         });
         
-        // Return OpenAI-compatible format (remove sessionId for API compatibility)
         const { sessionId, ...openAIResponse } = result.payload;
         return openAIResponse;
       } catch (error) {
@@ -258,7 +319,7 @@
       let chunkWaiters = [];
       
       const messageHandler = (event) => {
-        if (event.data.type === 'nativefoundationmodels-response' && event.data.requestId === requestId) {
+        if (event.data.type === this.api.config.messaging.responseType && event.data.requestId === requestId) {
           const { success, data, error } = event.data;
           
           if (!success) {
@@ -276,13 +337,11 @@
           }
           
           if (data.type === 'streamChunk' && data.payload.sessionId === this.id) {
-            // Yield the full OpenAI-compatible chunk (excluding sessionId for API compatibility)
             const { sessionId, ...openAIChunk } = data.payload;
             chunks.push(openAIChunk);
             chunkWaiters.forEach(resolve => resolve());
             chunkWaiters = [];
           } else if (data.type === 'streamEnd' && data.payload.sessionId === this.id) {
-            // Yield the final chunk (excluding sessionId)
             const { sessionId, ...openAIChunk } = data.payload;
             chunks.push(openAIChunk);
             streamComplete = true;
@@ -306,15 +365,13 @@
       window.addEventListener('message', messageHandler);
       
       try {
-        // Start the streaming request
         window.postMessage({
-          type: 'nativefoundationmodels-request',
+          type: this.api.config.messaging.requestType,
           requestId,
           command: 'sendPlaygroundMessage',
           payload: { sessionId: this.id, prompt, ...options }
         }, '*');
         
-        // Yield OpenAI-compatible chunks as they arrive
         let chunkIndex = 0;
         while (true) {
           if (streamError) {
@@ -354,8 +411,15 @@
     }
   }
 
-  // Message forwarding is now handled by content script
-
-  // Expose API to websites
-  window.nativeFoundationModels = new NativeFoundationModels();
+  // Export for both module and script contexts
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { NativeFoundationModels, Session };
+  } else if (typeof self !== 'undefined') {
+    self.UnifiedInjectedScript = { NativeFoundationModels, Session };
+  } else if (typeof window !== 'undefined') {
+    window.UnifiedInjectedScript = { NativeFoundationModels, Session };
+  }
 })();
+
+// Initialize with Chrome configuration and expose API
+window.nativeFoundationModels = new UnifiedInjectedScript.NativeFoundationModels(ChromeConfig);
