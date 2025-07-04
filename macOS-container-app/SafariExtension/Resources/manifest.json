@@ -20,7 +20,6 @@
     },
 
     "action": {
-        "default_popup": "popup.html",
         "default_icon": "images/toolbar-icon.svg"
     },
 
@@ -28,7 +27,8 @@
         "scripting",
         "tabs",
         "activeTab",
-        "nativeMessaging"
+        "nativeMessaging",
+        "storage"
     ],
 
     "host_permissions": [
@@ -42,7 +42,7 @@
     }],
 
     "web_accessible_resources": [{
-        "resources": ["inject.js"],
+        "resources": ["inject.js", "playground.html", "download-dialog.js", "popup-api.js", "popup.js", "brain.png", "prism.js/prism.js", "prism.js/prism.css"],
         "matches": ["<all_urls>"]
     }]
 }

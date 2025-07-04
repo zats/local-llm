@@ -38,37 +38,50 @@ struct ContentView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            if !showBrowserSelector {
-                HStack {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            showBrowserSelector = true
-                            selectedBrowser = nil
-                            stepManager.selectedBrowser = nil
+        ZStack {
+            GradientBackground()
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Top padding for traffic lights
+                Spacer()
+                    .frame(height: 28)
+                
+                // Back button outside of toolbar to avoid macOS 26 beta crash
+                if !showBrowserSelector {
+                    HStack {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.5)) {
+                                showBrowserSelector = true
+                                selectedBrowser = nil
+                                stepManager.selectedBrowser = nil
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text("Back")
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.white.opacity(0.15))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
                         }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        .foregroundColor(.white.opacity(0.8))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.white.opacity(0.1))
-                        )
-                        .transition(.move(edge: .top))
+                        .buttonStyle(PlainButtonStyle())
+                        .focusable(false)
+                        .padding(.top, 8)
+                        
+                        Spacer()
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .focusable(false)
-                    
-                    Spacer()
                 }
-                .padding(.horizontal, 32)
-                .padding(.top, 20)
-            }
             
             if !showBrowserSelector, let browser = stepManager.selectedBrowser, let icon = browser.icon {
                 Image(nsImage: icon)
@@ -111,19 +124,17 @@ struct ContentView: View {
                         .environmentObject(stepManager)
                     }
                 }
-                .padding(.horizontal, 32)
             }
             
-            Spacer()
+                Spacer()
+            }
+            .padding(.horizontal, 32)
         }
-        .frame(minWidth: 420, minHeight: 700)
         .onAppear {
             AppMover.moveIfNecessary()
             heartbeat = true
         }
-        .background {
-            GradientBackground()
-        }
+        .frame(width: 420, height: 700)
     }
 }
 
@@ -275,6 +286,7 @@ struct InstallationStepView: View {
                 )
         )
         .opacity(isCompleted ? 0.7 : 1.0)
+        .animation(.easeInOut(duration: 0.3), value: isCompleted)
     }
     
     private var backgroundColor: Color {
@@ -313,7 +325,12 @@ struct InstallationStepView: View {
         
         switch step {
         case .installBinary:
-            return browser == .safari ? "Skip" : "Install"
+            if browser == .safari {
+                return "Skip"
+            }
+            // Check if both components are installed
+            let bothInstalled = stepManager.isBinaryInstalled() && stepManager.isNativeMessagingHostInstalled()
+            return bothInstalled ? "Reinstall" : "Install"
         case .installExtension:
             return browser == .safari ? "Open Safari Settings" : "Open Store"
         }

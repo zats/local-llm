@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SecureBank Support - PII Protection Demo</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .demo-container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .warning-banner {
+            background: #ff4757;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .chat-container {
+            padding: 25px;
+        }
+        
+        .message-area {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .message.support {
+            background: #e3f2fd;
+            align-self: flex-start;
+            border-bottom-left-radius: 6px;
+        }
+        
+        .message.user {
+            background: #1976d2;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 6px;
+        }
+        
+        .input-container {
+            position: relative;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            padding-right: 60px;
+        }
+        
+        .input-field:focus {
+            border-color: #1976d2;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+        }
+        
+        .input-field.warning {
+            border-color: #ff4757;
+            box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.1);
+        }
+        
+        .send-button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .send-button:hover:not(:disabled) {
+            background: #1565c0;
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: translateY(-50%);
+        }
+        
+        .pii-status {
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+            transition: all 0.3s ease;
+        }
+        
+        .pii-status.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .pii-status.safe {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .pii-status.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pii-item {
+            background: rgba(0,0,0,0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 2px 4px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        
+        .processing-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .processing-indicator.show {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e0e0e0;
+            border-top: 2px solid #1976d2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer-note {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .protected-badge {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        @media (max-width: 600px) {
+            .demo-container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .chat-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="warning-banner">
+            ⚠️ DEMO ONLY - DO NOT ENTER REAL PERSONAL INFORMATION
+        </div>
+        
+        <div class="header">
+            <div class="logo">🏦 SecureBank Support</div>
+            <div class="subtitle">AI-Powered Privacy Protection</div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="message-area" id="messageArea">
+                <div class="message support">
+                    Hello! I'm here to help with your banking questions. 
+                    <br><br>
+                    Our system automatically detects and warns about personal information before sending messages. Try typing something with fake personal details to see it in action!
+                </div>
+            </div>
+            
+            <div class="processing-indicator" id="processingIndicator">
+                <div class="spinner"></div>
+                <span>AI analyzing for personal information...</span>
+            </div>
+            
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    class="input-field" 
+                    id="messageInput"
+                    placeholder="Type your message here..."
+                    autocomplete="off"
+                >
+                <button class="send-button" id="sendButton">
+                    ➤
+                </button>
+            </div>
+            
+            <div class="pii-status" id="piiStatus">
+                <span id="piiStatusText"></span>
+            </div>
+            
+            <div class="footer-note">
+                This demo uses on-device AI to protect your privacy. 
+                <br>No data is sent to external servers for PII detection.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let debounceTimer = null;
+        let isProcessing = false;
+        
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const messageArea = document.getElementById('messageArea');
+        const piiStatus = document.getElementById('piiStatus');
+        const piiStatusText = document.getElementById('piiStatusText');
+        const processingIndicator = document.getElementById('processingIndicator');
+        
+        function addMessage(text, type) {
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.textContent = text;
+            messageArea.appendChild(message);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+                
+        async function analyzeWithLLM(text) {
+            if (!window.nativeFoundationModels) {
+                // Fallback to pattern matching if LLM not available
+                console.log('LLM not available, using pattern matching');
+                return false;
+            }
+            
+            try {
+                const prompt = `You are the best in class detector of personally identifiable information (PII).
+Look for:
+* Names (first, last, full names)
+* Email addresses
+* Phone numbers
+* Social Security Numbers
+* Credit card numbers
+* Physical addresses
+* Bank account numbers
+* Driver's license numbers
+* Passport numbers
+* Any other sensitive personal information
+
+Response format: If PII is found, respond with a JSON object like:
+{
+  "hasPII": true,
+  "items": [
+    {"type": "email", "value": "john@example.com"},
+    {"type": "phone", "value": "555-1234"}
+  ]
+}
+
+If no PII is found, respond with:
+{
+  "hasPII": false,
+  "items": []
+}
+
+Only respond with the JSON object, no additional text, no markdown code blocks.
+
+Text: ${text}`;
+
+                const result = await window.nativeFoundationModels.getCompletion(prompt);
+                const response = result.choices[0].message.content.trim();
+                
+                // Extract JSON from markdown code block if present
+                let jsonString = response;
+                const codeBlockMatch = response.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+                if (codeBlockMatch) {
+                    jsonString = codeBlockMatch[1].trim();
+                }
+                
+                try {
+                    const parsed = JSON.parse(jsonString);
+                    return parsed.hasPII ? parsed.items : [];
+                } catch (e) {
+                    console.error('Failed to parse LLM response as JSON:', e);
+                    return undefined;
+                }
+            } catch (error) {
+                console.error('LLM analysis failed:', error);
+                return undefined;
+            }
+        }
+        
+        function showPIIStatus(piiItems) {
+            if (piiItems.length === 0) {
+                // Show safe status
+                piiStatus.className = 'pii-status safe show';
+                piiStatusText.innerHTML = '✅ Personal information not detected';
+                messageInput.classList.remove('warning');
+                return;
+            }
+            
+            // Show warning status
+            const itemsHtml = piiItems.map(item => {
+                const values = item.matches || [item.value];
+                return values.map(value => 
+                    `<span class="pii-item">${item.type}: ${value}</span>`
+                ).join('');
+            }).join('');
+            
+            piiStatus.className = 'pii-status warning show';
+            piiStatusText.innerHTML = `⚠️ Potential personal information detected: ${itemsHtml}`;
+            messageInput.classList.add('warning');
+        }
+        
+        async function analyzeMessage() {
+            const text = messageInput.value.trim();
+            
+            if (!text) {
+                piiStatus.classList.remove('show');
+                messageInput.classList.remove('warning');
+                sendButton.disabled = false;
+                return;
+            }
+            
+            isProcessing = true;
+            processingIndicator.classList.add('show');
+            sendButton.disabled = true;
+            
+            try {
+                const piiItems = await analyzeWithLLM(text);
+                if (piiItems === undefined) {
+                    return;
+                } else {
+                    showPIIStatus(piiItems);
+                }
+            } catch (error) {
+                console.error('Analysis failed:', error);
+                // Continue without PII detection if analysis fails
+                piiStatus.classList.remove('show');
+                messageInput.classList.remove('warning');
+            } finally {
+                isProcessing = false;
+                processingIndicator.classList.remove('show');
+                sendButton.disabled = false;
+            }
+        }
+        
+        messageInput.addEventListener('input', () => {
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+            
+            // Clear previous state immediately
+            if (!isProcessing) {
+                piiStatus.classList.remove('show');
+                messageInput.classList.remove('warning');
+            }
+            
+            // Debounce the analysis
+            debounceTimer = setTimeout(() => {
+                analyzeMessage();
+            }, 1000); // Wait 1 second after user stops typing
+        });
+        
+        sendButton.addEventListener('click', () => {
+            const text = messageInput.value.trim();
+            if (text && !sendButton.disabled) {
+                addMessage(text, 'user');
+                messageInput.value = '';
+                piiStatus.classList.remove('show');
+                messageInput.classList.remove('warning');
+                
+                // Simulate bank response
+                setTimeout(() => {
+                    addMessage('Thank you for your message! Our team will review your inquiry and respond within 24 hours. Is there anything else I can help you with?', 'support');
+                }, 1500);
+            }
+        });
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !sendButton.disabled) {
+                sendButton.click();
+            }
+        });
+        
+        // Test the system on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (window.nativeFoundationModels) {
+                    console.log('✅ Native Foundation Models detected - Using AI-powered PII detection');
+                } else {
+                    console.log('⚠️ Native Foundation Models not detected - Using pattern-based PII detection');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

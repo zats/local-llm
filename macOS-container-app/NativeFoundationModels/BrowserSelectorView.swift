@@ -86,7 +86,6 @@ struct BrowserSelectorView: View {
                         )
                     }
                 }
-                .padding(.horizontal, 24)
                 .task {
                     selectedBrowser = browserDetector.defaultBrowser
                 }

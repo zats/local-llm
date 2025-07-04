@@ -25,52 +25,40 @@ function injectPageScript() {
     }
 }
 
+console.log("DEBUG: content.js loaded and setting up message listener");
+
 // Listen for messages from the injected page script
 window.addEventListener('message', async (event) => {
+    console.log("DEBUG: content.js received message:", event.data);
+    
     if (event.data && event.data.type === 'nativeRequest') {
         const { request } = event.data;
+        console.log("DEBUG: content.js processing nativeRequest:", request);
         
         try {
-            // Safari extension: Send message to Safari Web Extension Handler
-            // In Safari, this should trigger SafariWebExtensionHandler.beginRequest()
+            // Safari extension: Send message to background script
+            // Only the background script can call sendNativeMessage() in Safari
             
-            // Create message format expected by SafariWebExtensionHandler
-            const message = {
-                action: request.action,
-                requestId: request.requestId,
-                data: request.data || {}
+            const messageToBackground = {
+                type: 'nativeRequest',
+                payload: request
             };
             
-            // Try different Safari extension messaging approaches
-            let response;
+            console.log("DEBUG: content.js sending to background:", messageToBackground);
             
-            // First try: Direct native messaging (if Safari supports it)
-            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendNativeMessage) {
-                // Try chrome.runtime.sendNativeMessage
-                response = await new Promise((resolve, reject) => {
-                    chrome.runtime.sendNativeMessage(message, (response) => {
-                        if (chrome.runtime.lastError) {
-                            reject(new Error(chrome.runtime.lastError.message));
-                        } else {
-                            resolve(response);
-                        }
-                    });
-                });
-            } else if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendNativeMessage) {
-                // Try browser.runtime.sendNativeMessage
-                response = await browser.runtime.sendNativeMessage(message);
-            } else {
-                // Fallback: Try sending to background script which might have native access
-                response = await browser.runtime.sendMessage(message);
-            }
+            // Send to background script via browser.runtime.sendMessage()
+            const response = await browser.runtime.sendMessage(messageToBackground);
             
-            // Received response from Safari handler
+            console.log("DEBUG: content.js received response from background:", response);
             
             // Send response back to page
-            window.postMessage({
+            const responseToPage = {
                 type: 'nativeResponse',
                 response: response
-            }, '*');
+            };
+            
+            console.log("DEBUG: content.js sending response back to page:", responseToPage);
+            window.postMessage(responseToPage, '*');
         } catch (error) {
             console.error("Critical error in content script:", error);
             

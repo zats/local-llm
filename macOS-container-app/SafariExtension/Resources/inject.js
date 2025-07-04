@@ -1,8 +1,11 @@
 // This is the actual script that will run in the page context
 // It creates the window.nativeFoundationModels API
 
+console.log("DEBUG: inject.js loaded and executing");
+
 // Prevent duplicate loading
 if (typeof window.nativeFoundationModels === 'undefined') {
+    console.log("DEBUG: Creating NativeFoundationModels API");
 
 // Create the NativeFoundationModels API class
 class NativeFoundationModels {
@@ -12,7 +15,9 @@ class NativeFoundationModels {
         
         // Listen for responses from content script
         window.addEventListener('message', (event) => {
+            console.log("DEBUG: inject.js received message:", event.data);
             if (event.data && event.data.type === 'nativeResponse') {
+                console.log("DEBUG: inject.js handling nativeResponse:", event.data.response);
                 this._handleResponse(event.data.response);
             }
         });
@@ -21,7 +26,10 @@ class NativeFoundationModels {
     }
 
     async checkAvailability() {
-        return this._sendRequest('checkAvailability', {});
+        console.log("DEBUG: checkAvailability called in inject.js");
+        const result = await this._sendRequest('checkAvailability', {});
+        console.log("DEBUG: checkAvailability result:", result);
+        return result;
     }
 
     async getCompletion(prompt, options = {}) {
@@ -130,25 +138,30 @@ class NativeFoundationModels {
     }
     
     async _sendRequestWithId(action, data, requestId) {
-        // Sending request
+        console.log("DEBUG: _sendRequestWithId called with:", { action, data, requestId });
         
         return new Promise((resolve, reject) => {
             this.pendingRequests.set(requestId, { resolve, reject });
             
-            // Send message to content script via window.postMessage
-            window.postMessage({
+            const message = {
                 type: 'nativeRequest',
                 request: {
                     action,
                     requestId,
                     data
                 }
-            }, '*');
+            };
+            
+            console.log("DEBUG: Sending postMessage from inject.js:", message);
+            
+            // Send message to content script via window.postMessage
+            window.postMessage(message, '*');
             
             // Set timeout to avoid hanging requests
             setTimeout(() => {
                 const pending = this.pendingRequests.get(requestId);
                 if (pending) {
+                    console.log("DEBUG: Request timeout for requestId:", requestId);
                     pending.reject(new Error('Request timeout'));
                     this.pendingRequests.delete(requestId);
                 }
@@ -182,6 +195,10 @@ class NativeFoundationModels {
 // Inject the API into the window object
 window.nativeFoundationModels = new NativeFoundationModels();
 
+console.log("DEBUG: window.nativeFoundationModels created:", window.nativeFoundationModels);
+
 // API successfully injected into window object
 
+} else {
+    console.log("DEBUG: NativeFoundationModels already exists, skipping creation");
 } // End duplicate loading check

@@ -34,9 +34,11 @@ struct NativeFoundationModelsApp: App {
         WindowGroup {
             ContentView()
                 .onAppear {
-                    // Disable focus ring globally
                     NSApplication.shared.windows.forEach { window in
-                        window.styleMask.remove(.fullSizeContentView)
+                        window.titlebarAppearsTransparent = true
+                        window.titleVisibility = .hidden
+                        window.styleMask.insert(.fullSizeContentView)
+                        window.isMovableByWindowBackground = true
                     }
                 }
         }
@@ -132,7 +134,8 @@ class InstallationStepManager: ObservableObject {
     
     func checkAllSteps() {
         DispatchQueue.main.async {
-            self.stepStatuses[.installBinary] = self.isBinaryStepComplete()
+            // Don't auto-complete the binary step - user should always have the option to reinstall
+            // self.stepStatuses[.installBinary] = self.isBinaryStepComplete()
             self.stepStatuses[.installExtension] = self.isExtensionInstalled()
         }
     }

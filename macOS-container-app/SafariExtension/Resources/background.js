@@ -9,6 +9,12 @@ browser.runtime.onStartup.addListener(() => {
     // Extension started
 });
 
+// Handle toolbar button click - open playground in new tab
+browser.action.onClicked.addListener((tab) => {
+    const playgroundUrl = browser.runtime.getURL('playground.html');
+    browser.tabs.create({ url: playgroundUrl });
+});
+
 // Handle messages from content scripts
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
@@ -18,7 +24,24 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
     }
 
-    // Handle NativeFoundationModels API calls
+    // Handle NativeFoundationModels API calls from content script
+    if (request.type === 'nativeRequest' && request.payload) {
+        handleNativeFoundationModelsRequest(request.payload, sender, sendResponse);
+        return true; // Keep message channel open for async response
+    }
+
+    // Handle popup API calls (popup-api.js sends { requestId, command, payload })
+    if (request.command && request.requestId) {
+        const nativeRequest = {
+            action: request.command,
+            requestId: request.requestId,
+            data: request.payload
+        };
+        handleNativeFoundationModelsRequest(nativeRequest, sender, sendResponse);
+        return true; // Keep message channel open for async response
+    }
+
+    // Handle direct API calls (legacy support)
     if (request.action) {
         handleNativeFoundationModelsRequest(request, sender, sendResponse);
         return true; // Keep message channel open for async response
@@ -27,36 +50,42 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function handleNativeFoundationModelsRequest(request, sender, sendResponse) {
     try {
+        console.log("Background script handling request:", request.action, "with ID:", request.requestId);
         
-        // Safari extension: Try to communicate with Safari Web Extension Handler
-        let response;
+        // Safari extension: Use browser.runtime.sendNativeMessage WITHOUT app ID
+        // This should trigger SafariWebExtensionHandler.beginRequest() in Swift
         
-        // Try native messaging first (this should trigger SafariWebExtensionHandler.beginRequest)
-        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendNativeMessage) {
-            // Try chrome.runtime.sendNativeMessage
-            response = await new Promise((resolve, reject) => {
-                chrome.runtime.sendNativeMessage(request, (response) => {
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message));
+        // Create message format expected by SafariWebExtensionHandler
+        const message = {
+            action: request.action,
+            requestId: request.requestId,
+            data: request.data || {}
+        };
+        
+        // Safari extensions use sendNativeMessage - it should automatically route to SafariWebExtensionHandler
+        const response = await new Promise((resolve, reject) => {
+            // Try Safari's sendNativeMessage - it should route to SafariWebExtensionHandler.beginRequest()
+            if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendNativeMessage) {
+                browser.runtime.sendNativeMessage(message, (response) => {
+                    if (browser.runtime.lastError) {
+                        console.error('Safari native message error:', browser.runtime.lastError);
+                        reject(new Error(browser.runtime.lastError.message));
                     } else {
                         resolve(response);
                     }
                 });
-            });
-        } else if (typeof browser !== 'undefined' && browser.runtime && browser.runtime.sendNativeMessage) {
-            // Try browser.runtime.sendNativeMessage
-            response = await browser.runtime.sendNativeMessage(request);
-        } else {
-            // If native messaging isn't available, we need to find another way
-            throw new Error('Native messaging API not available in Safari');
-        }
+            } else {
+                reject(new Error('browser.runtime.sendNativeMessage not available'));
+            }
+        });
         
+        console.log("Received response:", response);
         sendResponse(response);
         
     } catch (error) {
         console.error("Critical error communicating with Safari Web Extension Handler:", error);
         
-        // Fallback: return error response
+        // Return error response
         sendResponse({
             requestId: request.requestId,
             type: 'response',

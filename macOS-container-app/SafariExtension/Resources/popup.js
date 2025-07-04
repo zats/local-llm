@@ -1,513 +1,895 @@
-// Popup Script for NativeFoundationModels Extension
-class PopupController {
-    constructor() {
-        this.lastChecked = null;
-        this.init();
-    }
+// Popup playground functionality
+class NativeFoundationModelsPlayground {
+  constructor() {
+    this.currentSession = null; // Now stores Session object instead of ID
+    this.isGenerating = false;
+    this.streamingContent = '';
+    this.temperature = 0.8;
+    this.maxTokens = 1024;
+    this.samplingMode = 'top-p'; // Maps to .topP() with default parameters
+    this.systemPrompt = 'You are a helpful, knowledgeable, and concise AI assistant. Provide clear, accurate responses while being friendly and professional.';
+    
+    // Temporary settings for the settings dialog
+    this.tempSettings = {};
+    
+    // Track conversation for code export
+    this.conversationHistory = [];
+    
+    // Get reference to the unified API
+    this.api = window.nativeFoundationModels;
+    
+    this.initializeElements();
+    this.setupEventListeners();
+    this.loadSettings();
+    
+    // Delay the availability check slightly to allow background script to initialize
+    setTimeout(() => this.checkAvailability(), 100);
+  }
 
-    init() {
-        this.setupEventListeners();
-        this.updateLastUpdated();
-        this.checkStatus();
+  initializeElements() {
+    this.statusEl = document.getElementById('status');
+    this.chatContainer = document.getElementById('chatContainer');
+    this.emptyState = document.getElementById('emptyState');
+    this.promptInput = document.getElementById('promptInput');
+    this.sendBtn = document.getElementById('sendBtn');
+    this.newChatBtn = document.getElementById('newChatBtn');
+    this.settingsBtn = document.getElementById('settingsBtn');
+    this.exportCodeBtn = document.getElementById('exportCodeBtn');
+    this.openPlaygroundBtn = document.getElementById('openPlaygroundBtn');
+    this.openPopupBtn = document.getElementById('openPopupBtn');
+    this.cancelBtn = document.getElementById('cancelBtn');
+    this.saveBtn = document.getElementById('saveBtn');
+    this.settingsView = document.getElementById('settingsView');
+    this.settingsBackdrop = document.getElementById('settingsBackdrop');
+    this.systemPromptInput = document.getElementById('systemPrompt');
+    this.tempValueSpan = document.getElementById('tempValue');
+    this.tempUpBtn = document.getElementById('tempUp');
+    this.tempDownBtn = document.getElementById('tempDown');
+    this.tokensValueSpan = document.getElementById('tokensValue');
+    this.tokensUpBtn = document.getElementById('tokensUp');
+    this.tokensDownBtn = document.getElementById('tokensDown');
+    this.samplingModeSelect = document.getElementById('samplingMode');
+    this.troubleshootingBtn = document.getElementById('troubleshootingBtn');
+    
+    // Debug: Log missing elements
+    const elements = {
+      'status': this.statusEl,
+      'chatContainer': this.chatContainer,
+      'promptInput': this.promptInput,
+      'sendBtn': this.sendBtn,
+      'openPlaygroundBtn': this.openPlaygroundBtn,
+      'exportCodeBtn': this.exportCodeBtn,
+      'settingsBtn': this.settingsBtn,
+      'newChatBtn': this.newChatBtn
+    };
+    
+    for (const [name, element] of Object.entries(elements)) {
+      if (!element) {
+        console.warn(`Element not found: ${name}`);
+      }
     }
+  }
 
-    setupEventListeners() {
-        // Test buttons
-        document.getElementById('test-availability')?.addEventListener('click', () => this.testAvailability());
-        document.getElementById('test-completion')?.addEventListener('click', () => this.testCompletion());
-        document.getElementById('test-streaming')?.addEventListener('click', () => this.testStreaming());
-        
-        // Utility buttons
-        document.getElementById('request-permissions')?.addEventListener('click', () => this.requestPermissions());
-        document.getElementById('refresh-status')?.addEventListener('click', () => this.checkStatus());
+  setupEventListeners() {
+    if (this.sendBtn) this.sendBtn.addEventListener('click', () => this.sendMessage());
+    if (this.newChatBtn) this.newChatBtn.addEventListener('click', () => this.startNewChat());
+    if (this.settingsBtn) this.settingsBtn.addEventListener('click', () => this.showSettings());
+    if (this.exportCodeBtn) this.exportCodeBtn.addEventListener('click', () => this.exportCode());
+    if (this.openPlaygroundBtn) {
+      this.openPlaygroundBtn.addEventListener('click', () => this.openPlayground());
     }
-
-    updateLastUpdated() {
-        const now = new Date().toLocaleTimeString();
-        const element = document.getElementById('last-updated');
-        if (element) element.textContent = now;
+    if (this.openPopupBtn) {
+      this.openPopupBtn.addEventListener('click', () => this.openPopup());
     }
-
-    async checkStatus() {
-        this.updateLastUpdated();
-        this.updateStatus('status-text', 'Checking status...', 'checking');
-        
-        try {
-            // Check extension active
-            this.updateStatus('extension-active', '✅ Active', 'success');
-            
-            // Check permissions
-            await this.checkPermissions();
-            
-            // Check content script and API
-            await this.checkContentScriptAndAPI();
-            
-            // Update overall status
-            this.updateOverallStatus();
-            
-        } catch (error) {
-            console.error("Critical error during status check:", error);
-            this.updateStatus('status-text', 'Status check failed', 'error');
+    if (this.cancelBtn) this.cancelBtn.addEventListener('click', () => this.cancelSettings());
+    if (this.saveBtn) this.saveBtn.addEventListener('click', () => this.saveSettings());
+    if (this.settingsBackdrop) this.settingsBackdrop.addEventListener('click', () => this.cancelSettings());
+    
+    if (this.promptInput) {
+      this.promptInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          this.sendMessage();
         }
+      });
+    }
+    
+    // Temperature stepper controls
+    if (this.tempUpBtn) this.tempUpBtn.addEventListener('click', () => this.adjustTemperature(0.1));
+    if (this.tempDownBtn) this.tempDownBtn.addEventListener('click', () => this.adjustTemperature(-0.1));
+    
+    // Max tokens stepper controls
+    if (this.tokensUpBtn) this.tokensUpBtn.addEventListener('click', () => this.adjustMaxTokens(50));
+    if (this.tokensDownBtn) this.tokensDownBtn.addEventListener('click', () => this.adjustMaxTokens(-50));
+    
+    // System prompt input - store temporarily
+    if (this.systemPromptInput) {
+      this.systemPromptInput.addEventListener('input', () => {
+        this.tempSettings.systemPrompt = this.systemPromptInput.value;
+      });
+      
+      // Select all text when system prompt is focused
+      this.systemPromptInput.addEventListener('focus', () => {
+        this.systemPromptInput.select();
+      });
+    }
+    
+    // Sampling mode dropdown - store temporarily
+    if (this.samplingModeSelect) {
+      this.samplingModeSelect.addEventListener('change', () => {
+        this.tempSettings.samplingMode = this.samplingModeSelect.value;
+      });
     }
 
-    async checkPermissions() {
-        try {
-            // Safari handles permissions differently - if extension is running, permissions are granted
-            let hasPermissions = false;
-            
-            try {
-                // Try to get current tab - if this works, we have permissions
-                const tabs = await browser.tabs.query({active: true, currentWindow: true});
-                if (tabs && tabs[0]) {
-                    hasPermissions = true;
-                }
-            } catch (e) {
-                // Fallback: try the permissions API
-                try {
-                    hasPermissions = await browser.permissions.contains({
-                        origins: ['<all_urls>']
-                    });
-                } catch (e2) {
-                    try {
-                        hasPermissions = await browser.permissions.contains({
-                            origins: ['http://*/*', 'https://*/*']
-                        });
-                    } catch (e3) {
-                        console.error("Critical error: All permission checks failed:", e3);
-                        // If all fails, we can't determine permissions
-                        hasPermissions = false;
-                    }
-                }
-            }
-            
-            if (hasPermissions) {
-                this.updateStatus('permissions-granted', '✅ Granted', 'success');
-            } else {
-                this.updateStatus('permissions-granted', '❌ Not Granted', 'error');
-            }
-        } catch (error) {
-            this.updateStatus('permissions-granted', '⚠️ Unknown', 'warning');
-        }
+    // Troubleshooting button
+    if (this.troubleshootingBtn) {
+      this.troubleshootingBtn.addEventListener('click', () => {
+        alert('For Safari troubleshooting:\\n\\n1. Check if extension is enabled in Safari settings\\n2. Look for the yellow icon in the address bar\\n3. Click it and select Always Allow on Every Website\\n4. Refresh the page');
+      });
+      
+      // Add hover effects
+      this.troubleshootingBtn.addEventListener('mouseover', () => {
+        this.troubleshootingBtn.style.transform = 'translateY(-2px)';
+        this.troubleshootingBtn.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
+      });
+      
+      this.troubleshootingBtn.addEventListener('mouseout', () => {
+        this.troubleshootingBtn.style.transform = 'translateY(0)';
+        this.troubleshootingBtn.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
+      });
     }
 
-    async checkContentScriptAndAPI() {
-        try {
-            // Get current active tab
-            const tabs = await browser.tabs.query({active: true, currentWindow: true});
-            if (!tabs[0]) {
-                this.updateStatus('content-script-active', '❌ No active tab', 'error');
-                this.updateStatus('api-available', '❌ No active tab', 'error');
-                return;
-            }
+    // Streaming is now handled directly by the unified API
+  }
 
-            // Try to execute a script to check if content script is working
-            try {
-                // Use Safari-compatible script execution
-                const results = await browser.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: () => {
-                        try {
-                            // Check if our API exists
-                            const hasAPI = typeof window.nativeFoundationModels !== 'undefined';
-                            const hasTestFunction = typeof window.testNFMCheck !== 'undefined';
-                            
-                            return {
-                                contentScriptActive: true,
-                                apiAvailable: hasAPI,
-                                testFunctionAvailable: hasTestFunction,
-                                url: window.location.href
-                            };
-                        } catch (e) {
-                            return { error: e.message };
-                        }
-                    }
-                });
-
-                if (results && results[0] && results[0].result) {
-                    const data = results[0].result;
-                    
-                    if (data.error) {
-                        this.updateStatus('content-script-active', '❌ Error', 'error');
-                        this.updateStatus('api-available', '❌ Error', 'error');
-                    } else {
-                        // Content script status
-                        if (data.contentScriptActive) {
-                            this.updateStatus('content-script-active', '✅ Active', 'success');
-                        } else {
-                            this.updateStatus('content-script-active', '❌ Not Active', 'error');
-                        }
-                        
-                        // API status
-                        if (data.apiAvailable) {
-                            this.updateStatus('api-available', '✅ Available', 'success');
-                        } else {
-                            this.updateStatus('api-available', '❌ Not Available', 'error');
-                        }
-                    }
-                }
-            } catch (executeError) {
-                // Modern script execution failed, trying legacy method
-                
-                // Fallback to legacy method for older Safari versions
-                try {
-                    const result = await browser.tabs.executeScript(tabs[0].id, {
-                        code: `
-                            try {
-                                // Check if our API exists
-                                const hasAPI = typeof window.nativeFoundationModels !== 'undefined';
-                                const hasTestFunction = typeof window.testNFMCheck !== 'undefined';
-                                
-                                ({
-                                    contentScriptActive: true,
-                                    apiAvailable: hasAPI,
-                                    testFunctionAvailable: hasTestFunction,
-                                    url: window.location.href
-                                });
-                            } catch (e) {
-                                ({ error: e.message });
-                            }
-                        `
-                    });
-
-                    if (result && result[0]) {
-                        const data = result[0];
-                        
-                        if (data.error) {
-                            this.updateStatus('content-script-active', '❌ Error', 'error');
-                            this.updateStatus('api-available', '❌ Error', 'error');
-                        } else {
-                            if (data.contentScriptActive) {
-                                this.updateStatus('content-script-active', '✅ Active', 'success');
-                            } else {
-                                this.updateStatus('content-script-active', '❌ Not Active', 'error');
-                            }
-                            
-                            if (data.apiAvailable) {
-                                this.updateStatus('api-available', '✅ Available', 'success');
-                            } else {
-                                this.updateStatus('api-available', '❌ Not Available', 'error');
-                            }
-                        }
-                    }
-                } catch (legacyError) {
-                    console.error("Critical error: Both modern and legacy script execution failed:", legacyError);
-                    this.updateStatus('content-script-active', '❌ Cannot check', 'error');
-                    this.updateStatus('api-available', '❌ Cannot check', 'error');
-                }
-            }
-
-        } catch (error) {
-            this.updateStatus('content-script-active', '⚠️ Check failed', 'warning');
-            this.updateStatus('api-available', '⚠️ Check failed', 'warning');
-        }
+  async checkAvailability() {
+    try {
+      const response = await this.api.checkAvailability();
+      
+      if (response && response.payload && response.payload.available) {
+        this.statusEl.textContent = 'Ready';
+        this.statusEl.className = 'status ready';
+      } else {
+        // If checkAvailability fails, try a different approach
+        this.tryFallbackAvailabilityCheck();
+      }
+    } catch (error) {
+      // If the availability check fails, try a fallback
+      this.tryFallbackAvailabilityCheck();
     }
-
-    updateOverallStatus() {
-        const extensionOk = document.getElementById('extension-active')?.textContent.includes('✅');
-        const permissionsOk = document.getElementById('permissions-granted')?.textContent.includes('✅');
-        const contentScriptOk = document.getElementById('content-script-active')?.textContent.includes('✅');
-        const apiOk = document.getElementById('api-available')?.textContent.includes('✅');
-
-        if (extensionOk && permissionsOk && contentScriptOk && apiOk) {
-            this.updateStatus('status-text', 'All systems operational', 'success');
-        } else if (!permissionsOk) {
-            this.updateStatus('status-text', 'Permissions needed', 'error');
-        } else if (!apiOk) {
-            this.updateStatus('status-text', 'API not available', 'error');
-        } else {
-            this.updateStatus('status-text', 'Issues detected', 'warning');
-        }
-    }
-
-    updateStatus(elementId, text, type = '') {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-
-        element.textContent = text;
-        element.className = `value ${type}`;
-
-        // Update status dot if this is the main status
-        if (elementId === 'status-text') {
-            const dot = document.querySelector('.status-dot');
-            if (dot) {
-                dot.className = `status-dot ${type}`;
-            }
-        }
-    }
-
-    async testAvailability() {
-        this.addResult('Testing availability...', 'info');
+  }
+  
+  async tryFallbackAvailabilityCheck() {
+    try {
+      // Try to start a session as a way to test availability
+      const session = await this.api.createSession();
+      if (session && session.id) {
+        // If we can start a session, LLM is available
+        this.statusEl.textContent = 'Ready';
+        this.statusEl.className = 'status ready';
         
-        try {
-            const tabs = await browser.tabs.query({active: true, currentWindow: true});
-            if (!tabs[0]) {
-                this.addResult('No active tab found', 'error');
-                return;
-            }
+        // Clean up the test session
+        await session.end();
+      } else {
+        // One more retry after a short delay
+        setTimeout(() => this.finalAvailabilityRetry(), 500);
+      }
+    } catch (error) {
+      // One more retry after a short delay
+      setTimeout(() => this.finalAvailabilityRetry(), 500);
+    }
+  }
+  
+  showDownloadPrompt() {
+    this.statusEl.innerHTML = `
+      <span style="color: #e74c3c;">Native app not found</span>
+      <button onclick="window.nfmDownloadDialog.show()" 
+         style="color: #3498db; background: none; border: none; margin-left: 8px; font-weight: 600; cursor: pointer; text-decoration: underline;">
+        Download →
+      </button>
+    `;
+    this.statusEl.className = 'status error';
+    
+    // Show the unified download dialog
+    if (window.nfmDownloadDialog) {
+      window.nfmDownloadDialog.show();
+    }
+  }
 
-            try {
-                const results = await browser.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: async () => {
-                        try {
-                            if (typeof window.testNFMCheck === 'function') {
-                                const result = await window.testNFMCheck();
-                                return { success: true, result };
-                            } else if (typeof window.nativeFoundationModels !== 'undefined') {
-                                const result = await window.nativeFoundationModels.checkAvailability();
-                                return { success: true, result };
-                            } else {
-                                return { success: false, error: 'API not available' };
-                            }
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    }
-                });
+  async finalAvailabilityRetry() {
+    try {
+      const session = await this.api.createSession();
+      if (session && session.id) {
+        this.statusEl.textContent = 'Ready';
+        this.statusEl.className = 'status ready';
+        
+        await session.end();
+      } else {
+        this.showDownloadPrompt();
+      }
+    } catch (error) {
+      console.error('Availability check failed:', error);
+      this.showDownloadPrompt();
+    }
+  }
 
-                if (results && results[0] && results[0].result) {
-                    const data = results[0].result;
-                    if (data.success) {
-                        this.addResult(`✅ Availability check successful: ${JSON.stringify(data.result, null, 2)}`, 'success');
-                    } else {
-                        this.addResult(`❌ Availability check failed: ${data.error}`, 'error');
-                    }
-                }
-            } catch (modernError) {
-                // Fallback to legacy method
-                const result = await browser.tabs.executeScript(tabs[0].id, {
-                    code: `
-                        (async () => {
-                            try {
-                                if (typeof window.testNFMCheck === 'function') {
-                                    const result = await window.testNFMCheck();
-                                    return { success: true, result };
-                                } else if (typeof window.nativeFoundationModels !== 'undefined') {
-                                    const result = await window.nativeFoundationModels.checkAvailability();
-                                    return { success: true, result };
-                                } else {
-                                    return { success: false, error: 'API not available' };
-                                }
-                            } catch (error) {
-                                return { success: false, error: error.message };
-                            }
-                        })();
-                    `
-                });
+  async startNewChat() {
+    try {
+      if (this.currentSession) {
+        await this.currentSession.end();
+      }
 
-                if (result && result[0]) {
-                    const data = result[0];
-                    if (data.success) {
-                        this.addResult(`✅ Availability check successful: ${JSON.stringify(data.result, null, 2)}`, 'success');
-                    } else {
-                        this.addResult(`❌ Availability check failed: ${data.error}`, 'error');
-                    }
-                }
-            }
-        } catch (error) {
-            this.addResult(`❌ Test failed: ${error.message}`, 'error');
-        }
+      // Prepare session options with system prompt if provided
+      const sessionOptions = {};
+      if (this.systemPrompt.trim()) {
+        sessionOptions.systemPrompt = this.systemPrompt.trim();
+      }
+
+      this.currentSession = await this.api.createSession(sessionOptions);
+      
+      // Clear conversation history
+      this.conversationHistory = [];
+      
+      // Clear chat and show empty state
+      this.chatContainer.innerHTML = `
+        <div class="empty-state" id="emptyState">
+          Your conversation with the AI will appear here
+        </div>
+      `;
+      this.emptyState = document.getElementById('emptyState');
+      
+      this.statusEl.textContent = 'Ready';
+      this.statusEl.className = 'status ready';
+    } catch (error) {
+      this.statusEl.textContent = 'Failed to start new chat';
+      this.statusEl.className = 'status error';
+      this.currentSession = null; // Make sure it's null on failure
+    }
+  }
+
+  async sendMessage() {
+    const prompt = this.promptInput.value.trim();
+    if (!prompt || this.isGenerating) return;
+
+    // Start session if needed
+    if (!this.currentSession) {
+      await this.startNewChat();
     }
 
-    async testCompletion() {
-        const prompt = document.getElementById('test-prompt')?.value || 'Hello, how are you?';
-        this.addResult(`Testing completion with prompt: "${prompt}"`, 'info');
-        
-        try {
-            const tabs = await browser.tabs.query({active: true, currentWindow: true});
-            if (!tabs[0]) {
-                this.addResult('No active tab found', 'error');
-                return;
-            }
-
-            try {
-                const results = await browser.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: async (testPrompt) => {
-                        try {
-                            if (typeof window.nativeFoundationModels !== 'undefined') {
-                                const result = await window.nativeFoundationModels.getCompletion(testPrompt);
-                                return { success: true, result };
-                            } else {
-                                return { success: false, error: 'API not available' };
-                            }
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    },
-                    args: [prompt]
-                });
-
-                if (results && results[0] && results[0].result) {
-                    const data = results[0].result;
-                    if (data.success) {
-                        this.addResult(`✅ Completion successful: ${JSON.stringify(data.result, null, 2)}`, 'success');
-                    } else {
-                        this.addResult(`❌ Completion failed: ${data.error}`, 'error');
-                    }
-                }
-            } catch (modernError) {
-                // Fallback to legacy method
-                const result = await browser.tabs.executeScript(tabs[0].id, {
-                    code: `
-                        (async () => {
-                            try {
-                                if (typeof window.nativeFoundationModels !== 'undefined') {
-                                    const result = await window.nativeFoundationModels.getCompletion('${prompt.replace(/'/g, "\\'")}');
-                                    return { success: true, result };
-                                } else {
-                                    return { success: false, error: 'API not available' };
-                                }
-                            } catch (error) {
-                                return { success: false, error: error.message };
-                            }
-                        })();
-                    `
-                });
-
-                if (result && result[0]) {
-                    const data = result[0];
-                    if (data.success) {
-                        this.addResult(`✅ Completion successful: ${JSON.stringify(data.result, null, 2)}`, 'success');
-                    } else {
-                        this.addResult(`❌ Completion failed: ${data.error}`, 'error');
-                    }
-                }
-            }
-        } catch (error) {
-            this.addResult(`❌ Test failed: ${error.message}`, 'error');
-        }
+    // Check if session creation was successful
+    if (!this.currentSession) {
+      this.displayError({ message: 'Failed to create session', code: 'session_creation_failed' });
+      return;
     }
 
-    async testStreaming() {
-        const prompt = document.getElementById('test-prompt')?.value || 'Write a short story';
-        this.addResult(`Testing streaming with prompt: "${prompt}"`, 'info');
-        
-        try {
-            const tabs = await browser.tabs.query({active: true, currentWindow: true});
-            if (!tabs[0]) {
-                this.addResult('No active tab found', 'error');
-                return;
-            }
+    // Add user message to chat and conversation history
+    this.addMessage(prompt, 'user');
+    this.conversationHistory.push({ role: 'user', content: prompt });
+    this.promptInput.value = '';
+    
+    // Disable input
+    this.isGenerating = true;
+    this.sendBtn.disabled = true;
+    this.statusEl.textContent = 'Generating...';
 
-            try {
-                // Note: Streaming is complex to test in popup, so we'll just check if the method exists
-                const results = await browser.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: () => {
-                        try {
-                            if (typeof window.nativeFoundationModels !== 'undefined' && 
-                                typeof window.nativeFoundationModels.getCompletionStream === 'function') {
-                                return { success: true, message: 'Streaming method available' };
-                            } else {
-                                return { success: false, error: 'Streaming API not available' };
-                            }
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    }
-                });
+    try {
+      // Prepare message options
+      const options = {
+        temperature: this.temperature,
+        maximumResponseTokens: this.maxTokens,
+        samplingMode: this.samplingMode
+      };
 
-                if (results && results[0] && results[0].result) {
-                    const data = results[0].result;
-                    if (data.success) {
-                        this.addResult(`✅ Streaming test: ${data.message}`, 'success');
-                    } else {
-                        this.addResult(`❌ Streaming test failed: ${data.error}`, 'error');
-                    }
-                }
-            } catch (modernError) {
-                // Fallback to legacy method
-                const result = await browser.tabs.executeScript(tabs[0].id, {
-                    code: `
-                        (async () => {
-                            try {
-                                if (typeof window.nativeFoundationModels !== 'undefined' && 
-                                    typeof window.nativeFoundationModels.getCompletionStream === 'function') {
-                                    return { success: true, message: 'Streaming method available' };
-                                } else {
-                                    return { success: false, error: 'Streaming API not available' };
-                                }
-                            } catch (error) {
-                                return { success: false, error: error.message };
-                            }
-                        })();
-                    `
-                });
-
-                if (result && result[0]) {
-                    const data = result[0];
-                    if (data.success) {
-                        this.addResult(`✅ Streaming test: ${data.message}`, 'success');
-                    } else {
-                        this.addResult(`❌ Streaming test failed: ${data.error}`, 'error');
-                    }
-                }
-            }
-        } catch (error) {
-            this.addResult(`❌ Test failed: ${error.message}`, 'error');
+      // Add empty assistant message for streaming
+      this.currentAssistantMessage = this.addMessage('', 'assistant');
+      this.streamingContent = '';
+      
+      // Stream the response using the unified API
+      for await (const chunk of this.currentSession.sendMessageStream(prompt, options)) {
+        // Extract content from OpenAI-compatible chunk format
+        const content = chunk.choices?.[0]?.delta?.content;
+        if (content) {
+          this.currentAssistantMessage.textContent += content;
+          this.streamingContent += content;
+          this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
         }
+      }
+      
+      // Add assistant response to conversation history
+      this.conversationHistory.push({ role: 'assistant', content: this.streamingContent });
+      
+      this.resetGenerating();
+      
+    } catch (error) {
+      this.displayError({ message: error.message, code: 'request_failed' });
+      this.resetGenerating();
     }
+  }
 
-    async requestPermissions() {
-        this.addResult('Requesting permissions...', 'info');
-        
-        try {
-            const granted = await browser.permissions.request({
-                origins: ['<all_urls>']
-            });
-            
-            if (granted) {
-                this.addResult('✅ Permissions granted!', 'success');
-                setTimeout(() => this.checkStatus(), 1000);
-            } else {
-                this.addResult('❌ Permissions denied by user', 'error');
-            }
-        } catch (error) {
-            this.addResult(`❌ Permission request failed: ${error.message}`, 'error');
-        }
+
+  resetGenerating() {
+    this.isGenerating = false;
+    this.sendBtn.disabled = false;
+    this.statusEl.textContent = 'Ready';
+    this.statusEl.className = 'status ready';
+    this.currentAssistantMessage = null;
+  }
+
+  addMessage(content, role) {
+    // Hide empty state if it exists
+    if (this.emptyState && this.emptyState.parentNode) {
+      this.emptyState.remove();
+      this.emptyState = null;
     }
-
-    addResult(text, type = 'info') {
-        const resultsArea = document.getElementById('results');
-        if (!resultsArea) return;
-
-        // Remove placeholder if it exists
-        const placeholder = resultsArea.querySelector('.placeholder');
-        if (placeholder) {
-            placeholder.remove();
-        }
-
-        // Create result item
-        const resultItem = document.createElement('div');
-        resultItem.className = `result-item ${type}`;
-        
-        const timestamp = document.createElement('div');
-        timestamp.className = 'result-timestamp';
-        timestamp.textContent = new Date().toLocaleTimeString();
-        
-        const content = document.createElement('div');
-        content.textContent = text;
-        
-        resultItem.appendChild(timestamp);
-        resultItem.appendChild(content);
-        resultsArea.appendChild(resultItem);
-        
-        // Scroll to bottom
-        resultsArea.scrollTop = resultsArea.scrollHeight;
-        
-        // Limit to 10 results
-        const items = resultsArea.querySelectorAll('.result-item');
-        if (items.length > 10) {
-            items[0].remove();
-        }
+    
+    const messageEl = document.createElement('div');
+    messageEl.className = `message ${role}`;
+    messageEl.textContent = content;
+    this.chatContainer.appendChild(messageEl);
+    this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+    return messageEl;
+  }
+  
+  displayError(errorPayload) {
+    // Hide empty state if it exists
+    if (this.emptyState && this.emptyState.parentNode) {
+      this.emptyState.remove();
+      this.emptyState = null;
     }
+    
+    const messageEl = document.createElement('div');
+    messageEl.className = 'message error-message';
+    
+    // Use user-friendly message if available, otherwise fall back to technical message
+    const message = errorPayload.message || 'An unknown error occurred.';
+    const code = errorPayload.code || 'unknown_error';
+    
+    // Add appropriate emoji and styling based on error type
+    let emoji = '❌';
+    let actionHint = '';
+    
+    switch (code) {
+      case 'assets_unavailable':
+        emoji = '⏳';
+        actionHint = ' Please try again in a few moments.';
+        break;
+      case 'context_window_exceeded':
+        emoji = '📝';
+        actionHint = ' Use "New Chat" to start fresh.';
+        break;
+      case 'guardrail_violation':
+        emoji = '🛡️';
+        actionHint = ' Please try rephrasing your request.';
+        break;
+      case 'session_not_available':
+        emoji = '🔧';
+        actionHint = ' Please check your Apple Intelligence settings.';
+        break;
+      default:
+        actionHint = ' Please try again.';
+    }
+    
+    messageEl.textContent = `${emoji} ${message}${actionHint}`;
+    this.chatContainer.appendChild(messageEl);
+    this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+    
+    return messageEl;
+  }
+
+  showSettings() {
+    // Initialize temp settings with current values
+    this.tempSettings = {
+      systemPrompt: this.systemPrompt,
+      temperature: this.temperature,
+      maxTokens: this.maxTokens,
+      samplingMode: this.samplingMode
+    };
+    
+    // Update UI to show current values
+    this.systemPromptInput.value = this.systemPrompt;
+    this.tempValueSpan.textContent = this.temperature.toFixed(1);
+    this.tokensValueSpan.textContent = this.maxTokens;
+    this.samplingModeSelect.value = this.samplingMode;
+    
+    // Update button states
+    this.tempDownBtn.disabled = this.temperature <= 0;
+    this.tempUpBtn.disabled = this.temperature >= 2;
+    this.tokensDownBtn.disabled = this.maxTokens <= 1;
+    this.tokensUpBtn.disabled = this.maxTokens >= 2048;
+    
+    this.settingsView.classList.add('active');
+    this.settingsBackdrop.classList.add('active');
+  }
+  
+  cancelSettings() {
+    // Discard temp settings and close
+    this.tempSettings = {};
+    this.settingsView.classList.remove('active');
+    this.settingsBackdrop.classList.remove('active');
+  }
+  
+  async saveSettings() {
+    // Check if system prompt changed
+    const systemPromptChanged = this.tempSettings.systemPrompt !== undefined && 
+                                 this.tempSettings.systemPrompt !== this.systemPrompt;
+    
+    // Apply temp settings to actual settings
+    if (this.tempSettings.systemPrompt !== undefined) {
+      this.systemPrompt = this.tempSettings.systemPrompt;
+    }
+    if (this.tempSettings.temperature !== undefined) {
+      this.temperature = this.tempSettings.temperature;
+    }
+    if (this.tempSettings.maxTokens !== undefined) {
+      this.maxTokens = this.tempSettings.maxTokens;
+    }
+    if (this.tempSettings.samplingMode !== undefined) {
+      this.samplingMode = this.tempSettings.samplingMode;
+    }
+    
+    // Save to storage - Safari uses browser instead of chrome
+    const storage = typeof browser !== 'undefined' ? browser.storage : chrome.storage;
+    const settings = {
+      systemPrompt: this.systemPrompt,
+      temperature: this.temperature,
+      maxTokens: this.maxTokens,
+      samplingMode: this.samplingMode
+    };
+    storage.local.set({ playgroundSettings: settings });
+    
+    // If system prompt changed, reset chat and notify user
+    if (systemPromptChanged) {
+      await this.startNewChat();
+      this.addMessage('Settings updated! Chat has been reset to apply the new system prompt.', 'assistant');
+    }
+    
+    // Close settings
+    this.tempSettings = {};
+    this.settingsView.classList.remove('active');
+    this.settingsBackdrop.classList.remove('active');
+  }
+  
+  adjustTemperature(delta) {
+    const newTemp = Math.max(0, Math.min(2, (this.tempSettings.temperature || this.temperature) + delta));
+    const roundedTemp = Math.round(newTemp * 10) / 10; // Round to 1 decimal
+    this.tempSettings.temperature = roundedTemp;
+    this.tempValueSpan.textContent = roundedTemp.toFixed(1);
+    
+    // Update button states
+    this.tempDownBtn.disabled = roundedTemp <= 0;
+    this.tempUpBtn.disabled = roundedTemp >= 2;
+  }
+  
+  adjustMaxTokens(delta) {
+    const newTokens = Math.max(1, Math.min(2048, (this.tempSettings.maxTokens || this.maxTokens) + delta));
+    this.tempSettings.maxTokens = newTokens;
+    this.tokensValueSpan.textContent = newTokens;
+    
+    // Update button states
+    this.tokensDownBtn.disabled = newTokens <= 1;
+    this.tokensUpBtn.disabled = newTokens >= 2048;
+  }
+
+  loadSettings() {
+    // Safari uses browser instead of chrome
+    const storage = typeof browser !== 'undefined' ? browser.storage : chrome.storage;
+    storage.local.get(['playgroundSettings'], (result) => {
+      if (result.playgroundSettings) {
+        const settings = result.playgroundSettings;
+        
+        // Load system prompt
+        if (settings.systemPrompt !== undefined) {
+          this.systemPrompt = settings.systemPrompt;
+        }
+        
+        // Load temperature
+        if (settings.temperature !== undefined) {
+          this.temperature = settings.temperature;
+          this.tempValueSpan.textContent = this.temperature.toFixed(1);
+          this.tempDownBtn.disabled = this.temperature <= 0;
+          this.tempUpBtn.disabled = this.temperature >= 2;
+        }
+        
+        // Load max tokens
+        if (settings.maxTokens !== undefined) {
+          this.maxTokens = settings.maxTokens;
+          this.tokensValueSpan.textContent = this.maxTokens;
+          this.tokensDownBtn.disabled = this.maxTokens <= 1;
+          this.tokensUpBtn.disabled = this.maxTokens >= 2048;
+        }
+        
+        // Load sampling mode
+        if (settings.samplingMode !== undefined) {
+          this.samplingMode = settings.samplingMode;
+          this.samplingModeSelect.value = this.samplingMode;
+        }
+      }
+      
+      // Always set the system prompt input value (either loaded or default)
+      this.systemPromptInput.value = this.systemPrompt;
+    });
+  }
+
+  async exportCode() {
+    // Always show modal with default streaming mode
+    this.showCodeModal();
+  }
+
+  generateJavaScriptCode(useStreaming = true) {
+    const config = {
+      systemPrompt: this.systemPrompt,
+      temperature: this.temperature,
+      maxTokens: this.maxTokens,
+      samplingMode: this.samplingMode
+    };
+
+    const standardPrompt = "Write a short creative story about a robot discovering nature for the first time.";
+
+    let code = `if (!window.nativeFoundationModels) {
+  console.error('Native Foundation Models extension not found');
+  return;
 }
 
-// Initialize popup when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new PopupController());
-} else {
-    new PopupController();
+try {
+  const session = await window.nativeFoundationModels.createSession({`;
+
+    if (config.systemPrompt && config.systemPrompt.trim()) {
+      code += `
+    systemPrompt: ${JSON.stringify(config.systemPrompt)}`;
+    }
+
+    code += `
+  });
+
+  const options = {
+    temperature: ${config.temperature},
+    maximumResponseTokens: ${config.maxTokens},
+    samplingMode: '${config.samplingMode}'
+  };
+
+`;
+
+    if (useStreaming) {
+      code += `  let response = '';
+  for await (const token of session.sendMessageStream(${JSON.stringify(standardPrompt)}, options)) {
+    response += token;
+  }`;
+    } else {
+      code += `  const response = await session.sendMessage(${JSON.stringify(standardPrompt)}, options);`;
+    }
+
+    code += `
+
+  await session.end();
+} catch (error) {
+  console.error('Error:', error);
+}`;
+
+    return code;
+  }
+
+  showCodeModal() {
+    // Load Prism.js assets
+    this.loadPrismAssets();
+    
+    // Create backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'settings-backdrop active';
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90vw;
+      max-width: 800px;
+      max-height: 80vh;
+      background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+      border-radius: 20px;
+      z-index: 10001;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    `;
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    `;
+
+    const title = document.createElement('h3');
+    title.textContent = '💻 JavaScript Code Export';
+    title.style.cssText = `
+      margin: 0;
+      color: #e2e8f0;
+      font-size: 18px;
+      font-weight: 600;
+    `;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = `
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    `;
+    closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+    closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+
+    // Content area
+    const content = document.createElement('div');
+    content.style.cssText = `
+      padding: 20px 24px;
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    `;
+
+    // Create code container
+    const codeContainer = document.createElement('div');
+    codeContainer.style.cssText = `
+      flex: 1;
+      min-height: 350px;
+      background: #1a202c;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      overflow: auto;
+      position: relative;
+    `;
+
+    const pre = document.createElement('pre');
+    pre.style.cssText = `
+      margin: 0;
+      padding: 16px;
+      background: transparent;
+      font-family: 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow: visible;
+      color: #e2e8f0;
+    `;
+
+    const codeElement = document.createElement('code');
+    codeElement.className = 'language-javascript';
+    
+    pre.appendChild(codeElement);
+    codeContainer.appendChild(pre);
+
+    // Hidden textarea for copying
+    const textarea = document.createElement('textarea');
+    textarea.style.cssText = `
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
+    `;
+    textarea.readonly = true;
+
+    // Streaming mode checkbox
+    const streamingCheckbox = document.createElement('input');
+    streamingCheckbox.type = 'checkbox';
+    streamingCheckbox.id = 'streamingMode';
+    streamingCheckbox.checked = true;
+
+    // Function to update code based on checkbox state
+    const updateCode = () => {
+      const useStreaming = streamingCheckbox.checked;
+      const code = this.generateJavaScriptCode(useStreaming);
+      codeElement.textContent = code;
+      textarea.value = code;
+      
+      // Re-highlight with Prism.js
+      if (window.Prism) {
+        window.Prism.highlightElement(codeElement);
+      }
+    };
+
+    // Generate initial code
+    updateCode();
+
+    // Update code when checkbox changes
+    streamingCheckbox.addEventListener('change', updateCode);
+
+    // Bottom container with checkbox and buttons
+    const bottomContainer = document.createElement('div');
+    bottomContainer.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 16px;
+      gap: 12px;
+    `;
+
+    // Mode selection checkbox
+    const modeContainer = document.createElement('div');
+    modeContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `;
+
+    streamingCheckbox.style.cssText = `
+      margin: 0;
+      cursor: pointer;
+    `;
+
+    const checkboxLabel = document.createElement('label');
+    checkboxLabel.htmlFor = 'streamingMode';
+    checkboxLabel.textContent = 'Streaming';
+    checkboxLabel.style.cssText = `
+      color: #e2e8f0;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    `;
+
+    modeContainer.appendChild(streamingCheckbox);
+    modeContainer.appendChild(checkboxLabel);
+
+    // Buttons container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      display: flex;
+      gap: 12px;
+    `;
+
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = '📋 Copy to Clipboard';
+    copyBtn.style.cssText = `
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    `;
+    copyBtn.onmouseover = () => copyBtn.style.transform = 'translateY(-1px)';
+    copyBtn.onmouseout = () => copyBtn.style.transform = 'translateY(0)';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Close';
+    cancelBtn.style.cssText = `
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    `;
+    cancelBtn.onmouseover = () => cancelBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+    cancelBtn.onmouseout = () => cancelBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+
+    // Event handlers
+    const closeModal = () => {
+      document.body.removeChild(backdrop);
+      document.body.removeChild(modal);
+    };
+
+    closeBtn.onclick = closeModal;
+    cancelBtn.onclick = closeModal;
+    backdrop.onclick = closeModal;
+
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(textarea.value);
+        copyBtn.textContent = '✅ Copied!';
+        copyBtn.style.background = 'linear-gradient(135deg, #46b946 0%, #2d8f2d 100%)';
+        setTimeout(() => {
+          copyBtn.textContent = '📋 Copy to Clipboard';
+          copyBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }, 2000);
+      } catch (error) {
+        // Fallback - select all text
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+        copyBtn.textContent = '📝 Text Selected';
+        setTimeout(() => {
+          copyBtn.textContent = '📋 Copy to Clipboard';
+        }, 2000);
+      }
+    };
+
+    // Assemble modal
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(copyBtn);
+    bottomContainer.appendChild(modeContainer);
+    bottomContainer.appendChild(buttonContainer);
+    content.appendChild(codeContainer);
+    content.appendChild(textarea);
+    content.appendChild(bottomContainer);
+    modal.appendChild(header);
+    modal.appendChild(content);
+
+    // Add to page
+    document.body.appendChild(backdrop);
+    document.body.appendChild(modal);
+
+    // Auto-select text after modal is added to DOM
+    setTimeout(() => {
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+    }, 100);
+  }
+
+  loadPrismAssets() {
+    // Safari uses browser instead of chrome for extension APIs
+    const runtime = typeof browser !== 'undefined' ? browser : chrome;
+    
+    // Load Prism.js CSS if not already loaded
+    if (!document.querySelector('link[href*="prism.css"]')) {
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = runtime.runtime.getURL('prism.js/prism.css');
+      document.head.appendChild(cssLink);
+    }
+
+    // Load Prism.js JavaScript if not already loaded
+    if (!window.Prism) {
+      const script = document.createElement('script');
+      script.src = runtime.runtime.getURL('prism.js/prism.js');
+      script.onload = () => {
+        // Prism.js is now loaded
+        console.log('Prism.js loaded successfully');
+      };
+      document.head.appendChild(script);
+    }
+  }
+
+  openPlayground() {
+    // Open the dedicated playground page in a new tab
+    const runtime = typeof browser !== 'undefined' ? browser : chrome;
+    const playgroundUrl = runtime.runtime.getURL('playground.html');
+    
+    // Try to open using tabs API
+    runtime.tabs.create({ url: playgroundUrl }, (tab) => {
+      if (runtime.runtime.lastError) {
+        // Fallback to window.open if tabs API fails
+        window.open(playgroundUrl, '_blank');
+      }
+    });
+  }
+
+  openPopup() {
+    // Open the popup view in a smaller window
+    const runtime = typeof browser !== 'undefined' ? browser : chrome;
+    const popupUrl = runtime.runtime.getURL('popup.html');
+    
+    // Open in a smaller popup window
+    window.open(popupUrl, 'NFM_Popup', 'width=420,height=600,resizable=yes,scrollbars=yes');
+  }
 }
+
+// Initialize playground when popup loads
+document.addEventListener('DOMContentLoaded', () => {
+  new NativeFoundationModelsPlayground();
+});
