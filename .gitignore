@@ -63,13 +63,13 @@ native-foundation-models-extension/background.js
 native-foundation-models-extension/content.js
 native-foundation-models-extension/browser-compat.js
 native-foundation-models-extension/download-dialog.js
-native-foundation-models-extension/injected.js
 native-foundation-models-extension/brain.png
 native-foundation-models-extension/prism.js/
+native-foundation-models-extension/injected.js
 macOS-container-app/SafariExtension/Resources/background.js
 macOS-container-app/SafariExtension/Resources/content.js
 macOS-container-app/SafariExtension/Resources/browser-compat.js
 macOS-container-app/SafariExtension/Resources/download-dialog.js
-macOS-container-app/SafariExtension/Resources/inject.js
 macOS-container-app/SafariExtension/Resources/brain.png
 macOS-container-app/SafariExtension/Resources/prism.js/
+macOS-container-app/SafariExtension/Resources/inject.js

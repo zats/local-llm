@@ -21,7 +21,19 @@
     async checkAvailability() {
       try {
         const response = await this.sendMessage('checkAvailability');
-        return response.payload;
+        console.log('🔧 checkAvailability response:', response);
+        
+        // Handle different response formats between Chrome and Safari
+        if (response.payload) {
+          // Chrome format: {type: 'availabilityResponse', payload: {...}}
+          return response.payload;
+        } else if (response.data) {
+          // Safari format: {type: 'response', data: {...}}
+          return response.data;
+        } else {
+          // Fallback
+          return response;
+        }
       } catch (error) {
         // Show download dialog on error
         if (window.nfmDownloadDialog) {
@@ -50,7 +62,18 @@
     async getCompletion(prompt, options = {}) {
       try {
         const response = await this.sendMessage('getCompletion', { prompt, ...options });
-        return response.payload;
+        
+        // Handle different response formats between Chrome and Safari
+        if (response.payload) {
+          // Chrome format: {type: 'completionResponse', payload: {...}}
+          return response.payload;
+        } else if (response.data) {
+          // Safari format: {type: 'response', data: {...}}
+          return response.data;
+        } else {
+          // Fallback
+          return response;
+        }
       } catch (error) {
         throw {
           error: {

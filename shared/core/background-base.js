@@ -73,8 +73,11 @@ class UnifiedBackground {
   }
   
   handleExtensionMessage(message, sender, sendResponse) {
+    console.log('🔧 Background received extension message:', message);
+    
     // Handle legacy greeting
     if (message.greeting === "hello") {
+      console.log('🔧 Handling legacy greeting');
       sendResponse({ farewell: "goodbye" });
       return;
     }
@@ -84,8 +87,11 @@ class UnifiedBackground {
         (message.command && message.requestId) || 
         message.action) {
       
+      console.log('🔧 Handling Native Foundation Models request');
       return this.handleNativeFoundationModelsRequest(message, sender, sendResponse);
     }
+    
+    console.log('🔧 Message not handled by background script');
   }
   
   handleNativeFoundationModelsRequest(message, sender, sendResponse) {
@@ -93,8 +99,12 @@ class UnifiedBackground {
     let nativeRequest;
     
     if (message.type === this.config.messaging.requestType) {
-      // Content script format
-      nativeRequest = message.payload;
+      // Content script format - use the full message structure
+      nativeRequest = {
+        command: message.command,
+        requestId: message.requestId,
+        payload: message.payload
+      };
     } else if (message.command && message.requestId) {
       // Popup API format
       nativeRequest = {
@@ -120,6 +130,7 @@ class UnifiedBackground {
   
   handleChromeNativeRequest(nativeRequest, sendResponse) {
     const { requestId } = nativeRequest;
+    console.log('🔧 Handling Chrome native request:', nativeRequest);
     
     // Establish connection on-demand if not already connected
     if (!this.nativePort) {
@@ -138,12 +149,15 @@ class UnifiedBackground {
     
     // Store response handler
     if (requestId) {
+      console.log('🔧 Storing response handler for requestId:', requestId);
       this.requestHandlers.set(requestId, sendResponse);
     }
     
     // Send to native app
     try {
+      console.log('🔧 Sending message to native app:', nativeRequest);
       this.nativePort.postMessage(nativeRequest);
+      console.log('🔧 Message sent successfully to native app');
     } catch (error) {
       console.error('Failed to send message to native app:', error);
       sendResponse({ 
@@ -158,8 +172,20 @@ class UnifiedBackground {
   
   handleSafariNativeRequest(nativeRequest, sendResponse) {
     // Safari uses direct native messaging, not persistent connections
-    browser.runtime.sendNativeMessage(this.config.nativeMessaging.appId, nativeRequest)
+    console.log('🔧 Handling Safari native request:', nativeRequest);
+    
+    // Transform message format for Safari Swift handler
+    const safariMessage = {
+      action: nativeRequest.command,  // Safari expects "action", not "command"
+      requestId: nativeRequest.requestId,
+      data: nativeRequest.payload
+    };
+    
+    console.log('🔧 Sending to Safari native handler:', safariMessage);
+    
+    browser.runtime.sendNativeMessage(this.config.nativeMessaging.appId, safariMessage)
       .then(response => {
+        console.log('🔧 Safari native response:', response);
         sendResponse(response);
       })
       .catch(error => {
@@ -176,12 +202,18 @@ class UnifiedBackground {
   
   handleNativeMessage(message) {
     // Handle response from native app (Chrome only)
+    console.log('🔧 Received message from native app:', message);
     const { requestId } = message;
     
     if (requestId && this.requestHandlers.has(requestId)) {
+      console.log('🔧 Found response handler for requestId:', requestId);
       const sendResponse = this.requestHandlers.get(requestId);
+      console.log('🔧 Sending response back to content script:', message);
       sendResponse(message);
       this.requestHandlers.delete(requestId);
+    } else {
+      console.log('🔧 No response handler found for requestId:', requestId);
+      console.log('🔧 Available handlers:', Array.from(this.requestHandlers.keys()));
     }
   }
   

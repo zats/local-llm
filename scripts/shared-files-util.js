@@ -15,25 +15,23 @@ const SAFARI_DIR = path.join(PROJECT_ROOT, 'macOS-container-app', 'SafariExtensi
  * Get all generated file paths that should be ignored in git
  */
 function getGeneratedFilesPaths() {
-  const chromeFiles = [
+  // Common files shared between both extensions
+  const commonFiles = [
     'background.js',
     'content.js',
     'browser-compat.js',
     'download-dialog.js',
-    'injected.js',
     'brain.png',
     'prism.js/'
   ];
 
-  const safariFiles = [
-    'background.js',
-    'content.js',
-    'browser-compat.js',
-    'download-dialog.js',
-    'inject.js',
-    'brain.png',
-    'prism.js/'
-  ];
+  // Browser-specific files
+  const chromeSpecificFiles = ['injected.js'];
+  const safariSpecificFiles = ['inject.js'];
+
+  // Combine files for each platform
+  const chromeFiles = [...commonFiles, ...chromeSpecificFiles];
+  const safariFiles = [...commonFiles, ...safariSpecificFiles];
 
   const chromePaths = chromeFiles.map(file => `native-foundation-models-extension/${file}`);
   const safariPaths = safariFiles.map(file => `macOS-container-app/SafariExtension/Resources/${file}`);
@@ -49,16 +47,23 @@ function getGeneratedFilesPaths() {
  * Get list of generated files (without paths, for cleanup operations)
  */
 function getGeneratedFiles() {
-  return [
+  // Common files shared between both extensions
+  const commonFiles = [
     'background.js',
     'content.js',
     'browser-compat.js',
     'download-dialog.js',
-    'injected.js',  // Chrome
-    'inject.js',    // Safari
     'brain.png',
     'prism.js'
   ];
+
+  // Browser-specific files
+  const browserSpecificFiles = [
+    'injected.js',  // Chrome
+    'inject.js'     // Safari
+  ];
+
+  return [...commonFiles, ...browserSpecificFiles];
 }
 
 module.exports = {
