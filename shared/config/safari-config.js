@@ -5,6 +5,12 @@
 const SafariConfig = {
   browser: 'safari',
   
+  init() {
+    console.log('[NFM-SafariConfig] Initializing Safari configuration');
+    console.log('[NFM-SafariConfig] Native messaging app ID:', this.nativeMessaging.appId);
+    console.log('[NFM-SafariConfig] Supports persistent connection:', this.nativeMessaging.supportsPersistentConnection);
+  },
+  
   // Native messaging configuration
   nativeMessaging: {
     type: 'message-based',

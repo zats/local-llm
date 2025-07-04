@@ -64,6 +64,7 @@ class UnifiedBackground {
   }
   
   handleNativeFoundationModelsRequest(message, sender, sendResponse) {
+    console.log('[NFM-BG] Handling native foundation models request:', message);
     // Normalize the request format
     let nativeRequest;
     
@@ -90,6 +91,9 @@ class UnifiedBackground {
       };
     }
     
+    console.log('[NFM-BG] Normalized native request:', nativeRequest);
+    console.log('[NFM-BG] Supports persistent connection:', this.config.nativeMessaging.supportsPersistentConnection);
+    
     if (this.config.nativeMessaging.supportsPersistentConnection) {
       return this.handleChromeNativeRequest(nativeRequest, sendResponse, sender);
     } else {
@@ -98,13 +102,17 @@ class UnifiedBackground {
   }
   
   handleChromeNativeRequest(nativeRequest, sendResponse, sender) {
+    console.log('[NFM-BG-Chrome] Handling Chrome native request:', nativeRequest);
     const { requestId } = nativeRequest;
 
     // Establish connection on-demand if not already connected
     if (!this.nativePort) {
+      console.log('[NFM-BG-Chrome] No native port, setting up persistent connection');
       try {
         this.setupPersistentConnection();
+        console.log('[NFM-BG-Chrome] Persistent connection established');
       } catch (error) {
+        console.error('[NFM-BG-Chrome] Failed to establish persistent connection:', error);
         sendResponse({ 
           error: 'Native app not connected',
           errorType: 'NATIVE_APP_NOT_FOUND',
@@ -116,17 +124,21 @@ class UnifiedBackground {
     
     // Store response handler and sender info for streaming
     if (requestId) {
+      const isStreaming = nativeRequest.command === 'getCompletionStream';
+      console.log('[NFM-BG-Chrome] Storing request handler for requestId:', requestId, 'isStreaming:', isStreaming);
       this.requestHandlers.set(requestId, { 
         sendResponse,
         sender,
-        isStreaming: nativeRequest.command === 'getCompletionStream'
+        isStreaming
       });
     }
     
     // Send to native app
     try {
+      console.log('[NFM-BG-Chrome] Sending message to native app:', nativeRequest);
       this.nativePort.postMessage(nativeRequest);
     } catch (error) {
+      console.error('[NFM-BG-Chrome] Failed to send message to native app:', error);
       sendResponse({ 
         error: error.message,
         errorType: 'MESSAGING_ERROR'
@@ -138,6 +150,7 @@ class UnifiedBackground {
   }
   
   handleSafariNativeRequest(nativeRequest, sendResponse) {
+    console.log('[NFM-BG-Safari] Handling Safari native request:', nativeRequest);
     // Safari uses direct native messaging, not persistent connections    
     // Transform message format for Safari Swift handler
     const safariMessage = {
@@ -145,12 +158,17 @@ class UnifiedBackground {
       requestId: nativeRequest.requestId,
       data: nativeRequest.payload
     };
+    
+    console.log('[NFM-BG-Safari] Transformed message for Safari:', safariMessage);
+    console.log('[NFM-BG-Safari] Native app ID:', this.config.nativeMessaging.appId);
         
     browser.runtime.sendNativeMessage(this.config.nativeMessaging.appId, safariMessage)
       .then(response => {
+        console.log('[NFM-BG-Safari] Received response from native app:', response);
         sendResponse(response);
       })
       .catch(error => {
+        console.error('[NFM-BG-Safari] Failed to send message to native app:', error);
         sendResponse({
           error: 'Native app not connected',
           errorType: 'NATIVE_APP_NOT_FOUND',
@@ -162,22 +180,26 @@ class UnifiedBackground {
   }
   
   handleNativeMessage(message) {
+    console.log('[NFM-BG-Chrome] Received message from native app:', message);
     // Handle response from native app (Chrome only)
     const { requestId } = message;
     if (requestId && this.requestHandlers.has(requestId)) {
+      console.log('[NFM-BG-Chrome] Found request handler for requestId:', requestId);
       const handlerInfo = this.requestHandlers.get(requestId);
       const sendResponse = typeof handlerInfo === 'function' ? handlerInfo : handlerInfo.sendResponse;
       const sender = handlerInfo.sender;
       const isStreaming = handlerInfo.isStreaming;
+      console.log('[NFM-BG-Chrome] Handler info - isStreaming:', isStreaming, 'hasSender:', !!sender);
       // For streaming, send responses directly to content script
       if (isStreaming && sender && sender.tab) {
+        console.log('[NFM-BG-Chrome] Sending streaming response to content script, tabId:', sender.tab.id);
         if (this.config.browser === 'chrome') {
           chrome.tabs.sendMessage(sender.tab.id, {
             type: 'streamingResponse',
             requestId: message.requestId,
             data: message
           }).catch(error => {
-            console.error('Error sending streaming message to content script:', error);
+            console.error('[NFM-BG-Chrome] Error sending streaming message to content script:', error);
           });
         } else {
           browser.tabs.sendMessage(sender.tab.id, {
@@ -185,32 +207,37 @@ class UnifiedBackground {
             requestId: message.requestId,
             data: message
           }).catch(error => {
-            console.error('Error sending streaming message to content script:', error);
+            console.error('[NFM-BG-Chrome] Error sending streaming message to content script:', error);
           });
         }
         
         // Only call sendResponse for the first chunk to establish the connection
         if (message.type === 'streamChunk' && !handlerInfo.firstChunkSent) {
+          console.log('[NFM-BG-Chrome] Sending first chunk response via sendResponse');
           handlerInfo.firstChunkSent = true;
           try {
             sendResponse(message);
           } catch (error) {
-            console.error('Error calling sendResponse for first chunk:', error);
+            console.error('[NFM-BG-Chrome] Error calling sendResponse for first chunk:', error);
           }
         }
       } else {
+        console.log('[NFM-BG-Chrome] Sending non-streaming response via sendResponse');
         // For non-streaming, use normal sendResponse
         try {
           sendResponse(message);
         } catch (error) {
-          console.error('Error calling sendResponse:', error);
+          console.error('[NFM-BG-Chrome] Error calling sendResponse:', error);
         }
       }
       
       // Only delete handler for non-streaming responses or when stream ends
       if (message.type !== 'streamChunk') {
+        console.log('[NFM-BG-Chrome] Deleting request handler for requestId:', requestId);
         this.requestHandlers.delete(requestId);
       }
+    } else {
+      console.warn('[NFM-BG-Chrome] No handler found for requestId:', requestId);
     }
   }
   
