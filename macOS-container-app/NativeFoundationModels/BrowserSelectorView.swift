@@ -77,11 +77,11 @@ struct BrowserSelectorView: View {
                     ForEach(browserDetector.sortedBrowsers, id: \.self) { browser in
                         BrowserRow(
                             browser: browser,
-                            isSelected: selectedBrowser == browser,
                             isDefault: browser == browserDetector.defaultBrowser,
                             animationNamespace: animationNamespace,
                             onSelect: {
                                 selectedBrowser = browser
+                                onContinue()
                             }
                         )
                     }
@@ -92,39 +92,12 @@ struct BrowserSelectorView: View {
                 }
             }
             .frame(maxHeight: 400)
-            
-            Button(action: onContinue) {
-                HStack {
-                    Text("Continue")
-                        .font(.headline)
-                    Image(systemName: "arrow.right")
-                        .font(.subheadline.bold())
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 12)
-                .background(
-                    LinearGradient(
-                        colors: [Color(hex: "667eea"), Color(hex: "764ba2")],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .cornerRadius(12)
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .focusable(false)
-            .disabled(selectedBrowser == nil)
-            .opacity(selectedBrowser == nil ? 0.6 : 1.0)
-            .padding(.bottom, 24)
         }
     }
 }
 
 struct BrowserRow: View {
     let browser: Browser
-    let isSelected: Bool
     let isDefault: Bool
     var animationNamespace: Namespace.ID
     let onSelect: () -> Void
@@ -162,6 +135,8 @@ struct BrowserRow: View {
                                         .fill(Color.white.opacity(0.9))
                                 )
                         }
+                        
+                        Spacer()
                     }
                     
                     if !browser.supportsExtensions {
@@ -170,30 +145,14 @@ struct BrowserRow: View {
                             .foregroundColor(.red.opacity(0.8))
                     }
                 }
-                
-                Spacer()
-                
-                Circle()
-                    .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                    .background(
-                        Circle()
-                            .fill(isSelected ? Color(hex: "667eea") : Color.clear)
-                    )
-                    .frame(width: 20, height: 20)
-                    .overlay(
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
-                            .opacity(isSelected ? 1 : 0)
-                    )
             }
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(isSelected ? 0.15 : 0.1))
+                    .fill(.white.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? Color(hex: "667eea") : Color.white.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+                            .stroke(.white.opacity(0.2), lineWidth: 1)
                     )
             )
         }

@@ -14,7 +14,6 @@ struct GradientBackground: View {
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
-        .ignoresSafeArea()
     }
 }
 
@@ -39,92 +38,91 @@ struct ContentView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .top) {
-            GradientBackground()
-            
-            VStack(spacing: 0) {
-                if !showBrowserSelector {
-                    HStack {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.5)) {
-                                showBrowserSelector = true
-                                selectedBrowser = nil
-                                stepManager.selectedBrowser = nil
-                            }
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .foregroundColor(.white.opacity(0.8))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.white.opacity(0.1))
-                            )
-                            .transition(.move(edge: .top))
+        VStack(spacing: 0) {
+            if !showBrowserSelector {
+                HStack {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            showBrowserSelector = true
+                            selectedBrowser = nil
+                            stepManager.selectedBrowser = nil
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .focusable(false)
-                        
-                        Spacer()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundColor(.white.opacity(0.8))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.1))
+                        )
+                        .transition(.move(edge: .top))
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.top, 20)
+                    .buttonStyle(PlainButtonStyle())
+                    .focusable(false)
+                    
+                    Spacer()
                 }
-                
-                Image(.brain)
-                    .font(.system(size: 32))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.3), radius: showBrowserSelector ? 8 : 16, y: 4)
-                    .scaleEffect(heartbeat ? 1.02 : 1.0)
-                    .animation(
-                        .easeInOut(duration: 1.2)
-                        .repeatForever(autoreverses: true),
-                        value: heartbeat
-                    )
-                    .background(alignment: .bottomLeading) {
-                        if !showBrowserSelector, let browser = stepManager.selectedBrowser, let icon = browser.icon {
-                            Image(nsImage: icon)
-                                .resizable()
-                                .matchedGeometryEffect(id: "browserIcon-\(browser.rawValue)", in: animation)
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 120, height: 120)
-                                .offset(x: 40, y: -20)
-                        }
-                    }
-                if showBrowserSelector {
-                    BrowserSelectorView(selectedBrowser: $selectedBrowser, animationNamespace: animation) {
-                        if let browser = selectedBrowser {
-                            stepManager.selectedBrowser = browser
-                            withAnimation(.easeInOut(duration: 0.5)) {
-                                showBrowserSelector = false
-                            }
-                        }
-                    }
-                } else {
-                    VStack(spacing: 16) {
-                        ForEach(filteredSteps, id: \.rawValue) { step in
-                            InstallationStepView(
-                                step: step,
-                                title: step == .installBinary || selectedBrowser == .safari ? "1" : "2",
-                                isCompleted: stepManager.stepStatuses[step, default: false],
-                                isInProgress: stepManager.stepInProgress[step, default: false]
-                            ) {
-                                stepManager.executeStep(step)
-                            }
-                            .environmentObject(stepManager)
-                        }
-                    }
-                    .padding(.horizontal, 32)
-                }
+                .padding(.horizontal, 32)
+                .padding(.top, 20)
             }
+            
+            if !showBrowserSelector, let browser = stepManager.selectedBrowser, let icon = browser.icon {
+                Image(nsImage: icon)
+                    .resizable()
+                    .matchedGeometryEffect(id: "browserIcon-\(browser.rawValue)", in: animation)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 200, height: 200)
+            }
+            Image(.brain)
+                .resizable()
+                .offset(x: showBrowserSelector ? 0 : 60, y: showBrowserSelector ? 0: -70)
+                .frame(width: showBrowserSelector ? 300 : 100, height: showBrowserSelector ? 300 : 100)
+                .shadow(color: .black.opacity(0.3), radius: showBrowserSelector ? 8 : 16, y: 4)
+                .scaleEffect(heartbeat ? 1.02 : 1.0)
+                .animation(
+                    .easeInOut(duration: 1.2)
+                    .repeatForever(autoreverses: true),
+                    value: heartbeat
+                )
+            if showBrowserSelector {
+                BrowserSelectorView(selectedBrowser: $selectedBrowser, animationNamespace: animation) {
+                    if let browser = selectedBrowser {
+                        stepManager.selectedBrowser = browser
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            showBrowserSelector = false
+                        }
+                    }
+                }
+            } else {
+                VStack(spacing: 16) {
+                    ForEach(filteredSteps, id: \.rawValue) { step in
+                        InstallationStepView(
+                            step: step,
+                            title: step == .installBinary || selectedBrowser == .safari ? "1" : "2",
+                            isCompleted: stepManager.stepStatuses[step, default: false],
+                            isInProgress: stepManager.stepInProgress[step, default: false]
+                        ) {
+                            stepManager.executeStep(step)
+                        }
+                        .environmentObject(stepManager)
+                    }
+                }
+                .padding(.horizontal, 32)
+            }
+            
+            Spacer()
         }
-        .frame(width: 420, height: 750)
+        .frame(minWidth: 420, minHeight: 700)
         .onAppear {
             AppMover.moveIfNecessary()
             heartbeat = true
+        }
+        .background {
+            GradientBackground()
         }
     }
 }
