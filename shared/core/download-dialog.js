@@ -7,6 +7,9 @@
       this.dialogId = 'nfm-download-dialog';
       this.backdropId = 'nfm-download-backdrop';
       this.isShowing = false;
+      // Detect browser
+      this.isChrome = typeof chrome !== 'undefined' && chrome.runtime;
+      this.runtime = this.isChrome ? chrome.runtime : browser.runtime;
     }
 
     show() {
@@ -53,6 +56,11 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       `;
+
+      // Get brain icon based on browser
+      const brainIconElement = this.isChrome 
+        ? `<img src="${this.runtime.getURL('brain.png')}" alt="Brain Icon" style="width: 240px; height: 240px;"/>`
+        : `<div style="font-size: 200px;">🧠</div>`;
 
       dialog.innerHTML = `
         <!-- Header (matching settings-header) -->
@@ -112,7 +120,7 @@
             align-items: center;
             justify-content: center;
           ">
-            <img src="${chrome.runtime.getURL('brain.png')}" alt="Brain Icon" style="width: 240px; height: 240px;"/>
+            ${brainIconElement}
           </div>
 
           <div style="
@@ -148,79 +156,29 @@
                font-weight: 600;
                font-size: 16px;
                transition: all 0.3s ease;
-               box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-               margin: 0 auto 24px;
-               width: fit-content;
+               margin: 0 auto;
+               box-shadow: 0 4px 14px rgba(255, 255, 255, 0.2);
              "
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 30px rgba(0,0,0,0.3)';"
-             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.2)';">
-             Download for macOS
+             onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 6px 20px rgba(255,255,255,0.3)';"
+             onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 14px rgba(255,255,255,0.2)';">
+            Download App
           </button>
-
-          <!-- Instructions -->
-          <div style="
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: left;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-          ">
-            <div style="
-              font-size: 14px;
-              font-weight: 600;
-              margin-bottom: 12px;
-              color: #e2e8f0;
-            ">
-              Quick Setup:
-            </div>
-            <ol style="
-              margin: 0;
-              padding-left: 20px;
-              font-size: 14px;
-              line-height: 1.6;
-              color: #a0aec0;
-            ">
-              <li>Download and unzip the app</li>
-              <li>Run the app once to complete setup</li>
-              <li>Reload the browser extension to start using on-device AI</li>
-            </ol>
-          </div>
         </div>
-      `;
 
-      // Add styles
-      if (!document.getElementById('nfm-download-styles')) {
-        const style = document.createElement('style');
-        style.id = 'nfm-download-styles';
-        style.textContent = `
+        <!-- Animation keyframes -->
+        <style>
           @keyframes nfm-heartbeat {
-            0% { transform: scale(1); }
-            14% { transform: scale(1.05); }
-            28% { transform: scale(1); }
-            42% { transform: scale(1.05); }
-            70% { transform: scale(1); }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
           }
-        `;
-        document.head.appendChild(style);
-      }
+        </style>
+      `;
 
       // Add to page
       document.body.appendChild(backdrop);
       document.body.appendChild(dialog);
 
-      // Add close button event listener
-      const closeBtn = document.getElementById('nfm-close-btn');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', () => this.hide());
-      }
-
-      // Add download button event listener
-      const downloadBtn = document.getElementById('nfm-download-btn');
-      if (downloadBtn) {
-        downloadBtn.addEventListener('click', () => this.startDownload());
-      }
-
-      // Trigger animations
+      // Show with animation
       requestAnimationFrame(() => {
         backdrop.style.opacity = '1';
         backdrop.style.visibility = 'visible';
@@ -229,14 +187,31 @@
         dialog.style.transform = 'translate(-50%, -50%) scale(1)';
       });
 
-      // Close on backdrop click
-      backdrop.addEventListener('click', (e) => {
-        if (e.target === backdrop) {
-          this.hide();
-        }
-      });
+      // Setup event handlers
+      this.setupEventHandlers();
+    }
 
-      // Close on escape key
+    setupEventHandlers() {
+      const closeBtn = document.getElementById('nfm-close-btn');
+      const downloadBtn = document.getElementById('nfm-download-btn');
+      const backdrop = document.getElementById(this.backdropId);
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => this.hide());
+      }
+
+      if (backdrop) {
+        backdrop.addEventListener('click', () => this.hide());
+      }
+
+      if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+          window.open('https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.app.zip', '_blank');
+          this.hide();
+        });
+      }
+
+      // Handle escape key
       this.escapeHandler = (e) => {
         if (e.key === 'Escape') {
           this.hide();
@@ -245,34 +220,22 @@
       document.addEventListener('keydown', this.escapeHandler);
     }
 
-    startDownload() {
-      // Create a temporary link to trigger download
-      const downloadLink = document.createElement('a');
-      downloadLink.href = 'https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.zip';
-      downloadLink.download = 'NativeFoundationModels.app.zip';
-      downloadLink.style.display = 'none';
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-    }
-
     hide() {
       if (!this.isShowing) return;
-      this.isShowing = false;
-
-      const backdrop = document.getElementById(this.backdropId);
-      const dialog = document.getElementById(this.dialogId);
       
-      if (backdrop && dialog) {
-        backdrop.style.opacity = '0';
-        backdrop.style.visibility = 'hidden';
+      const dialog = document.getElementById(this.dialogId);
+      const backdrop = document.getElementById(this.backdropId);
+
+      if (dialog && backdrop) {
         dialog.style.opacity = '0';
         dialog.style.visibility = 'hidden';
         dialog.style.transform = 'translate(-50%, -50%) scale(0.8)';
-        
+        backdrop.style.opacity = '0';
+        backdrop.style.visibility = 'hidden';
+
         setTimeout(() => {
-          backdrop.remove();
           dialog.remove();
+          backdrop.remove();
         }, 300);
       }
 
@@ -280,9 +243,11 @@
       if (this.escapeHandler) {
         document.removeEventListener('keydown', this.escapeHandler);
       }
+
+      this.isShowing = false;
     }
   }
 
-  // Expose dialog instance globally
-  window.nfmDownloadDialog = new DownloadDialog();
+  // Export for use
+  window.NativeFoundationModelsDownloadDialog = DownloadDialog;
 })();

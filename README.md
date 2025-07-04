@@ -97,11 +97,39 @@ for await (const chunk of stream) {
 
 ## 🛠️ Development
 
+### Shared Extension Architecture
+
+This project uses a **unified codebase** for Chrome and Safari extensions to minimize duplication:
+
+```bash
+# One-time setup: installs dependencies, cleans duplicates, updates .gitignore
+pnpm setup
+
+# Start development with auto-sync file watching
+pnpm dev
+
+# Manual sync of shared files
+pnpm sync
+
+# Build both extensions
+pnpm build
+```
+
+**Key benefits:**
+- ✅ **70% less code duplication** between Chrome and Safari
+- ✅ **Single source of truth** in `shared/` directory
+- ✅ **Automatic synchronization** during development
+- ✅ **Platform-specific configurations** for browser differences
+
+See [SHARED_EXTENSION_WORKFLOW.md](SHARED_EXTENSION_WORKFLOW.md) for detailed development guide.
+
+### Component Build Processes
+
 Each component has its own build process and README:
 
 - **macOS Container App**: Xcode project using SwiftUI
-- **Native App**: Swift package with native messaging protocol
-- **Chrome Extension**: JavaScript/TypeScript with manifest v3
+- **Native App**: Swift package with native messaging protocol  
+- **Chrome/Safari Extensions**: Unified codebase with platform-specific builds
 - **Website**: Static HTML with live demos
 
 ## 🔗 Links

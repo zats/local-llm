@@ -1,0 +1,27 @@
+{
+  "name": "native-foundation-models",
+  "version": "1.0.0",
+  "description": "Cross-browser extension for Native Foundation Models with shared codebase",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node scripts/setup.js && node scripts/watch-shared.js",
+    "sync": "node scripts/sync-shared.js",
+    "build:chrome": "node scripts/build-chrome.js",
+    "build:safari": "node scripts/build-safari.js",
+    "build": "pnpm run build:chrome && pnpm run build:safari",
+    "watch": "node scripts/watch-shared.js",
+    "setup": "node scripts/setup.js"
+  },
+  "keywords": [
+    "browser-extension",
+    "llm",
+    "native-messaging",
+    "cross-browser"
+  ],
+  "author": "Sash Zats",
+  "license": "MIT",
+  "devDependencies": {
+    "chokidar": "^3.5.3",
+    "fs-extra": "^11.1.1"
+  }
+}
