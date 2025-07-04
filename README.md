@@ -115,13 +115,104 @@ pnpm sync
 pnpm build
 ```
 
-**Key benefits:**
-- ✅ **70% less code duplication** between Chrome and Safari
-- ✅ **Single source of truth** in `shared/` directory
-- ✅ **Automatic synchronization** during development
-- ✅ **Platform-specific configurations** for browser differences
+## 🔧 Compilation Guide
 
-See [SHARED_EXTENSION_WORKFLOW.md](SHARED_EXTENSION_WORKFLOW.md) for detailed development guide.
+### Prerequisites
+- Node.js and pnpm installed
+- Xcode (for Safari extension)
+- macOS 15+ with Apple Intelligence
+
+### Initial Setup
+```bash
+# Install dependencies
+pnpm install
+
+# One-time setup: clean duplicates and configure build system
+pnpm setup
+```
+
+### Development Workflow
+```bash
+# Start development mode with file watching
+pnpm dev
+
+# The watcher will automatically sync shared files when you make changes
+# Edit shared code in: shared/core/, shared/config/, shared/assets/
+# Edit platform-specific code directly in extension directories
+```
+
+### Building Extensions
+
+#### Chrome Extension
+```bash
+# Build Chrome extension
+pnpm build:chrome
+
+# Output: build/chrome/
+# Install in Chrome: chrome://extensions/ → Load unpacked → select build/chrome/
+```
+
+#### Safari Extension
+```bash
+# Build Safari extension resources
+pnpm build:safari
+
+# Output: build/safari/
+# Note: Safari extension is built through Xcode project at macOS-container-app/
+```
+
+### Build System Details
+
+#### Shared Architecture
+- **Core Logic**: `shared/core/background-base.js`, `shared/core/content-base.js`
+- **Platform Configs**: `shared/config/chrome-config.js`, `shared/config/safari-config.js`
+- **Assets**: `shared/assets/images/`, `shared/assets/prism.js/`
+
+#### Auto-Generated Files
+These files are created by the build system and should **never be edited directly**:
+```
+native-foundation-models-extension/
+├── background.js          # Generated from shared/core + chrome-config
+├── content.js             # Generated from shared/core + chrome-config
+├── browser-compat.js      # Copied from shared/core
+├── download-dialog.js     # Copied from shared/core
+├── brain.png              # Copied from shared/assets
+└── prism.js/              # Copied from shared/assets
+
+macOS-container-app/SafariExtension/Resources/
+├── background.js          # Generated from shared/core + safari-config
+├── content.js             # Generated from shared/core + safari-config
+├── browser-compat.js      # Copied from shared/core
+├── download-dialog.js     # Copied from shared/core
+├── brain.png              # Copied from shared/assets
+└── prism.js/              # Copied from shared/assets
+```
+
+#### Manual Sync
+```bash
+# Force sync shared files to both extensions
+pnpm sync
+
+# Use this when:
+# - File watcher is not running
+# - After pulling changes from source control
+# - When build seems out of sync
+```
+
+### Debugging Build Issues
+
+#### Common Problems
+1. **Missing generated files**: Run `pnpm sync` or `pnpm setup`
+2. **Outdated files**: Restart `pnpm dev` or run `pnpm sync`
+3. **Build errors**: Check that all shared files exist and are valid JavaScript
+
+#### Verifying Build
+```bash
+# Check git status - generated files should be ignored
+git status
+
+# Generated files appear in .gitignore under "Generated files from shared sources"
+```
 
 ### Component Build Processes
 
