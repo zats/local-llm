@@ -19,6 +19,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         super.init()
     }
     
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Check for updates silently on app startup
+        updaterController.updater.checkForUpdatesInBackground()
+    }
+    
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
     }
