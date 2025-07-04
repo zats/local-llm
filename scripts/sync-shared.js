@@ -63,7 +63,7 @@ async function syncSharedFiles() {
     // Update .gitignore with current generated files
     await updateGitignore();
     
-    console.log('✅ Sync completed successfully!');
+    console.log('  Sync completed successfully!');
     console.log('📁 Chrome extension: native-foundation-models-extension/');
     console.log('📁 Safari extension: macOS-container-app/SafariExtension/Resources/');
     console.log('💡 Run "pnpm watch" to start development with file watching');
@@ -82,7 +82,7 @@ async function copySharedAssets() {
   if (await fs.pathExists(sharedPrism)) {
     await fs.copy(sharedPrism, path.join(CHROME_DIR, 'prism.js'), { overwrite: true });
     await fs.copy(sharedPrism, path.join(SAFARI_DIR, 'prism.js'), { overwrite: true });
-    console.log('  ✅ Copied prism.js');
+    console.log('    Copied prism.js');
   }
   
   // Copy brain.png
@@ -90,7 +90,7 @@ async function copySharedAssets() {
   if (await fs.pathExists(sharedBrain)) {
     await fs.copy(sharedBrain, path.join(CHROME_DIR, 'brain.png'));
     await fs.copy(sharedBrain, path.join(SAFARI_DIR, 'brain.png'));
-    console.log('  ✅ Copied brain.png');
+    console.log('    Copied brain.png');
   }
 }
 
@@ -102,7 +102,7 @@ async function copySharedModules() {
   if (await fs.pathExists(browserCompat)) {
     await fs.copy(browserCompat, path.join(CHROME_DIR, 'browser-compat.js'));
     await fs.copy(browserCompat, path.join(SAFARI_DIR, 'browser-compat.js'));
-    console.log('  ✅ Copied browser-compat.js');
+    console.log('    Copied browser-compat.js');
   }
   
   // Copy download-dialog.js
@@ -110,7 +110,7 @@ async function copySharedModules() {
   if (await fs.pathExists(downloadDialog)) {
     await fs.copy(downloadDialog, path.join(CHROME_DIR, 'download-dialog.js'));
     await fs.copy(downloadDialog, path.join(SAFARI_DIR, 'download-dialog.js'));
-    console.log('  ✅ Copied download-dialog.js');
+    console.log('    Copied download-dialog.js');
   }
 }
 
@@ -163,8 +163,8 @@ const background = new UnifiedBackground(SafariConfig);
   await fs.writeFile(path.join(CHROME_DIR, 'background.js'), chromeBackground);
   await fs.writeFile(path.join(SAFARI_DIR, 'background.js'), safariBackground);
   
-  console.log('  ✅ Generated Chrome background.js');
-  console.log('  ✅ Generated Safari background.js');
+  console.log('    Generated Chrome background.js');
+  console.log('    Generated Safari background.js');
 }
 
 async function generateContentScripts() {
@@ -216,8 +216,8 @@ const contentScript = new UnifiedContentScript(SafariConfig);
   await fs.writeFile(path.join(CHROME_DIR, 'content.js'), chromeContent);
   await fs.writeFile(path.join(SAFARI_DIR, 'content.js'), safariContent);
   
-  console.log('  ✅ Generated Chrome content.js');
-  console.log('  ✅ Generated Safari content.js');
+  console.log('    Generated Chrome content.js');
+  console.log('    Generated Safari content.js');
 }
 
 async function generateInjectedScripts() {
@@ -262,8 +262,8 @@ window.nativeFoundationModels = new UnifiedInjectedScript.NativeFoundationModels
   await fs.writeFile(path.join(CHROME_DIR, 'injected.js'), chromeInjected);
   await fs.writeFile(path.join(SAFARI_DIR, 'inject.js'), safariInjected);
   
-  console.log('  ✅ Generated Chrome injected.js');
-  console.log('  ✅ Generated Safari inject.js');
+  console.log('    Generated Chrome injected.js');
+  console.log('    Generated Safari inject.js');
 }
 
 async function updateGitignore() {
@@ -305,7 +305,7 @@ async function updateGitignore() {
   gitignoreContent += '\n' + generatedFilesPaths.join('\n') + '\n';
   
   await fs.writeFile(GITIGNORE_PATH, gitignoreContent);
-  console.log('  ✅ Updated .gitignore with current generated files');
+  console.log('    Updated .gitignore with current generated files');
 }
 
 // Run the sync
