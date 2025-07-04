@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title-section">
+        <h1 class="title">Native Foundation Models</h1>
+      </div>
+      <div class="header-buttons">
+        <!-- PLATFORM_SPECIFIC_BUTTONS -->
+        <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+      </div>
+    </div>
+    
+    <div class="content">
+      <div class="brain-section">
+        <img src="brain.png" class="brain-image" alt="Brain">
+      </div>
+      
+      <div class="chat-messages" id="chatMessages"></div>
+      
+      <div class="input-section">
+        <textarea 
+          id="userInput" 
+          class="user-input" 
+          placeholder="Ask a question..."
+          rows="1"
+        ></textarea>
+        <button id="sendBtn" class="send-btn">Send</button>
+      </div>
+    </div>
+    
+    <button id="troubleshootingBtn" class="troubleshooting-btn" title="Troubleshooting">
+      Having issues? Click here for help
+    </button>
+  </div>
+  
+  <div class="settings-backdrop" id="settingsBackdrop"></div>
+  <div class="settings-modal" id="settingsModal">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button class="close-btn" id="closeSettingsBtn">✕</button>
+    </div>
+    <div class="settings-content">
+      <div class="setting-group">
+        <label for="temperatureStepper">Temperature: <span id="temperatureValue">0.7</span></label>
+        <input type="range" id="temperatureStepper" min="0" max="2" step="0.1" value="0.7" class="stepper">
+      </div>
+      
+      <div class="setting-group">
+        <label for="maxTokensStepper">Max Tokens: <span id="maxTokensValue">1000</span></label>
+        <input type="range" id="maxTokensStepper" min="1" max="4096" step="10" value="1000" class="stepper">
+      </div>
+      
+      <div class="setting-group">
+        <label for="samplingMode">Sampling Mode:</label>
+        <select id="samplingMode" class="select-input">
+          <option value="greedy">Greedy</option>
+          <option value="temperature" selected>Temperature</option>
+          <option value="top_p">Top-p</option>
+          <option value="min_p">Min-p</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label for="systemPrompt">System Prompt:</label>
+        <textarea id="systemPrompt" class="system-prompt-input" placeholder="Enter system prompt..."></textarea>
+      </div>
+      
+      <div class="settings-footer">
+        <label class="toggle-container">
+          <input type="checkbox" id="streamToggle" checked>
+          <span class="toggle-label">Stream responses</span>
+        </label>
+        <div class="button-group">
+          <button id="resetSettingsBtn" class="secondary-btn">Reset</button>
+          <button id="saveSettingsBtn" class="primary-btn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup-api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

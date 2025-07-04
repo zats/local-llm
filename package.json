@@ -4,7 +4,7 @@
   "description": "Cross-browser extension for Native Foundation Models with shared codebase",
   "main": "index.js",
   "scripts": {
-    "dev": "node scripts/sync-shared.js && node scripts/watch-shared.js"
+    "dev": "node scripts/sync-shared.js --watch"
   },
   "keywords": [
     "browser-extension",

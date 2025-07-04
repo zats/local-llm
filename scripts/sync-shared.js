@@ -7,27 +7,20 @@
 
 const fs = require('fs-extra');
 const path = require('path');
-const { getGeneratedFilesPaths, getGeneratedFiles, PROJECT_ROOT, CHROME_DIR, SAFARI_DIR } = require('./shared-files-util');
+const chokidar = require('chokidar');
+const { getGeneratedFilesPaths, getGeneratedFiles, updateGitignore, PROJECT_ROOT, CHROME_DIR, SAFARI_DIR } = require('./shared-files-util');
 
 const SHARED_DIR = path.join(PROJECT_ROOT, 'shared');
-const GITIGNORE_PATH = path.join(PROJECT_ROOT, '.gitignore');
 
 // Files that should NOT be removed from extension directories (platform-specific)
 const PLATFORM_SPECIFIC_FILES = {
   chrome: [
     'manifest.json',
-    'popup.html',
-    'popup.js',
-    'popup-api.js',
     'README.md'
   ],
   safari: [
     'manifest.json',
     'playground.html',
-    'popup.html',
-    'popup.js',
-    'popup-api.js',
-    'popup.css',
     '_locales',
     'images',
     'utils'
@@ -59,6 +52,9 @@ async function syncSharedFiles() {
     
     // Generate platform-specific injected scripts
     await generateInjectedScripts();
+    
+    // Generate platform-specific popup files
+    await generatePopupFiles();
     
     // Update .gitignore with current generated files
     await updateGitignore();
@@ -124,9 +120,8 @@ async function generateBackgroundScripts() {
   const safariConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'safari-config.js'), 'utf8');
 
   // Chrome background script wrapper
-  const chromeBackground = `// Auto-generated Chrome background script
+  const chromeBackground = `// Auto-generated from shared/core/background-base.js
 // This file integrates shared components - do not edit directly
-// Edit the original files in the shared/ directory
 
 // Load browser compatibility layer
 ${browserCompatCode}
@@ -142,9 +137,8 @@ const background = new UnifiedBackground(ChromeConfig);
 `;
 
   // Safari background script wrapper
-  const safariBackground = `// Auto-generated Safari background script
+  const safariBackground = `// Auto-generated from shared/core/background-base.js
 // This file integrates shared components - do not edit directly
-// Edit the original files in the shared/ directory
 
 // Load browser compatibility layer
 ${browserCompatCode}
@@ -177,9 +171,8 @@ async function generateContentScripts() {
   const safariConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'safari-config.js'), 'utf8');
 
   // Chrome content script wrapper
-  const chromeContent = `// Auto-generated Chrome content script
+  const chromeContent = `// Auto-generated from shared/core/content-base.js
 // This file integrates shared components - do not edit directly
-// Edit the original files in the shared/ directory
 
 // Load browser compatibility layer
 ${browserCompatCode}
@@ -195,9 +188,8 @@ const contentScript = new UnifiedContentScript(ChromeConfig);
 `;
 
   // Safari content script wrapper
-  const safariContent = `// Auto-generated Safari content script
+  const safariContent = `// Auto-generated from shared/core/content-base.js
 // This file integrates shared components - do not edit directly
-// Edit the original files in the shared/ directory
 
 // Load browser compatibility layer
 ${browserCompatCode}
@@ -229,9 +221,8 @@ async function generateInjectedScripts() {
   const safariConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'safari-config.js'), 'utf8');
 
   // Chrome injected script wrapper
-  const chromeInjected = `// Auto-generated Chrome injected script
+  const chromeInjected = `// Auto-generated from shared/core/injected-base.js
 // This file integrates shared components - do not edit directly
-// Edit the original files in the shared/ directory
 
 // Load Chrome configuration
 ${chromeConfigCode}
@@ -244,9 +235,8 @@ window.nativeFoundationModels = new UnifiedInjectedScript.NativeFoundationModels
 `;
 
   // Safari injected script wrapper
-  const safariInjected = `// Auto-generated Safari injected script
+  const safariInjected = `// Auto-generated from shared/core/injected-base.js
 // This file integrates shared components - do not edit directly
-// Edit the original files in the shared/ directory
 
 // Load Safari configuration
 ${safariConfigCode}
@@ -266,51 +256,164 @@ window.nativeFoundationModels = new UnifiedInjectedScript.NativeFoundationModels
   console.log('    Generated Safari inject.js');
 }
 
-async function updateGitignore() {
-  console.log('📝 Updating .gitignore with generated files...');
+async function generatePopupFiles() {
+  console.log('🔧 Generating platform-specific popup files...');
   
-  let gitignoreContent = '';
+  // Read shared popup files
+  const popupCss = await fs.readFile(path.join(SHARED_DIR, 'popup', 'popup.css'), 'utf8');
+  const popupTemplate = await fs.readFile(path.join(SHARED_DIR, 'popup', 'popup-template.html'), 'utf8');
+  const popupBaseJs = await fs.readFile(path.join(SHARED_DIR, 'popup', 'popup-base.js'), 'utf8');
+  const popupApiBaseJs = await fs.readFile(path.join(SHARED_DIR, 'popup', 'popup-api-base.js'), 'utf8');
+  const chromeConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'chrome-config.js'), 'utf8');
+  const safariConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'safari-config.js'), 'utf8');
+
+  // Generate Chrome popup files
+  const chromePopupHtml = popupTemplate.replace(
+    '<!-- PLATFORM_SPECIFIC_BUTTONS -->', 
+    '<button class="settings-btn" id="exportCodeBtn" title="Export as Code">💻</button>\n        <button class="settings-btn" id="newChatBtn" title="New Chat">📄</button>'
+  );
   
-  // Read existing .gitignore if it exists
-  if (await fs.pathExists(GITIGNORE_PATH)) {
-    gitignoreContent = await fs.readFile(GITIGNORE_PATH, 'utf8');
-  }
+  const chromePopupApiJs = `// Auto-generated from shared/popup/popup-api-base.js
+// This file integrates shared components - do not edit directly
+
+// Load Chrome configuration
+${chromeConfigCode}
+
+// Load shared popup API logic
+${popupApiBaseJs}
+
+// Initialize with Chrome configuration
+const popupAPI = new UnifiedPopupAPI(ChromeConfig);
+window.nativeFoundationModels = popupAPI;
+`;
+
+  const chromePopupJs = `// Auto-generated from shared/popup/popup-base.js
+// This file integrates shared components - do not edit directly
+
+// Load Chrome configuration
+${chromeConfigCode}
+
+// Load shared popup logic
+${popupBaseJs}
+
+// Initialize with Chrome configuration
+document.addEventListener('DOMContentLoaded', () => {
+  const popup = new UnifiedPopup(ChromeConfig);
+});
+`;
+
+  // Generate Safari popup files
+  const safariPopupHtml = popupTemplate.replace(
+    '<!-- PLATFORM_SPECIFIC_BUTTONS -->', 
+    '<button class="settings-btn" id="openPlaygroundBtn" title="Open in New Tab">🚀</button>\n        <button class="settings-btn" id="exportCodeBtn" title="Export as Code">💻</button>\n        <button class="settings-btn" id="newChatBtn" title="New Chat">📄</button>'
+  );
   
-  // Remove existing generated files section if it exists
-  const lines = gitignoreContent.split('\n');
-  const startIndex = lines.findIndex(line => line.includes('# Generated files from shared sources'));
+  const safariPopupApiJs = `// Auto-generated from shared/popup/popup-api-base.js
+// This file integrates shared components - do not edit directly
+
+// Load Safari configuration
+${safariConfigCode}
+
+// Load shared popup API logic
+${popupApiBaseJs}
+
+// Initialize with Safari configuration
+const popupAPI = new UnifiedPopupAPI(SafariConfig);
+window.nativeFoundationModels = popupAPI;
+`;
+
+  const safariPopupJs = `// Auto-generated from shared/popup/popup-base.js
+// This file integrates shared components - do not edit directly
+
+// Load Safari configuration
+${safariConfigCode}
+
+// Load shared popup logic
+${popupBaseJs}
+
+// Initialize with Safari configuration
+document.addEventListener('DOMContentLoaded', () => {
+  const popup = new UnifiedPopup(SafariConfig);
+});
+`;
+
+  // Write Chrome popup files
+  await fs.writeFile(path.join(CHROME_DIR, 'popup.html'), chromePopupHtml);
+  await fs.writeFile(path.join(CHROME_DIR, 'popup.css'), popupCss);
+  await fs.writeFile(path.join(CHROME_DIR, 'popup-api.js'), chromePopupApiJs);
+  await fs.writeFile(path.join(CHROME_DIR, 'popup.js'), chromePopupJs);
   
-  if (startIndex !== -1) {
-    // Find the end of the generated files section (next comment or end of file)
-    let endIndex = lines.length;
-    for (let i = startIndex + 1; i < lines.length; i++) {
-      if (lines[i].startsWith('#') && !lines[i].includes('Generated files from shared sources')) {
-        endIndex = i;
-        break;
+  // Write Safari popup files
+  await fs.writeFile(path.join(SAFARI_DIR, 'popup.html'), safariPopupHtml);
+  await fs.writeFile(path.join(SAFARI_DIR, 'popup.css'), popupCss);
+  await fs.writeFile(path.join(SAFARI_DIR, 'popup-api.js'), safariPopupApiJs);
+  await fs.writeFile(path.join(SAFARI_DIR, 'popup.js'), safariPopupJs);
+  
+  console.log('    Generated Chrome popup files');
+  console.log('    Generated Safari popup files');
+}
+
+
+async function watchSharedFiles() {
+  console.log('👀 Watching shared files for changes...');
+  console.log('📁 Watching:', SHARED_DIR);
+
+  const watcher = chokidar.watch(SHARED_DIR, {
+    ignored: /node_modules/,
+    persistent: true,
+    ignoreInitial: true
+  });
+
+  let syncTimeout;
+
+  function debouncedSync() {
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(async () => {
+      console.log('🔄 Changes detected, syncing...');
+      try {
+        await syncSharedFiles();
+        console.log('✅ Sync completed');
+      } catch (error) {
+        console.error('❌ Sync failed:', error.message);
       }
-    }
-    
-    // Remove the old section
-    lines.splice(startIndex, endIndex - startIndex);
-    gitignoreContent = lines.join('\n');
+    }, 500);
   }
-  
-  // Add current generated files section
-  const generatedFilesPaths = getGeneratedFilesPaths();
-  
-  if (!gitignoreContent.endsWith('\n') && gitignoreContent.length > 0) {
-    gitignoreContent += '\n';
-  }
-  
-  gitignoreContent += '\n' + generatedFilesPaths.join('\n') + '\n';
-  
-  await fs.writeFile(GITIGNORE_PATH, gitignoreContent);
-  console.log('    Updated .gitignore with current generated files');
+
+  watcher
+    .on('add', (filePath) => {
+      console.log('➕ File added:', path.relative(PROJECT_ROOT, filePath));
+      debouncedSync();
+    })
+    .on('change', (filePath) => {
+      console.log('📝 File changed:', path.relative(PROJECT_ROOT, filePath));
+      debouncedSync();
+    })
+    .on('unlink', (filePath) => {
+      console.log('➖ File removed:', path.relative(PROJECT_ROOT, filePath));
+      debouncedSync();
+    })
+    .on('error', (error) => {
+      console.error('👀 Watcher error:', error);
+    });
+
+  console.log('✅ File watcher started. Press Ctrl+C to stop.');
+
+  // Handle process termination
+  process.on('SIGINT', () => {
+    console.log('\n👋 Stopping file watcher...');
+    watcher.close();
+    process.exit(0);
+  });
 }
 
-// Run the sync
+// Run the sync or watch based on command line arguments
 if (require.main === module) {
-  syncSharedFiles();
+  const args = process.argv.slice(2);
+  if (args.includes('--watch')) {
+    watchSharedFiles();
+  } else {
+    syncSharedFiles();
+  }
 }
 
-module.exports = { syncSharedFiles };
+module.exports = { syncSharedFiles, watchSharedFiles };
