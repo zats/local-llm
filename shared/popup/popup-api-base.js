@@ -10,6 +10,29 @@ class UnifiedPopupAPI extends (window.UnifiedInjectedScript?.LocalLLM || window.
     yield* this._streamCompletion(prompt, options);
   }
 
+  // Check LocalLLM availability status
+  async checkStatus() {
+    try {
+      const response = await this.sendMessage('checkAvailability');
+      console.log(`🔴🟡🟢 response`, response);
+      
+      // Parse the native app response format
+      if (response.payload && response.payload.available !== undefined) {
+        return response.payload.available ? 'available' : 'unavailable';
+      }
+      
+      // Fallback for direct response format
+      if (response.available !== undefined) {
+        return response.available ? 'available' : 'unavailable';
+      }
+      
+      return 'unavailable';
+    } catch (error) {
+      console.error('Status check error:', error);
+      return 'unavailable';
+    }
+  }
+
   // Override sendMessage to use chrome.runtime instead of window.postMessage
   async sendMessage(command, payload = {}) {
     const requestId = this.generateRequestId();
@@ -27,6 +50,7 @@ class UnifiedPopupAPI extends (window.UnifiedInjectedScript?.LocalLLM || window.
         throw new Error(response?.error || 'Unknown error');
       }
     } catch (error) {
+      console.error(response)
       console.error('Extension message error:', error);
       throw error;
     }

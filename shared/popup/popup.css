@@ -21,11 +21,62 @@ body {
   border-bottom: 1px solid #e0e0e0;
 }
 
-.system-prompt-section label {
-  display: block;
-  font-weight: 600;
+.system-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 6px;
+}
+
+.system-prompt-section label {
+  font-weight: 600;
   color: #333;
+  margin: 0;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  cursor: help;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ccc;
+  transition: background-color 0.3s ease;
+}
+
+.status-dot.available {
+  background-color: #28a745;
+  box-shadow: 0 0 4px rgba(40, 167, 69, 0.4);
+}
+
+.status-dot.checking {
+  background-color: #ffc107;
+  box-shadow: 0 0 4px rgba(255, 193, 7, 0.4);
+  animation: pulse 1.5s infinite;
+}
+
+.status-dot.unavailable {
+  background-color: #dc3545;
+  box-shadow: 0 0 4px rgba(220, 53, 69, 0.4);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .settings-buttons {

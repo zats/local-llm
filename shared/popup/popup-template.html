@@ -7,7 +7,12 @@
 <body>
   <div class="chat-container">
     <div class="system-prompt-section">
-      <label for="systemPrompt">System Prompt:</label>
+      <div class="system-prompt-header">
+        <label for="systemPrompt">System Prompt:</label>
+        <div class="status-indicator" id="llmStatusIndicator" title="LocalLLM Status">
+          <div class="status-dot" id="statusDot"></div>
+        </div>
+      </div>
       <textarea id="systemPrompt" placeholder="Enter system prompt...">You are a helpful assistant.</textarea>
       <div class="settings-buttons">
         <!-- PLATFORM_SPECIFIC_BUTTONS -->

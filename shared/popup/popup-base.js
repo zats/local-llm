@@ -13,6 +13,8 @@ class ChatManager {
     this.chatMessages = document.getElementById('chatMessages');
     this.messageInput = document.getElementById('messageInput');
     this.sendButton = document.getElementById('sendButton');
+    this.statusDot = document.getElementById('statusDot');
+    this.statusIndicator = document.getElementById('llmStatusIndicator');
   }
 
   attachEventListeners() {
@@ -57,6 +59,46 @@ class ChatManager {
   resetChat() {
     this.messages = [];
     this.chatMessages.innerHTML = '';
+  }
+
+  updateStatus(status) {
+    if (!this.statusDot || !this.statusIndicator) return;
+    
+    // Remove all status classes
+    this.statusDot.classList.remove('available', 'checking', 'unavailable');
+    
+    // Add appropriate class and update tooltip
+    switch (status) {
+      case 'available':
+        this.statusDot.classList.add('available');
+        this.statusIndicator.title = 'LocalLLM Status: Available';
+        break;
+      case 'checking':
+        this.statusDot.classList.add('checking');
+        this.statusIndicator.title = 'LocalLLM Status: Checking...';
+        break;
+      case 'unavailable':
+      default:
+        this.statusDot.classList.add('unavailable');
+        this.statusIndicator.title = 'LocalLLM Status: Unavailable';
+        break;
+    }
+  }
+
+  async checkLLMStatus() {
+    if (!window.localLLM) return 'unavailable';
+    
+    this.updateStatus('checking');
+    
+    try {
+      const status = await window.localLLM.checkStatus();
+      this.updateStatus(status);
+      return status;
+    } catch (error) {
+      console.error('Status check failed:', error);
+      this.updateStatus('unavailable');
+      return 'unavailable';
+    }
   }
 
   addMessage(content, role) {
@@ -145,6 +187,7 @@ class UnifiedPopup {
     this.config = config;
     this.chatManager = new ChatManager();
     this.attachPlatformButtons();
+    this.initializeStatus();
   }
 
   attachPlatformButtons() {
@@ -171,6 +214,16 @@ class UnifiedPopup {
         chrome.tabs.create({ url: chrome.runtime.getURL('playground.html') });
       });
     }
+  }
+
+  initializeStatus() {
+    // Initial status check
+    this.chatManager.checkLLMStatus();
+    
+    // Periodic status checks every 30 seconds
+    setInterval(() => {
+      this.chatManager.checkLLMStatus();
+    }, 30000);
   }
 
   exportAsCode() {
