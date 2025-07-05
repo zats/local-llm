@@ -46,21 +46,21 @@ Clean, modern API with TypeScript support, comprehensive documentation, and easy
 
 This repository contains all the components needed to run LocalLLM on your Mac:
 
-### [`/macOS-container-app`](./macOS-container-app)
+### /macOS-container-app
 The macOS installer application that sets up LocalLLM on your system. This SwiftUI app handles:
 - Installation of the native binary to `~/bin`
 - Configuration of native messaging host
 - Chrome extension installation guidance
 - System requirements verification
 
-### [`/native-foundation-models-extension`](./native-foundation-models-extension)
+### /native-foundation-models-extension
 The Chrome extension that bridges web applications with the native host. Features include:
 - JavaScript API (`window.localLLM`)
 - Automatic connection management
 - Error handling and retries
 - TypeScript type definitions
 
-### [`/docs`](./docs)
+### /docs
 The project website and documentation, including:
 - Interactive demos
 - API documentation
