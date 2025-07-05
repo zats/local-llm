@@ -58,17 +58,17 @@ jobs:
       - name: Build and Archive
         run: |
           cd macOS-container-app
-          xcodebuild -project NativeFoundationModels.xcodeproj \
-            -scheme NativeFoundationModels \
+          xcodebuild -project LocalLLM.xcodeproj \
+            -scheme LocalLLM \
             -configuration Release \
-            -archivePath $PWD/build/NativeFoundationModels.xcarchive \
+            -archivePath $PWD/build/LocalLLM.xcarchive \
             archive
       
       - name: Export Archive
         run: |
           cd macOS-container-app
           xcodebuild -exportArchive \
-            -archivePath $PWD/build/NativeFoundationModels.xcarchive \
+            -archivePath $PWD/build/LocalLLM.xcarchive \
             -exportPath $PWD/build \
             -exportOptionsPlist ExportOptions.plist
       
@@ -81,21 +81,21 @@ jobs:
           cd macOS-container-app/build
           
           # Create ZIP for notarization
-          ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
+          ditto -c -k --keepParent "LocalLLM.app" "LocalLLM.zip"
           
           # Notarize
-          xcrun notarytool submit "NativeFoundationModels.zip" \
+          xcrun notarytool submit "LocalLLM.zip" \
             --apple-id "$NOTARIZATION_APPLE_ID" \
             --team-id "$NOTARIZATION_TEAM_ID" \
             --password "$NOTARIZATION_PASSWORD" \
             --wait
           
           # Staple the ticket
-          xcrun stapler staple "NativeFoundationModels.app"
+          xcrun stapler staple "LocalLLM.app"
           
           # Re-create ZIP with stapled app
-          rm "NativeFoundationModels.zip"
-          ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
+          rm "LocalLLM.zip"
+          ditto -c -k --keepParent "LocalLLM.app" "LocalLLM.zip"
       
       - name: Generate Appcast
         run: |
@@ -107,7 +107,7 @@ jobs:
           
           # Copy release to updates directory
           mkdir -p docs/updates
-          cp macOS-container-app/build/NativeFoundationModels.zip docs/updates/
+          cp macOS-container-app/build/LocalLLM.zip docs/updates/
           
           # Generate appcast
           generate_appcast docs/updates -o docs/appcast.xml
@@ -135,7 +135,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: macOS-container-app/build/NativeFoundationModels.zip
+          files: macOS-container-app/build/LocalLLM.zip
           body_path: docs/release-notes/${{ github.ref_name }}.md
           draft: false
           prerelease: false

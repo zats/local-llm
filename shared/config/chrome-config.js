@@ -38,7 +38,7 @@ const ChromeConfig = {
     hasToolbarIcon: true,
     openInNewTab: true,
     playgroundUrl: 'popup.html',
-    downloadUrl: 'https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.app.zip'
+    downloadUrl: 'https://github.com/zats/local-llm/releases/latest/download/NativeFoundationModels.app.zip'
   },
   
   // Manifest configuration

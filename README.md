@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.zip">
+  <a href="https://github.com/zats/local-llm/releases/latest/download/NativeFoundationModels.zip">
     <img src="https://img.shields.io/badge/Download-macOS%20App-blue?style=for-the-badge" alt="Download for macOS">
   </a>
 </p>
@@ -69,7 +69,7 @@ The project website and documentation, including:
 
 ## 🚀 Quick Start
 
-1. **Download the installer**: [Download NativeFoundationModels.zip](https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.zip)
+1. **Download the installer**: [Download NativeFoundationModels.zip](https://github.com/zats/local-llm/releases/latest/download/NativeFoundationModels.zip)
 2. **Run the macOS app**: Open the downloaded app and follow the installation steps
 3. **Install the Chrome extension**: The app will guide you to install the browser extension
 4. **Start coding**: Use the simple JavaScript API in your web applications
@@ -141,7 +141,7 @@ Each component has its own build process and README:
 
 - [Website](https://zats.github.io/native-foundation-models/)
 - [Chrome Extension](https://chromewebstore.google.com/detail/native-foundation-models/jjmocainopehgedhgjpanckkalhiodmj)
-- [Issues](https://github.com/zats/native-foundation-models/issues)
+- [Issues](https://github.com/zats/local-llm/issues)
 
 ## 📄 License
 

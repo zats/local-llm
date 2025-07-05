@@ -206,7 +206,7 @@
 
       if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
-          window.open('https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.app.zip', '_blank');
+          window.open('https://github.com/zats/local-llm/releases/latest/download/NativeFoundationModels.app.zip', '_blank');
           this.hide();
         });
       }

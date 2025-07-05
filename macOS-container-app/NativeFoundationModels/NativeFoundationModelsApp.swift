@@ -1,6 +1,5 @@
 //
 //  NativeFoundationModelsApp.swift
-//  NativeFoundationModels
 //
 //  Created by Sash Zats on 6/30/25.
 //
@@ -344,7 +343,7 @@ class InstallationStepManager: ObservableObject {
         
         switch browser {
         case .chrome, .edge, .brave, .arc, .vivaldi, .dia:
-            url = URL(string: "https://chromewebstore.google.com/detail/native-foundation-models/jjmocainopehgedhgjpanckkalhiodmj")
+            url = URL(string: "https://chromewebstore.google.com/detail/jjmocainopehgedhgjpanckkalhiodmj")
         case .safari, .firefox:
             break
         }

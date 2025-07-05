@@ -124,10 +124,10 @@ mkdir -p "$UPDATES_DIR"
 
 # Build and archive the application
 log "Building application archive..."
-ARCHIVE_PATH="$BUILD_DIR/NativeFoundationModels.xcarchive"
+ARCHIVE_PATH="$BUILD_DIR/LocalLLM.xcarchive"
 xcodebuild archive \
-    -project NativeFoundationModels.xcodeproj \
-    -scheme NativeFoundationModels \
+    -project LocalLLM.xcodeproj \
+    -scheme LocalLLM \
     -configuration Release \
     -archivePath "$ARCHIVE_PATH" \
     ARCHS="arm64 x86_64" \
@@ -164,7 +164,7 @@ xcodebuild -exportArchive \
     -exportOptionsPlist "$EXPORT_OPTIONS_PLIST"
 
 # Check if app was exported successfully
-if [[ ! -d "$BUILD_DIR/NativeFoundationModels.app" ]]; then
+if [[ ! -d "$BUILD_DIR/LocalLLM.app" ]]; then
     error "App export failed."
 fi
 
@@ -175,7 +175,7 @@ log "Application exported successfully with proper code signatures"
 log "Verifying code signatures..."
 
 # Verify Safari extension signature
-SAFARI_EXTENSION_PATH="$BUILD_DIR/NativeFoundationModels.app/Contents/PlugIns/SafariExtension.appex"
+SAFARI_EXTENSION_PATH="$BUILD_DIR/LocalLLM.app/Contents/PlugIns/SafariExtension.appex"
 if [[ -d "$SAFARI_EXTENSION_PATH" ]]; then
     if codesign --verify --strict "$SAFARI_EXTENSION_PATH"; then
         log "Safari extension signature verified"
@@ -190,10 +190,10 @@ else
 fi
 
 # Verify main app signature
-if codesign --verify --deep --strict "$BUILD_DIR/NativeFoundationModels.app"; then
+if codesign --verify --deep --strict "$BUILD_DIR/LocalLLM.app"; then
     log "Main app signature verified successfully"
     # Check architecture
-    MAIN_ARCH=$(lipo -info "$BUILD_DIR/NativeFoundationModels.app/Contents/MacOS/NativeFoundationModels" 2>/dev/null | grep -o 'x86_64\|arm64' | sort -u | tr '\n' ' ')
+    MAIN_ARCH=$(lipo -info "$BUILD_DIR/LocalLLM.app/Contents/MacOS/LocalLLM" 2>/dev/null | grep -o 'x86_64\|arm64' | sort -u | tr '\n' ' ')
     log "Main app architectures: $MAIN_ARCH"
 else
     warn "Main app signature verification failed"
@@ -202,7 +202,7 @@ fi
 # Notarize app (requires Apple ID credentials)
 log "Creating ZIP for distribution..."
 cd "$BUILD_DIR"
-ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
+ditto -c -k --keepParent "LocalLLM.app" "LocalLLM.zip"
 
 # Check for notarization credentials and prompt if needed (local only)
 if [[ -z "$CI" && (-z "$APPLE_ID" || -z "$APPLE_TEAM_ID" || -z "$APPLE_APP_PASSWORD") ]]; then
@@ -230,7 +230,7 @@ if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
     log "Notarizing application..."
     
     # Submit for notarization and capture the submission ID
-    SUBMIT_OUTPUT=$(xcrun notarytool submit "NativeFoundationModels.zip" \
+    SUBMIT_OUTPUT=$(xcrun notarytool submit "LocalLLM.zip" \
         --apple-id "$APPLE_ID" \
         --team-id "$APPLE_TEAM_ID" \
         --password "$APPLE_APP_PASSWORD" \
@@ -248,11 +248,11 @@ if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
         # Check if notarization was successful
         if echo "$SUBMIT_OUTPUT" | grep -q '"status":"Accepted"'; then
             log "Notarization successful! Stapling ticket..."
-            xcrun stapler staple "NativeFoundationModels.app"
+            xcrun stapler staple "LocalLLM.app"
             
             # Re-create ZIP with stapled app
-            rm "NativeFoundationModels.zip"
-            ditto -c -k --keepParent "NativeFoundationModels.app" "NativeFoundationModels.zip"
+            rm "LocalLLM.zip"
+            ditto -c -k --keepParent "LocalLLM.app" "LocalLLM.zip"
         else
             warn "Notarization failed or invalid. Check the logs:"
             # Get detailed logs if submission ID is available
@@ -296,7 +296,7 @@ $(git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/n
 $(git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "HEAD~10")..HEAD)
 
 ---
-Download: [NativeFoundationModels.zip](https://github.com/zats/local-llm/releases/download/v$VERSION/NativeFoundationModels.zip)
+Download: [LocalLLM.zip](https://github.com/zats/local-llm/releases/download/v$VERSION/LocalLLM.zip)
 EOF
 fi
 
@@ -339,7 +339,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
     log "Creating GitHub release..."
     if command -v gh &> /dev/null; then
         gh release create "v$VERSION" \
-            "$BUILD_DIR/NativeFoundationModels.zip" \
+            "$BUILD_DIR/LocalLLM.zip" \
             --title "Release v$VERSION" \
             --notes-file "$RELEASE_NOTES_DIR/$VERSION.md"
         log "GitHub release created successfully!"
@@ -348,10 +348,10 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
         log "Generating appcast with live GitHub release URLs..."
         
         # Clean up any existing files to avoid conflicts
-        rm -f "$UPDATES_DIR/NativeFoundationModels.zip"
+        rm -f "$UPDATES_DIR/LocalLLM.zip"
         
         # Copy release to updates directory with version in filename (for appcast generation)
-        cp "$BUILD_DIR/NativeFoundationModels.zip" "$UPDATES_DIR/NativeFoundationModels-$VERSION.zip"
+        cp "$BUILD_DIR/LocalLLM.zip" "$UPDATES_DIR/LocalLLM-$VERSION.zip"
         
         # Look for generate_appcast in common locations
         GENERATE_APPCAST_PATH=""
@@ -399,7 +399,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
                 log "Adding new version $VERSION to appcast..."
                 
                 # Get file size of the ZIP
-                ZIP_SIZE=$(stat -f%z "$BUILD_DIR/NativeFoundationModels.zip")
+                ZIP_SIZE=$(stat -f%z "$BUILD_DIR/LocalLLM.zip")
                 
                 # Get current build number from Xcode project
                 BUILD_NUMBER=$(agvtool what-version -terse || echo "1")
@@ -411,7 +411,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             <sparkle:version>$BUILD_NUMBER</sparkle:version>
             <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-            <enclosure url=\"$DOWNLOAD_URL_PREFIX/NativeFoundationModels.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
+            <enclosure url=\"$DOWNLOAD_URL_PREFIX/LocalLLM.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
         </item>"
                 
                 # Show what the new entry will look like
@@ -427,7 +427,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
                 
                 # Use awk to insert after the title line
                 awk -v new_item="$NEW_ITEM" '
-                    /<title>NativeFoundationModels<\/title>/ {
+                    /<title>LocalLLM<\/title>/ {
                         print $0
                         print new_item
                         next
@@ -446,7 +446,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             fi
             
             # Clean up temporary files
-            rm -f "$UPDATES_DIR/NativeFoundationModels-$VERSION.zip"
+            rm -f "$UPDATES_DIR/LocalLLM-$VERSION.zip"
             
             # Commit and push updated appcast
             log "Updating appcast..."
@@ -500,7 +500,7 @@ else
     if [[ "$DRY_RUN" == "true" ]]; then
         log "Dry run completed! 🎉"
         echo ""
-        log "Build artifacts available at: $BUILD_DIR/NativeFoundationModels.zip"
+        log "Build artifacts available at: $BUILD_DIR/LocalLLM.zip"
         warn "No git operations were performed (dry run mode)"
         echo "To create actual release, run: ./scripts/release.sh $VERSION"
     else
@@ -508,7 +508,7 @@ else
         echo ""
         warn "Manual steps required:"
         echo "1. Push changes and tag: git push origin main && git push origin v$VERSION"
-        echo "2. Create GitHub release with ZIP file: $BUILD_DIR/NativeFoundationModels.zip"
+        echo "2. Create GitHub release with ZIP file: $BUILD_DIR/LocalLLM.zip"
         echo "3. Update appcast manually after release is live"
     fi
 fi

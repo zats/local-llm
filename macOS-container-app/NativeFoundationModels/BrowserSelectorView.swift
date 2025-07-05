@@ -1,6 +1,5 @@
 //
 //  BrowserSelectorView.swift
-//  NativeFoundationModels
 //
 //  Created by Sash Zats on 7/2/25.
 //

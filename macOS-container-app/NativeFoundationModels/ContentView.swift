@@ -1,6 +1,5 @@
 //
 //  ContentView.swift
-//  NativeFoundationModels
 //
 //  Created by Sash Zats on 6/30/25.
 //
