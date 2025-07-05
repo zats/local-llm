@@ -50,12 +50,7 @@ class NativeFoundationModelsService {
             generationOptions.maximumResponseTokens = maxTokens
             
             // Generate response
-            let response = try await session.generateResponseDirect(to: prompt, options: generationOptions)
-            
-            // Calculate token usage
-            let promptTokens = LanguageModelSession.estimateTokens(text: prompt)
-            let completionTokens = LanguageModelSession.estimateTokens(text: response)
-            
+            let response = try await session.generateResponseDirect(to: prompt, options: generationOptions)            
             return [
                 "id": id,
                 "object": "chat.completion",
@@ -67,12 +62,7 @@ class NativeFoundationModelsService {
                         "content": response
                     ],
                     "finish_reason": "stop"
-                ]],
-                "usage": [
-                    "prompt_tokens": promptTokens,
-                    "completion_tokens": completionTokens,
-                    "total_tokens": promptTokens + completionTokens
-                ]
+                ]]
             ]
         } catch let error as LanguageModelError {
             os_log(.error, "Language model error: %@", error.userFriendlyMessage)
@@ -228,10 +218,6 @@ class NativeFoundationModelsService {
         requestId: String,
         context: NSExtensionContext
     ) {
-        // Calculate token usage
-        let promptTokens = LanguageModelSession.estimateTokens(text: prompt)
-        let completionTokens = LanguageModelSession.estimateTokens(text: fullResponse)
-        
         let response = NSExtensionItem()
         let responseDict: [String: Any] = [
             "requestId": requestId,
@@ -253,11 +239,6 @@ class NativeFoundationModelsService {
                         ],
                         "finish_reason": "stop"
                     ]],
-                    "usage": [
-                        "prompt_tokens": promptTokens,
-                        "completion_tokens": completionTokens,
-                        "total_tokens": promptTokens + completionTokens
-                    ]
                 ]
             ]
         ]

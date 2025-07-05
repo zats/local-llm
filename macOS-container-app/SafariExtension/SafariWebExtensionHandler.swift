@@ -112,16 +112,19 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         
         do {
             let responseData: Any
+            let type: String
             
             switch action {
             case "checkAvailability":
                 responseData = await nativeFoundationModels.checkAvailability()
-                
+                type = "availabilityResponse"
+
             case "getCompletion":
                 let prompt = data["prompt"] as? String ?? ""
                 let options = data["options"] as? [String: Any] ?? [:]
                 responseData = await nativeFoundationModels.getCompletion(prompt: prompt, options: options)
-                
+                type = "completionResponse"
+
             case "getCompletionStream":
                 let prompt = data["prompt"] as? String ?? ""
                 let options = data["options"] as? [String: Any] ?? [:]
@@ -136,6 +139,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             case "cancelStream":
                 nativeFoundationModels.cancelStream(requestId: requestId)
                 responseData = ["success": true]
+                type = "streamEnd"
                 
             default:
                 throw NSError(domain: "NativeFoundationModels", code: 400, userInfo: [
@@ -143,20 +147,20 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 ])
             }
             
-            sendResponse(requestId: requestId, data: responseData, context: context)
+            sendResponse(requestId: requestId, type: type, data: responseData, context: context)
             
         } catch {
             os_log(.error, "Error handling request %@: %@", requestId, error.localizedDescription)
-            sendResponse(requestId: requestId, error: error.localizedDescription, context: context)
+            sendResponse(requestId: requestId, type: "error", error: error.localizedDescription, context: context)
         }
     }
     
-    private func sendResponse(requestId: String, data: Any? = nil, error: String? = nil, context: NSExtensionContext) {
+    private func sendResponse(requestId: String, type: String, data: Any? = nil, error: String? = nil, context: NSExtensionContext) {
         let response = NSExtensionItem()
         let responseDict: [String: Any] = [
             "requestId": requestId,
-            "type": "response",
-            "data": data as Any,
+            "type": type,
+            "payload": data as Any,
             "error": error as Any
         ]
         

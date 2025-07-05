@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Generate Safari popup files
   const safariPopupHtml = popupTemplate.replace(
     '<!-- PLATFORM_SPECIFIC_BUTTONS -->', 
-    '<button class="settings-btn" id="openPlaygroundBtn" title="Open in New Tab">🚀</button>\n        <button class="settings-btn" id="exportCodeBtn" title="Export as Code">💻</button>\n        <button class="settings-btn" id="newChatBtn" title="New Chat">📄</button>'
+    '<button class="settings-btn" id="exportCodeBtn" title="Export as Code">💻</button>\n        <button class="settings-btn" id="newChatBtn" title="New Chat">📄</button>'
   );
   
   const safariPopupApiJs = `// Auto-generated from shared/popup/popup-api-base.js

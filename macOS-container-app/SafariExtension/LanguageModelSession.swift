@@ -192,14 +192,6 @@ public class LanguageModelSession: @unchecked Sendable {
         // Fallback for other errors
         return .generationFailed(error.localizedDescription)
     }
-    
-    // MARK: - Token Estimation
-    
-    public static func estimateTokens(text: String) -> Int {
-        // Rough estimation: ~4 characters per token for English text
-        // This is a heuristic and may not be perfectly accurate
-        return max(1, text.count / 4)
-    }
 }
 
 public enum LanguageModelError: Error, LocalizedError {

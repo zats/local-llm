@@ -66,7 +66,7 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
 
       if (response && (response.success || response.type === 'availabilityResponse')) {
         if (response.type === 'availabilityResponse') {
-          return response.payload;
+          return response.payload;          
         } else {
           return response.data;
         }
