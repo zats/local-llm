@@ -296,7 +296,7 @@ $(git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/n
 $(git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "HEAD~10")..HEAD)
 
 ---
-Download: [NativeFoundationModels.zip](https://github.com/zats/native-foundation-models/releases/download/v$VERSION/NativeFoundationModels.zip)
+Download: [NativeFoundationModels.zip](https://github.com/zats/local-llm/releases/download/v$VERSION/NativeFoundationModels.zip)
 EOF
 fi
 
@@ -368,7 +368,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             
             # Use the private key file if it exists
             PRIVATE_KEY_FILE="$PROJECT_DIR/.sparkle-keys/sparkle_private_key.pem"
-            DOWNLOAD_URL_PREFIX="https://github.com/zats/native-foundation-models/releases/download/v$VERSION/"
+            DOWNLOAD_URL_PREFIX="https://github.com/zats/local-llm/releases/download/v$VERSION/"
             
             # Debug: show what files are in the updates directory
             log "Files in updates directory:"
