@@ -420,10 +420,9 @@ async function watchSharedFiles() {
 // Run the sync or watch based on command line arguments
 if (require.main === module) {
   const args = process.argv.slice(2);
+  syncSharedFiles();
   if (args.includes('--watch')) {
     watchSharedFiles();
-  } else {
-    syncSharedFiles();
   }
 }
 
