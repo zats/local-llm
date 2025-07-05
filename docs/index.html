@@ -1,30 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>NativeFoundationModels - Native AI Integration for the Web</title>
+    <title>LocalLLM - Local-First Chat Completion API</title>
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://zats.github.io/native-foundation-models/">
-    <meta property="og:title" content="Native Foundation Models - Native AI Integration for the Web">
-    <meta property="og:description" content="Seamlessly integrate powerful language models directly into web applications with zero latency, complete privacy, and native performance on macOS.">
+    <meta property="og:title" content="LocalLLM - Local-First Chat Completion API">
+    <meta property="og:description" content="OpenAI-compatible interface for on-device language models with zero latency, complete privacy, and native performance.">
     <meta property="og:image" content="https://zats.github.io/native-foundation-models/thumbnail.png">
     <meta property="og:image:width" content="985">
     <meta property="og:image:height" content="628">
-    <meta property="og:image:alt" content="Native Foundation Models - Brain icon with lightning bolt representing AI-powered native web integration">
+    <meta property="og:image:alt" content="LocalLLM - Brain icon with lightning bolt representing local AI integration">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://zats.github.io/native-foundation-models/">
-    <meta property="twitter:title" content="Native Foundation Models - Native AI Integration for the Web">
-    <meta property="twitter:description" content="Seamlessly integrate powerful language models directly into web applications with zero latency, complete privacy, and native performance on macOS.">
+    <meta property="twitter:title" content="LocalLLM - Local-First Chat Completion API">
+    <meta property="twitter:description" content="OpenAI-compatible interface for on-device language models with zero latency, complete privacy, and native performance.">
     <meta property="twitter:image" content="https://zats.github.io/native-foundation-models/thumbnail.png">
-    <meta property="twitter:image:alt" content="Native Foundation Models - Brain icon with lightning bolt representing AI-powered native web integration">
+    <meta property="twitter:image:alt" content="LocalLLM - Brain icon with lightning bolt representing local AI integration">
 
     <!-- General Meta Tags -->
-    <meta name="description" content="Seamlessly integrate powerful language models directly into web applications with zero latency, complete privacy, and native performance on macOS.">
-    <meta name="keywords" content="AI, machine learning, native apps, web integration, privacy, local AI, language models, macOS">
-    <meta name="author" content="Native Foundation Models">
+    <meta name="description" content="OpenAI-compatible interface for on-device language models with zero latency, complete privacy, and native performance.">
+    <meta name="keywords" content="AI, machine learning, native apps, web integration, privacy, local AI, language models, macOS, OpenAI compatible">
+    <meta name="author" content="LocalLLM"
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -548,12 +548,12 @@
 <body>
     <div class="hero">
         <div class="container">
-            <h1>Native Foundation Models</h1>
-            <img class="logo" src="nfm.png" alt="Native Foundation Models Logo">
-            <p class="tagline">Native AI Integration for the Modern Web</p>
+            <h1>LocalLLM</h1>
+            <img class="logo" src="nfm.png" alt="LocalLLM Logo">
+            <p class="tagline">Local-First Chat Completion API</p>
             <p class="subtitle">
-                Seamlessly integrate powerful language models directly into web applications with zero latency, 
-                complete privacy, and native performance.
+                OpenAI-compatible interface for on-device language models with zero latency, 
+                complete privacy, and native performance. Swap endpoints, not payloads.
             </p>
             <div style="margin-top: 40px;">
                 <a href="https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.zip" 
@@ -575,44 +575,44 @@
     <div class="main-content">
         <div class="container">
             <div class="section">
-                <h2>Why Native Foundation Models?</h2>
+                <h2>Why LocalLLM?</h2>
                 <div class="features-grid">
                     <div class="feature-card">
-                        <span class="feature-icon">🚀</span>
-                        <h4>Zero Latency</h4>
-                        <p>Run language models locally with no network delays. Instant responses for real-time applications and interactive experiences.</p>
+                        <span class="feature-icon">🔄</span>
+                        <h4>OpenAI Compatible</h4>
+                        <p>Drop-in replacement for OpenAI's API. Use the same request/response formats you already know and love.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🏠</span>
+                        <h4>Local-First Design</h4>
+                        <p>When local models are available, requests execute locally. Otherwise, gracefully fall back to cloud APIs.</p>
                     </div>
                     <div class="feature-card">
                         <span class="feature-icon">🔒</span>
                         <h4>Complete Privacy</h4>
-                        <p>Your data never leaves your device. Process sensitive information locally without sending it to external APIs or cloud services.</p>
+                        <p>Your data never leaves your device when running locally. Process sensitive information without external API calls.</p>
                     </div>
                     <div class="feature-card">
                         <span class="feature-icon">⚡</span>
-                        <h4>Native Performance</h4>
-                        <p>Leverage Apple's FoundationModels framework for optimized performance on macOS with hardware acceleration.</p>
-                    </div>
-                    <div class="feature-card">
-                        <span class="feature-icon">🌐</span>
-                        <h4>Web Integration</h4>
-                        <p>Simple JavaScript API that works with any web framework. Add AI capabilities to existing applications in minutes.</p>
+                        <h4>Zero Latency</h4>
+                        <p>Instant responses with on-device inference. No network delays for real-time applications and interactive experiences.</p>
                     </div>
                     <div class="feature-card">
                         <span class="feature-icon">📡</span>
                         <h4>Real-time Streaming</h4>
-                        <p>Stream responses token by token for responsive user experiences. Perfect for chat interfaces and live content generation.</p>
+                        <p>OpenAI-compatible streaming with chat.completion.chunk format. Perfect for responsive chat interfaces.</p>
                     </div>
                     <div class="feature-card">
-                        <span class="feature-icon">🔧</span>
-                        <h4>Developer Friendly</h4>
-                        <p>Clean, modern API with TypeScript support, comprehensive documentation, and easy integration patterns.</p>
+                        <span class="feature-icon">🧠</span>
+                        <h4>Single Source of Truth</h4>
+                        <p>Check await window.localLLM.available() for authoritative model availability. Simple, reliable, no duplicate checks needed.</p>
                     </div>
                 </div>
             </div>
 
             <div class="demo-section">
                 <h3>🧪 Live Demo</h3>
-                <p>Experience NativeFoundationModels in action. Test the API methods and see real-time responses.</p>
+                <p>Experience LocalLLM in action. Test the OpenAI-compatible API and see real-time responses.</p>
                 
                 <div class="demo-area">
                     <div class="button-group">
@@ -637,55 +637,63 @@
 
 
                         <div class="code-section">
-                <h3>Simple. Powerful. Ready to Use.</h3>
+                <h3>OpenAI-Compatible. Local-First. Ready to Use.</h3>
                 <div class="code-examples">
                     <div class="code-block" data-title="Check Availability">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// Verify NativeFoundationModels is ready
-const status = await window.nativeFoundationModels
-  .checkAvailability();
-
-if (status.available) {
-  console.log('NativeFoundationModels ready! 🚀');
-  console.log('Status:', status);
-  // { id: "availability-...", object: "availability.check", 
-  //   created: 1234567890, available: true, reason: "Ready" }
+                        <pre><code class="language-javascript">// Single source of truth for availability
+if (await window.localLLM?.available()) {
+  console.log('LocalLLM ready! 🚀');
+  // On-device path
+} else {
+  console.log('Local LLM unavailable, using cloud');
+  // Cloud fallback path
 }</code></pre></div>
 
-                    <div class="code-block" data-title="Get Completion">
+                    <div class="code-block" data-title="Basic Chat Completion">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// Generate content instantly
-const result = await window.nativeFoundationModels
-  .getCompletion('Explain quantum computing');
+                        <pre><code class="language-javascript">// OpenAI-compatible interface
+const result = await localLLM.chat.completions.create({
+  model: "localLLM-pro-2025",
+  messages: [
+    { role: "system", content: "You are a terse assistant." },
+    { role: "user", content: "Hello local world" }
+  ]
+});
 
 console.log(result.choices[0].message.content);
-// Full response: { id: "chatcmpl-...", object: "chat.completion",
-//   created: 1234567890, choices: [...] }</code></pre></div>
+// Full OpenAI-compatible response format</code></pre></div>
 
-                    <div class="code-block" data-title="Stream Responses">
+                    <div class="code-block" data-title="Streaming Response">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// Real-time streaming - yields OpenAI-compatible chunks
-const stream = await window.nativeFoundationModels
-  .getCompletionStream('Write a story');
+                        <pre><code class="language-javascript">// Real-time streaming with OpenAI chunks
+const stream = await localLLM.chat.completions.create({
+  model: "localLLM-pro-2025", 
+  messages: [
+    { role: "user", content: "Write a haiku about AI" }
+  ],
+  stream: true
+});
 
 for await (const chunk of stream) {
   const content = chunk.choices[0]?.delta?.content;
   if (content) {
-    updateUI(content); // Live updates
+    process.stdout.write(content);
   }
-  console.log(chunk);
-  // { id: "chatcmpl-...", object: "chat.completion.chunk", 
-  //   created: 1234567890, choices: [{delta: {content: "..."}}] }
 }</code></pre></div>
 
-                    <div class="code-block" data-title="Advanced Options">
+                    <div class="code-block" data-title="Advanced Configuration">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// Configure behavior
-const result = await window.nativeFoundationModels
-  .getCompletion(prompt, {
-    temperature: 0.8,
-    maximumResponseTokens: 500
-  });</code></pre></div>
+                        <pre><code class="language-javascript">// Configure model behavior
+const result = await localLLM.chat.completions.create({
+  model: "localLLM-pro-2025",
+  messages: [
+    { role: "user", content: "Explain quantum computing" }
+  ],
+  temperature: 0.7,
+  max_tokens: 500,
+  stream: false
+});</code></pre></div>
                 </div>
             </div>
         </div>
@@ -724,7 +732,7 @@ const result = await window.nativeFoundationModels
             
             <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; margin-top: 30px;">
                 <p style="color: rgba(255,255,255,0.7); font-size: 0.9em; margin: 0;">
-                    © 2025 Native Foundation Models. Built with 🖤 for the developer community.
+                    © 2025 LocalLLM. Built with 🖤 for the developer community.
                 </p>
             </div>
         </div>
@@ -748,18 +756,23 @@ const result = await window.nativeFoundationModels
         }
 
         async function testAvailability() {
-            log('🔍 Testing NativeFoundationModels connection...', 'info');
+            log('🔍 Testing LocalLLM connection...', 'info');
             setButtonStatus('availability-status', 'loading');
             
-            if (!window.nativeFoundationModels) {
-                log('❌ NativeFoundationModels not detected. Please install and configure the extension.', 'error');
+            if (!window.localLLM) {
+                log('❌ LocalLLM not detected. Please install and configure the extension.', 'error');
                 setButtonStatus('availability-status', 'error');
                 return;
             }
             
             try {
-                const result = await window.nativeFoundationModels.checkAvailability();
-                log(`✅ NativeFoundationModels connected successfully! ${JSON.stringify(result)}`, 'success');
+                // Check availability using the async method
+                const available = await window.localLLM.available();
+                log(`✅ LocalLLM availability: ${available}`, available ? 'success' : 'info');
+                
+                // Also test the legacy checkAvailability method for compatibility
+                const result = await window.localLLM.checkAvailability();
+                log(`✅ Detailed status: ${JSON.stringify(result)}`, 'success');
                 setButtonStatus('availability-status', 'success');
             } catch (error) {
                 log(`❌ Connection failed: ${error.message}\n${error.stack}\n${JSON.stringify(error.cause)}`, 'error');
@@ -768,17 +781,24 @@ const result = await window.nativeFoundationModels
         }
 
         async function testCompletion() {
-            log('💡 Generating content with NativeFoundationModels...', 'info');
+            log('💡 Generating content with LocalLLM...', 'info');
             setButtonStatus('completion-status', 'loading');
             
-            if (!window.nativeFoundationModels) {
-                log('❌ NativeFoundationModels not available. Please configure the extension first.', 'error');
+            if (!window.localLLM) {
+                log('❌ LocalLLM not available. Please configure the extension first.', 'error');
                 setButtonStatus('completion-status', 'error');
                 return;
             }
             
             try {
-                const result = await window.nativeFoundationModels.getCompletion('Share an interesting fact about artificial intelligence in one sentence.');
+                // Use the new OpenAI-compatible interface
+                const result = await window.localLLM.chat.completions.create({
+                    model: "localLLM-pro-2025",
+                    messages: [
+                        { role: "system", content: "You are an expert on providing interesting facts in under one sentence about any topic user inquires." },
+                        { role: "user", content: "Artificial intelligence" },
+                    ]
+                });
                 log(`✅ Generated: ${JSON.stringify(result)}`, 'success');
                 setButtonStatus('completion-status', 'success');
             } catch (error) {
@@ -791,14 +811,21 @@ const result = await window.nativeFoundationModels
             log('📡 Starting real-time streaming...', 'info');
             setButtonStatus('streaming-status', 'loading');
             
-            if (!window.nativeFoundationModels) {
-                log('❌ NativeFoundationModels not available. Please configure the extension first.', 'error');
+            if (!window.localLLM) {
+                log('❌ LocalLLM not available. Please configure the extension first.', 'error');
                 setButtonStatus('streaming-status', 'error');
                 return;
             }
             
             try {
-                const stream = await window.nativeFoundationModels.getCompletionStream('Write three motivational quotes about technology and innovation.');
+                // Use the new OpenAI-compatible streaming interface
+                const stream = await window.localLLM.chat.completions.create({
+                    model: "localLLM-pro-2025",
+                    messages: [
+                        { role: "user", content: "Write three motivational quotes about technology and innovation." }
+                    ],
+                    stream: true
+                });
                 
                 // Create streaming display
                 const output = document.getElementById('output');
@@ -827,17 +854,16 @@ const result = await window.nativeFoundationModels
             }
         }
 
-        // Auto-detect NativeFoundationModels on page load
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                if (window.nativeFoundationModels) {
-                    log('🎉 NativeFoundationModels detected and ready to use!', 'success');
-                    setButtonStatus('availability-status', 'success');
-                } else {
-                    log('ℹ️  NativeFoundationModels not detected. Install the extension to begin.', 'info');
-                    setButtonStatus('availability-status', 'error');
-                }
-            }, 1000);
+        // Auto-detect LocalLLM on page load
+        window.addEventListener('load', async () => {
+            if (window.localLLM) {
+                const available = await window.localLLM.available();
+                log(`🔍 Local model availability: ${available}`, available ? 'success' : 'info');
+                setButtonStatus('availability-status', available ? 'success' : 'error');
+            } else {
+                log('ℹ️  LocalLLM not detected. Install the extension to begin.', 'info');
+                setButtonStatus('availability-status', 'error');
+            }
         });
         
         // Copy code functionality

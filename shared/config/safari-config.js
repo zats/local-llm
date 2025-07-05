@@ -1,5 +1,5 @@
 /**
- * Safari-specific configuration for Native Foundation Models extension
+ * Safari-specific configuration for LocalLLM extension
  */
 
 const SafariConfig = {

@@ -1,5 +1,5 @@
 /**
- * Chrome-specific configuration for Native Foundation Models extension
+ * Chrome-specific configuration for LocalLLM extension
  */
 
 const ChromeConfig = {

@@ -1,4 +1,4 @@
-// Download dialog component for Native Foundation Models
+// Download dialog component for LocalLLM
 (function() {
   'use strict';
 
@@ -77,7 +77,7 @@
             font-size: 18px;
             font-weight: 600;
           ">
-            Native Foundation Models
+            LocalLLM
           </div>
           <button id="nfm-close-btn" style="
             background: rgba(255, 255, 255, 0.1);
@@ -140,7 +140,7 @@
             text-align: center;
             margin-bottom: 24px;
           ">
-            To use on-device AI, you need the Native Foundation Models app. Click below to download it.
+            To use on-device AI, you need the LocalLLM app. Click below to download it.
           </div>
 
           <!-- Download button (matching docs style) -->

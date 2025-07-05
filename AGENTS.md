@@ -1,7 +1,7 @@
-# Native Foundation Models - Project Context
+# LocalLLM - Project Context
 
 ## Project Overview
-This is a cross-browser extension system for Native Foundation Models that provides local AI integration for web applications on macOS. The project consists of:
+This is a cross-browser extension system for LocalLLM that provides local AI integration for web applications on macOS. The project consists of:
 
 - **Chrome Extension**: Located in `native-foundation-models-extension/`
 - **Safari Extension**: Located in `macOS-container-app/SafariExtension/`

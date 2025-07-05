@@ -58,7 +58,7 @@ function save_credentials() {
     if [[ -z "$CI" ]]; then
         log "Saving credentials to project directory..."
         cat > "$PROJECT_CREDS_FILE" << EOF
-# Native Foundation Models Release Credentials
+# LocalLLM Release Credentials
 export APPLE_ID="$APPLE_ID"
 export APPLE_TEAM_ID="$APPLE_TEAM_ID"
 export APPLE_APP_PASSWORD="$APPLE_APP_PASSWORD"

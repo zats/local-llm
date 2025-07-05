@@ -1,5 +1,5 @@
 /**
- * Unified background script for Native Foundation Models extension
+ * Unified background script for LocalLLM extension
  * Works with both Chrome (persistent connection) and Safari (message-based) native messaging
  */
 

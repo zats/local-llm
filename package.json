@@ -1,7 +1,7 @@
 {
   "name": "native-foundation-models",
   "version": "1.0.0",
-  "description": "Cross-browser extension for Native Foundation Models with shared codebase",
+  "description": "Cross-browser extension for LocalLLM with shared codebase",
   "main": "index.js",
   "scripts": {
     "dev": "node scripts/sync-shared.js --watch"

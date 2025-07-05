@@ -1,7 +1,7 @@
-# Native Foundation Models
+# LocalLLM
 
 <p align="center">
-  <img src="docs/nfm.png" alt="Native Foundation Models Logo" width="200"/>
+  <img src="docs/nfm.png" alt="LocalLLM Logo" width="200"/>
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
   <sub>Requires macOS® 26 Tahoe and Apple Intelligence®</sub>
 </p>
 
-## Why Native Foundation Models?
+## Why LocalLLM?
 
 ### 🚀 Zero Latency
 Run language models locally with no network delays. Instant responses for real-time applications and interactive experiences.
@@ -44,10 +44,10 @@ Clean, modern API with TypeScript support, comprehensive documentation, and easy
 
 ## 📦 Repository Structure
 
-This repository contains all the components needed to run Native Foundation Models on your Mac:
+This repository contains all the components needed to run LocalLLM on your Mac:
 
 ### [`/macOS-container-app`](./macOS-container-app)
-The macOS installer application that sets up Native Foundation Models on your system. This SwiftUI app handles:
+The macOS installer application that sets up LocalLLM on your system. This SwiftUI app handles:
 - Installation of the native binary to `~/bin`
 - Configuration of native messaging host
 - Chrome extension installation guidance
@@ -55,7 +55,7 @@ The macOS installer application that sets up Native Foundation Models on your sy
 
 ### [`/native-foundation-models-extension`](./native-foundation-models-extension)
 The Chrome extension that bridges web applications with the native host. Features include:
-- JavaScript API (`window.nativeFoundationModels`)
+- JavaScript API (`window.localLLM`)
 - Automatic connection management
 - Error handling and retries
 - TypeScript type definitions
@@ -75,18 +75,17 @@ The project website and documentation, including:
 4. **Start coding**: Use the simple JavaScript API in your web applications
 
 ```javascript
-// Check if Native Foundation Models is available (OpenAI-compatible)
-const status = await window.nativeFoundationModels.checkAvailability();
-if (status.available) {
+// Check if LocalLLM is available (OpenAI-compatible)
+if (await window.localLLM.available()) {
   console.log('Ready to use!');
 }
 
 // Generate content (OpenAI-compatible format)
-const result = await window.nativeFoundationModels.getCompletion('Explain quantum computing');
+const result = await window.localLLM.getCompletion('Explain quantum computing');
 console.log(result.choices[0].message.content);
 
 // Stream responses (yields OpenAI-compatible chunks)
-const stream = await window.nativeFoundationModels.getCompletionStream('Write a story');
+const stream = await window.localLLM.getCompletionStream('Write a story');
 for await (const chunk of stream) {
   const content = chunk.choices[0]?.delta?.content;
   if (content) {

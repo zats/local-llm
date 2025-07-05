@@ -1,4 +1,4 @@
-# Native Foundation Models Native App
+# LocalLLM Native App
 
 macOS native application that provides on-device LLM capabilities to the Chrome extension via native messaging.
 No more downloading 3GB+ models, no more long latency and LLM service bills! 
@@ -72,7 +72,7 @@ The app communicates with the Chrome extension using JSON messages over stdin/st
 
 ## API Reference
 
-The extension exposes `window.nativeFoundationModels` with methods:
+The extension exposes `window.localLLM` with methods:
 - `checkAvailability()`: Check if LLM is available
 - `getCompletion(prompt, options)`: Get completion response
 - `getCompletionStream(prompt, options)`: Get streaming completion

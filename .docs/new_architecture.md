@@ -7,11 +7,11 @@
 ## 1 — Core Principles
 
 1. **Local‑first, cloud‑optional**  – When a browser extension exposes an on‑device model *and that model is available*, requests execute locally; otherwise the Web App falls back to HTTPS (`/v1/chat/completions`).
-2. **Single‑source availability flag** – The Web App consults **only** `window.localllm.available`. A value of `true` guarantees the model is ready; `false` means “route to cloud.” No secondary probes or duplicate APIs.
+2. **Single‑source availability flag** – The Web App consults **only** `window.localLLM.available`. A value of `true` guarantees the model is ready; `false` means “route to cloud.” No secondary probes or duplicate APIs.
 3. **OpenAI‑compatible surface** – All OpenAI request/response shapes still work. Developers swap endpoints, not payloads.
-4. **Modern JS class API** – `class LocalLLM` (ES2022) is safe across all evergreen browsers by June 2025. A stub at `window.localllm` is injected for zero‑config hacking.
-5. **Typed SaaS development** – The NPM package (`localllm`) exports the same class plus full `*.d.ts` typings for Node/Edge runtimes.
-6. **Graceful degradation** – The Web App evaluates `window.localllm.available` on each request (cheap), never relying on extension‑initiated network calls.
+4. **Modern JS class API** – `class LocalLLM` (ES2022) is safe across all evergreen browsers by June 2025. A stub at `window.localLLM` is injected for zero‑config hacking.
+5. **Typed SaaS development** – The NPM package (`localLLM`) exports the same class plus full `*.d.ts` typings for Node/Edge runtimes.
+6. **Graceful degradation** – The Web App evaluates `window.localLLM.available` on each request (cheap), never relying on extension‑initiated network calls.
 
 ---
 
@@ -33,7 +33,7 @@ flowchart LR
 ```
 
 - **Extension bridge** – Handles only on‑device inference. It **never** talks to the cloud.
-- **Client fallback** – The Web App reads `window.localllm?.available`.
+- **Client fallback** – The Web App reads `window.localLLM?.available`.
   - `true` → use extension path
   - `false` (or property undefined) → use cloud path
 - The JSON contract is identical on both paths.
@@ -45,7 +45,7 @@ flowchart LR
 ### 3.0 Availability check (single source of truth)
 
 ```js
-if (window.localllm?.available) {
+if (window.localLLM?.available) {
   // On‑device path
   console.log("Running locally");
 } else {
@@ -64,11 +64,11 @@ if (window.localllm?.available) {
 <html>
 <head><meta charset="utf-8" /></head>
 <body>
-<script src="localllm-injected.js"></script>
+<script src="localLLM-injected.js"></script>
 <script>
   (async () => {
-    const res = await localllm.chat.completions.create({
-      model: "localllm-pro-2025",
+    const res = await localLLM.chat.completions.create({
+      model: "localLLM-pro-2025",
       messages: [
         { role: "system", content: "You are a terse assistant." },
         { role: "user", content: "Hello local world" }
@@ -84,15 +84,15 @@ if (window.localllm?.available) {
 ### 3.2 Completion with streaming (typed SaaS)
 
 ```ts
-import LocalLLM from "localllm";
+import LocalLLM from "localLLM";
 
 const llm = new LocalLLM({
   apiKey: process.env.LOCALLLM_API_KEY,     // cloud fallback only
-  baseURL: "https://api.localllm.example"
+  baseURL: "https://api.localLLM.example"
 });
 
 await llm.chat.completions.create({
-  model: "localllm-pro-2025",
+  model: "localLLM-pro-2025",
   messages: [
     { role: "system", content: "You are concise." },
     { role: "user", content: "Give me a limerick." }
@@ -104,7 +104,7 @@ await llm.chat.completions.create({
 ### 3.3 Multi‑turn conversation loop
 
 ```ts
-import LocalLLM from "localllm";
+import LocalLLM from "localLLM";
 
 const llm = new LocalLLM();
 
@@ -115,7 +115,7 @@ const history = [
 async function ask(question: string) {
   history.push({ role: "user", content: question });
   const resp = await llm.chat.completions.create({
-    model: "localllm-pro-2025",
+    model: "localLLM-pro-2025",
     messages: history,
     temperature: 0.7
   });
@@ -131,7 +131,7 @@ async function ask(question: string) {
 
 ```ts
 function selectTransport(): "extension" | "https" {
-  return (window as any).localllm?.available ? "extension" : "https";
+  return (window as any).localLLM?.available ? "extension" : "https";
 }
 ```
 
@@ -162,21 +162,21 @@ port.postMessage({ type: "start", request: {/* … */} });
 ```ts
 declare global {
   interface Window {
-    localllm?: {
+    localLLM?: {
       /** Authoritative availability flag */
       available: boolean;
       chat: {
         completions: {
-          create: typeof import("localllm").default.prototype.chat.completions.create;
+          create: typeof import("localLLM").default.prototype.chat.completions.create;
         };
       };
     };
   }
 }
 
-declare module "localllm" {
+declare module "localLLM" {
   export default class LocalLLM {
-    readonly available: boolean; // mirrors window.localllm.available
+    readonly available: boolean; // mirrors window.localLLM.available
     chat: {
       completions: {
         create: typeof import("openai").Chat.Completions.create;

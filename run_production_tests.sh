@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Native Foundation Models Production Test Runner
+# LocalLLM Production Test Runner
 # Builds the native app and runs comprehensive tests
 
 set -e
 
-echo "🧪 Native Foundation Models Production Test Suite"
+echo "🧪 LocalLLM Production Test Suite"
 echo "=================================="
 
 # Change to native-app directory

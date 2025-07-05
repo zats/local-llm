@@ -16,7 +16,7 @@ class UnifiedPopup {
     this.conversationHistory = [];
     
     // Get reference to the unified API
-    this.api = window.nativeFoundationModels;
+    this.api = window.localLLM;
     
     this.initializeElements();
     this.setupEventListeners();

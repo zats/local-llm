@@ -325,7 +325,7 @@
         }
                 
         async function analyzeWithLLM(text) {
-            if (!window.nativeFoundationModels) {
+            if (!window.localLLM) {
                 // Fallback to pattern matching if LLM not available
                 console.log('LLM not available, using pattern matching');
                 return false;
@@ -364,7 +364,7 @@ Only respond with the JSON object, no additional text, no markdown code blocks.
 
 Text: ${text}`;
 
-                const result = await window.nativeFoundationModels.getCompletion(prompt);
+                const result = await window.localLLM.getCompletion(prompt);
                 const response = result.choices[0].message.content.trim();
                 
                 // Extract JSON from markdown code block if present
@@ -483,10 +483,10 @@ Text: ${text}`;
         // Test the system on page load
         window.addEventListener('load', () => {
             setTimeout(() => {
-                if (window.nativeFoundationModels) {
-                    console.log('✅ Native Foundation Models detected - Using AI-powered PII detection');
+                if (window.localLLM) {
+                    console.log('✅ LocalLLM detected - Using AI-powered PII detection');
                 } else {
-                    console.log('⚠️ Native Foundation Models not detected - Using pattern-based PII detection');
+                    console.log('⚠️ LocalLLM not detected - Using pattern-based PII detection');
                 }
             }, 1000);
         });

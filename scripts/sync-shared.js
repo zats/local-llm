@@ -231,7 +231,7 @@ ${chromeConfigCode}
 ${injectedBaseCode}
 
 // Initialize with Chrome configuration and expose API
-window.nativeFoundationModels = new UnifiedInjectedScript.NativeFoundationModels(ChromeConfig);
+window.localLLM = new UnifiedInjectedScript.LocalLLM(ChromeConfig);
 `;
 
   // Safari injected script wrapper
@@ -245,7 +245,7 @@ ${safariConfigCode}
 ${injectedBaseCode}
 
 // Initialize with Safari configuration and expose API
-window.nativeFoundationModels = new UnifiedInjectedScript.NativeFoundationModels(SafariConfig);
+window.localLLM = new UnifiedInjectedScript.LocalLLM(SafariConfig);
 `;
 
   // Write generated files
@@ -284,7 +284,7 @@ ${popupApiBaseJs}
 
 // Initialize with Chrome configuration
 const popupAPI = new UnifiedPopupAPI(ChromeConfig);
-window.nativeFoundationModels = popupAPI;
+window.localLLM = popupAPI;
 `;
 
   const chromePopupJs = `// Auto-generated from shared/popup/popup-base.js
@@ -319,7 +319,7 @@ ${popupApiBaseJs}
 
 // Initialize with Safari configuration
 const popupAPI = new UnifiedPopupAPI(SafariConfig);
-window.nativeFoundationModels = popupAPI;
+window.localLLM = popupAPI;
 `;
 
   const safariPopupJs = `// Auto-generated from shared/popup/popup-base.js

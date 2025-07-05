@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 Native Foundation Models Extension Setup"
+echo "🚀 LocalLLM Extension Setup"
 echo "============================"
 
 # Check if Swift is available

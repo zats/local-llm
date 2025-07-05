@@ -1,6 +1,6 @@
-# Native Foundation Models Chrome Extension
+# LocalLLM Chrome Extension
 
-Browser extension that provides the `window.nativeFoundationModels` API for web applications.
+Browser extension that provides the `window.localLLM` API for web applications.
 
 ## Overview
 
@@ -8,7 +8,7 @@ This Chrome extension bridges web applications with the native Foundation Models
 
 ## Features
 
-- 🌐 **Global API** - Exposes `window.nativeFoundationModels` on all web pages
+- 🌐 **Global API** - Exposes `window.localLLM` on all web pages
 - 🔄 **Automatic Connection** - Manages native host connection lifecycle
 - 🔁 **Retry Logic** - Automatic reconnection on connection loss
 - 📝 **TypeScript Support** - Full type definitions included
@@ -30,21 +30,20 @@ This Chrome extension bridges web applications with the native Foundation Models
 
 ## API Reference
 
-### `window.nativeFoundationModels.checkAvailability()`
+### `window.localLLM.checkAvailability()`
 Checks if the native host is available and responding.
 
 ```javascript
-const status = await window.nativeFoundationModels.checkAvailability();
-if (status.available) {
+if (await window.localLLM.available()) {
   console.log('Ready to use!');
 }
 ```
 
-### `window.nativeFoundationModels.getCompletion(prompt, options?)`
+### `window.localLLM.getCompletion(prompt, options?)`
 Generates a completion for the given prompt.
 
 ```javascript
-const result = await window.nativeFoundationModels.getCompletion(
+const result = await window.localLLM.getCompletion(
   'Explain quantum computing',
   {
     temperature: 0.7,
@@ -54,11 +53,11 @@ const result = await window.nativeFoundationModels.getCompletion(
 console.log(result.response);
 ```
 
-### `window.nativeFoundationModels.getCompletionStream(prompt, options?)`
+### `window.localLLM.getCompletionStream(prompt, options?)`
 Streams a completion token by token.
 
 ```javascript
-const stream = await window.nativeFoundationModels.getCompletionStream('Write a poem');
+const stream = await window.localLLM.getCompletionStream('Write a poem');
 for await (const token of stream) {
   process.stdout.write(token);
 }
@@ -83,7 +82,7 @@ native-foundation-models-extension/
    - Creates a script element to inject the API
 
 2. **Injected Script** (`inject.js`)
-   - Defines `window.nativeFoundationModels`
+   - Defines `window.localLLM`
    - Communicates with content script via custom events
 
 3. **Background Service Worker** (`background.js`)

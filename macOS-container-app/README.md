@@ -1,10 +1,10 @@
 # macOS Container App
 
-The Native Foundation Models installer application for macOS.
+The LocalLLM installer application for macOS.
 
 ## Overview
 
-This SwiftUI application provides a user-friendly installer that sets up Native Foundation Models on your Mac. It handles the complete installation process including binary deployment, native messaging host configuration, and Chrome extension setup.
+This SwiftUI application provides a user-friendly installer that sets up LocalLLM on your Mac. It handles the complete installation process including binary deployment, native messaging host configuration, and Chrome extension setup.
 
 ## Features
 

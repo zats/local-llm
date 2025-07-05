@@ -1,6 +1,6 @@
-# Native Foundation Models Documentation & Website
+# LocalLLM Documentation & Website
 
-The project website and interactive documentation for Native Foundation Models.
+The project website and interactive documentation for LocalLLM.
 
 ## Overview
 
@@ -123,7 +123,7 @@ Tested and working on:
 ## Social Media Preview
 
 The site includes Open Graph and Twitter Card meta tags:
-- Title: "Native Foundation Models - Native AI Integration for the Web"
+- Title: "LocalLLM - Native AI Integration for the Web"
 - Description: Focus on zero latency, privacy, and native performance
 - Image: Brain logo with gradient background (985x628px)
 

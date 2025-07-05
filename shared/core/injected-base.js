@@ -1,44 +1,163 @@
 /**
- * Unified injected script for Native Foundation Models extension
- * Provides consistent website-facing API across Chrome and Safari
+ * LocalLLM - Local-first Chat Completion API
+ * Provides OpenAI-compatible interface for on-device language models
  */
 
 (function() {
   'use strict';
 
   // Prevent duplicate loading
-  if (typeof window.nativeFoundationModels !== 'undefined') {
+  if (typeof window.localLLM !== 'undefined') {
     return;
   }
 
-  class NativeFoundationModels {
-    constructor(config) {
+  class LocalLLM {
+    constructor(config = {}) {
       this.config = config;
       this.sessions = new Map(); // Track active sessions
       this.requestCounter = 0;
+      
+      // OpenAI-compatible chat.completions interface
+      this.chat = {
+        completions: {
+          create: this.createChatCompletion.bind(this)
+        }
+      };
+    }
+    
+    // Async availability check - always queries the native extension
+    async available() {
+      try {
+        const result = await this.checkAvailability();
+        return result.available;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // OpenAI-compatible chat.completions.create method
+    async createChatCompletion(options) {
+      
+      // Handle streaming
+      if (options.stream) {
+        return this._createStreamingCompletion(options);
+      }
+      
+      // Handle regular completion
+      return this._createRegularCompletion(options);
+    }
+    
+    async _createRegularCompletion(options) {
+      const { messages, model = 'localLLM-default', ...otherOptions } = options;
+      
+      // Convert to our internal format
+      const prompt = this._messagesToPrompt(messages);
+      
+      try {
+        const response = await this.sendMessage('getCompletion', { 
+          prompt, 
+          model, 
+          ...otherOptions 
+        });
+        
+        // Convert response to OpenAI format
+        const responseData = response.payload || response.data || response;
+        return this._formatAsOpenAIResponse(responseData, model);
+      } catch (error) {
+        throw this._formatAsOpenAIError(error);
+      }
+    }
+    
+    _createStreamingCompletion(options) {
+      const { messages, model = 'localLLM-default', ...otherOptions } = options;
+      const prompt = this._messagesToPrompt(messages);
+      
+      // Return async generator for streaming
+      return this._streamCompletion(prompt, { model, ...otherOptions });
+    }
+    
+    _messagesToPrompt(messages) {
+      // Convert OpenAI messages format to simple prompt
+      return messages.map(msg => {
+        if (msg.role === 'system') return `System: ${msg.content}`;
+        if (msg.role === 'user') return `User: ${msg.content}`;
+        if (msg.role === 'assistant') return `Assistant: ${msg.content}`;
+        return msg.content;
+      }).join('\n\n');
+    }
+    
+    _formatAsOpenAIResponse(data, model) {
+      // Convert our response format to OpenAI format
+      return {
+        id: data.id || `chatcmpl-${this.generateRequestId()}`,
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model: model,
+        choices: [{
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: data.content || data.choices?.[0]?.message?.content || ''
+          },
+          finish_reason: data.finish_reason || 'stop'
+        }],
+        usage: data.usage || {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0
+        }
+      };
+    }
+    
+    _formatAsOpenAIError(error) {
+      return {
+        error: {
+          message: error.message || 'Unknown error',
+          type: 'local_llm_error',
+          code: error.code || 'unknown_error'
+        }
+      };
+    }
+    
+    _formatAsOpenAIChunk(data, model) {
+      // Convert any response data to OpenAI streaming chunk format
+      return {
+        id: data.id || `chatcmpl-${this.generateRequestId()}`,
+        object: 'chat.completion.chunk',
+        created: Math.floor(Date.now() / 1000),
+        model: model || 'localLLM-default',
+        choices: [{
+          index: 0,
+          delta: {
+            content: data.content || data.choices?.[0]?.delta?.content || data.choices?.[0]?.message?.content || ''
+          },
+          finish_reason: data.finish_reason || null
+        }]
+      };
     }
 
     async checkAvailability() {
-      console.log('[NFM-Injected] Checking availability');
       try {
         const response = await this.sendMessage('checkAvailability');        
-        console.log('[NFM-Injected] Availability response:', response);
         // Handle different response formats between Chrome and Safari
         if (response.payload) {
           // Chrome format: {type: 'availabilityResponse', payload: {...}}
-          console.log('[NFM-Injected] Using Chrome response format');
-          return response.payload;
+          const result = response.payload;
+          this._isAvailable = result.available;
+          return result;
         } else if (response.data) {
           // Safari format: {type: 'response', data: {...}}
-          console.log('[NFM-Injected] Using Safari response format');
-          return response.data;
+          const result = response.data;
+          this._isAvailable = result.available;
+          return result;
         } else {
           // Fallback
-          console.log('[NFM-Injected] Using fallback response format');
+          this._isAvailable = response.available;
           return response;
         }
       } catch (error) {
-        console.error('[NFM-Injected] Availability check failed:', error);
+        console.error('[LocalLLM] Availability check failed:', error);
+        this._isAvailable = false;
         // Show download dialog on error
         if (window.nfmDownloadDialog) {
           window.nfmDownloadDialog.show();
@@ -92,15 +211,14 @@
       }
     }
 
-    async* getCompletionStream(prompt, options = {}) {
-      console.log('[NFM-Injected] Starting completion stream for prompt:', prompt.substring(0, 50) + '...');
+    async* _streamCompletion(prompt, options = {}) {
+      
       // This function is designed to handle two scenarios:
       // 1. True streaming: The native connection supports sending multiple "chunks" over time (e.g., Chrome).
       // 2. Simulated streaming: The native connection is one-shot and returns a single, complete response (e.g., Safari).
       // The generator will yield the single response as if it were a one-chunk stream in the second case.
       
       const requestId = this.generateRequestId();
-      console.log('[NFM-Injected] Generated request ID:', requestId);
       
       const chunks = [];
       let streamComplete = false;
@@ -108,13 +226,10 @@
       let chunkWaiters = [];
       
       const messageHandler = (event) => {
-        console.log('[NFM-Injected] Received message event:', event.data);
         if (event.data && event.data.type === this.config.messaging.responseType && event.data.requestId === requestId) {
-          console.log('[NFM-Injected] Processing response for requestId:', requestId);
           const { success, data, error } = event.data;
           
           if (!success) {
-            console.error('[NFM-Injected] Stream error:', error);
             if (event.data.errorType === 'NATIVE_APP_NOT_FOUND' && window.nfmDownloadDialog) {
               window.nfmDownloadDialog.show();
             } else if (error && error.toLowerCase().includes('not available') && window.nfmDownloadDialog) {
@@ -128,30 +243,24 @@
           }
           
           const responseData = data.payload || data.data || data;
-          console.log('[NFM-Injected] Response data:', responseData);
-          console.log('[NFM-Injected] Response object type:', responseData.object);
           
-          // Check if this is a streaming chunk or a single complete response
+          // Convert to OpenAI format chunks
           if (responseData.object === 'chat.completion.chunk') {
-            // This is a standard streaming chunk
-            console.log('[NFM-Injected] Processing streaming chunk');
+            // This is already a standard streaming chunk
             chunks.push(responseData);
           } else if (responseData.object === 'chat.completion') {
             // This is a single, complete response (Safari behavior).
-            // We simulate a stream by treating it as the only chunk.
-            console.log('[NFM-Injected] Processing single complete response (Safari mode)');
-            chunks.push({
-              ...responseData,
-              object: 'chat.completion.chunk', // Normalize to a chunk object
-            });
+            // Convert to OpenAI streaming format
+            const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
+            chunks.push(openAIChunk);
             streamComplete = true;
           } else if (responseData.object === 'chat.completion.stream' && responseData.chunks) {
             // This is Safari's bundled streaming response
-            console.log('[NFM-Injected] Processing Safari bundled stream with', responseData.chunks.length, 'chunks');
             // Add artificial delay between chunks for Safari to simulate streaming
             const addChunksWithDelay = async () => {
               for (const chunk of responseData.chunks) {
-                chunks.push(chunk);
+                const openAIChunk = this._formatAsOpenAIChunk(chunk, options.model);
+                chunks.push(openAIChunk);
                 // Wake up the generator to yield this chunk
                 chunkWaiters.forEach(resolve => resolve());
                 chunkWaiters = [];
@@ -163,15 +272,16 @@
               chunkWaiters = [];
             };
             addChunksWithDelay();
+          } else {
+            // Convert any other format to OpenAI chunk
+            const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
+            chunks.push(openAIChunk);
           }
           
           // Handle stream end signal
           if (data.type === 'streamEnd') {
-            console.log('[NFM-Injected] Stream end signal received');
             streamComplete = true;
           }
-          
-          console.log('[NFM-Injected] Current chunks count:', chunks.length, 'streamComplete:', streamComplete);
           
           // Wake up the generator loop
           chunkWaiters.forEach(resolve => resolve());
@@ -180,7 +290,6 @@
       };
       
       window.addEventListener('message', messageHandler);
-      console.log('[NFM-Injected] Added message listener');
       
       try {
         // Send unified message format
@@ -190,59 +299,45 @@
           command: 'getCompletionStream',
           payload: { prompt, ...options }
         };
-        console.log('[NFM-Injected] Sending request message:', requestMessage);
         window.postMessage(requestMessage, '*');
         
         // Yield chunks as they arrive
         let chunkIndex = 0;
         while (true) {
-          console.log('[NFM-Injected] Generator loop - chunkIndex:', chunkIndex, 'chunks.length:', chunks.length, 'streamComplete:', streamComplete);
           
           if (streamError) {
-            console.error('[NFM-Injected] Throwing stream error:', streamError);
             throw streamError;
           }
           
           while (chunkIndex < chunks.length) {
-            console.log('[NFM-Injected] Yielding chunk at index:', chunkIndex);
             yield chunks[chunkIndex];
             chunkIndex++;
           }
           
           if (streamComplete && chunkIndex >= chunks.length) {
-            console.log('[NFM-Injected] Stream complete, breaking loop');
             break;
           }
-          
-          console.log('[NFM-Injected] Waiting for more chunks...');
           await new Promise(resolve => {
             chunkWaiters.push(resolve);
           });
         }
       } finally {
-        console.log('[NFM-Injected] Removing message listener');
         window.removeEventListener('message', messageHandler);
       }
     }
 
     async sendMessage(command, payload = {}) {
-      console.log('[NFM-Injected] Sending message - command:', command, 'payload:', payload);
       const requestId = this.generateRequestId();
-      console.log('[NFM-Injected] Generated requestId for sendMessage:', requestId);
       
       return new Promise((resolve, reject) => {
         const messageHandler = (event) => {
-          console.log('[NFM-Injected] sendMessage received event:', event.data);
           if (event.data.type === this.config.messaging.responseType && event.data.requestId === requestId) {
-            console.log('[NFM-Injected] Found matching response for requestId:', requestId);
             window.removeEventListener('message', messageHandler);
             
             const { success, data, error } = event.data;
             if (success) {
-              console.log('[NFM-Injected] sendMessage success, resolving with:', data);
               resolve(data);
             } else {
-              console.error('[NFM-Injected] sendMessage error:', error);
               if (event.data.errorType === 'NATIVE_APP_NOT_FOUND' && window.nfmDownloadDialog) {
                 window.nfmDownloadDialog.show();
               } else if (error && error.toLowerCase().includes('not available') && window.nfmDownloadDialog) {
@@ -262,12 +357,9 @@
           command,
           payload
         };
-        console.log('[NFM-Injected] Posting message:', message);
-        window.postMessage(message, '*');
-        
+        window.postMessage(message, '*');        
         // Timeout after 30 seconds
         setTimeout(() => {
-          console.warn('[NFM-Injected] Request timeout for requestId:', requestId);
           window.removeEventListener('message', messageHandler);
           reject(new Error('Request timeout'));
         }, 30000);
@@ -276,7 +368,6 @@
 
     generateRequestId() {
       const id = 'req-' + Math.random().toString(36).substr(2, 9);
-      console.log('[NFM-Injected] Generated new requestId:', id);
       return id;
     }
 
@@ -427,12 +518,52 @@
     }
   }
 
+  // Initialize LocalLLM instance and expose globally
+  // This function will be called by the extension to configure and expose the API
+  window.initializeLocalLLM = function(config) {
+    if (window.localLLM) {
+      return;
+    }
+    
+    const localLLMInstance = new LocalLLM(config);
+    
+    // Create the window.localLLM global with the required interface
+    window.localLLM = {
+      // Async availability check
+      available: localLLMInstance.available.bind(localLLMInstance),
+      
+      // OpenAI-compatible chat interface
+      chat: {
+        completions: {
+          create: localLLMInstance.createChatCompletion.bind(localLLMInstance)
+        }
+      },
+      
+      // Legacy compatibility methods (deprecated)
+      checkAvailability: localLLMInstance.checkAvailability.bind(localLLMInstance),
+      getCompletion: localLLMInstance.getCompletion.bind(localLLMInstance),
+      getCompletionStream: localLLMInstance.getCompletionStream.bind(localLLMInstance),
+      createSession: localLLMInstance.createSession.bind(localLLMInstance),
+      
+      // Internal reference
+      _instance: localLLMInstance
+    };
+  };
+
   // Export for both module and script contexts
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { NativeFoundationModels, Session };
+    module.exports = { LocalLLM, Session };
   } else if (typeof self !== 'undefined') {
-    self.UnifiedInjectedScript = { NativeFoundationModels, Session };
+    self.LocalLLMScript = { LocalLLM, Session };
   } else if (typeof window !== 'undefined') {
-    window.UnifiedInjectedScript = { NativeFoundationModels, Session };
+    window.LocalLLMScript = { LocalLLM, Session };
+  }
+  
+  // Backward compatibility - also maintain old export
+  if (typeof window !== 'undefined') {
+    window.UnifiedInjectedScript = {  LocalLLM, Session };
+    
+    // Legacy global initialization
+    window.localLLM = window.localLLM;
   }
 })();
