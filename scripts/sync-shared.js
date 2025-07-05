@@ -281,9 +281,6 @@ if (typeof ChromeConfig === 'undefined') {
 ${chromeConfigCode}
 }
 
-// Ensure window.localLLM is undefined so injected-base.js doesn't return early
-delete window.localLLM;
-
 // Load shared injected-base.js (LocalLLM class)
 ${injectedBaseJs}
 
@@ -320,9 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
 if (typeof SafariConfig === 'undefined') {
 ${safariConfigCode}
 }
-
-// Ensure window.localLLM is undefined so injected-base.js doesn't return early
-delete window.localLLM;
 
 // Load shared injected-base.js (LocalLLM class)
 ${injectedBaseJs}

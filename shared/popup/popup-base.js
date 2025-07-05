@@ -37,6 +37,7 @@ class ChatManager {
       if (savedPrompt) {
         this.systemPrompt = savedPrompt;
         if (this.systemPromptInput) {
+          // Set value without triggering change event
           this.systemPromptInput.value = savedPrompt;
         }
       }
