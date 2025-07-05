@@ -145,7 +145,9 @@ struct ContentView: View {
             .padding(.horizontal, 32)
         }
         .onAppear {
-            AppMover.moveIfNecessary()
+            DispatchQueue.main.async {
+                AppMover.moveIfNecessary()
+            }
             heartbeat = true
         }
         .frame(width: 420, height: 700)
