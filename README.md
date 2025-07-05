@@ -101,17 +101,8 @@ for await (const chunk of stream) {
 This project uses a **unified codebase** for Chrome and Safari extensions to minimize duplication:
 
 ```bash
-# One-time setup: installs dependencies, cleans duplicates, updates .gitignore
-pnpm setup
-
-# Start development with auto-sync file watching
+# Start watching the changes to the shared JS files
 pnpm dev
-
-# Manual sync of shared files
-pnpm sync
-
-# Build both extensions
-pnpm build
 ```
 
 ## 🔧 Compilation Guide
@@ -125,9 +116,6 @@ pnpm build
 ```bash
 # Install dependencies
 pnpm install
-
-# One-time setup: clean duplicates and configure build system
-pnpm setup
 ```
 
 ### Development Workflow
@@ -138,79 +126,6 @@ pnpm dev
 # The watcher will automatically sync shared files when you make changes
 # Edit shared code in: shared/core/, shared/config/, shared/assets/
 # Edit platform-specific code directly in extension directories
-```
-
-### Building Extensions
-
-#### Chrome Extension
-```bash
-# Build Chrome extension
-pnpm build:chrome
-
-# Output: build/chrome/
-# Install in Chrome: chrome://extensions/ → Load unpacked → select build/chrome/
-```
-
-#### Safari Extension
-```bash
-# Build Safari extension resources
-pnpm build:safari
-
-# Output: build/safari/
-# Note: Safari extension is built through Xcode project at macOS-container-app/
-```
-
-### Build System Details
-
-#### Shared Architecture
-- **Core Logic**: `shared/core/background-base.js`, `shared/core/content-base.js`
-- **Platform Configs**: `shared/config/chrome-config.js`, `shared/config/safari-config.js`
-- **Assets**: `shared/assets/images/`, `shared/assets/prism.js/`
-
-#### Auto-Generated Files
-These files are created by the build system and should **never be edited directly**:
-```
-native-foundation-models-extension/
-├── background.js          # Generated from shared/core + chrome-config
-├── content.js             # Generated from shared/core + chrome-config
-├── browser-compat.js      # Copied from shared/core
-├── download-dialog.js     # Copied from shared/core
-├── brain.png              # Copied from shared/assets
-└── prism.js/              # Copied from shared/assets
-
-macOS-container-app/SafariExtension/Resources/
-├── background.js          # Generated from shared/core + safari-config
-├── content.js             # Generated from shared/core + safari-config
-├── browser-compat.js      # Copied from shared/core
-├── download-dialog.js     # Copied from shared/core
-├── brain.png              # Copied from shared/assets
-└── prism.js/              # Copied from shared/assets
-```
-
-#### Manual Sync
-```bash
-# Force sync shared files to both extensions
-pnpm sync
-
-# Use this when:
-# - File watcher is not running
-# - After pulling changes from source control
-# - When build seems out of sync
-```
-
-### Debugging Build Issues
-
-#### Common Problems
-1. **Missing generated files**: Run `pnpm sync` or `pnpm setup`
-2. **Outdated files**: Restart `pnpm dev` or run `pnpm sync`
-3. **Build errors**: Check that all shared files exist and are valid JavaScript
-
-#### Verifying Build
-```bash
-# Check git status - generated files should be ignored
-git status
-
-# Generated files appear in .gitignore under "Generated files from shared sources"
 ```
 
 ### Component Build Processes
