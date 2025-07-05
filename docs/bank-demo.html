@@ -364,7 +364,9 @@ Only respond with the JSON object, no additional text, no markdown code blocks.
 
 Text: ${text}`;
 
-                const result = await window.localLLM.getCompletion(prompt);
+                const result = await window.localLLM.chat.completions.create({
+                    messages: [{ role: "user", content: prompt }]
+                });
                 const response = result.choices[0].message.content.trim();
                 
                 // Extract JSON from markdown code block if present

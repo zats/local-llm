@@ -654,7 +654,6 @@ if (await window.localLLM?.available()) {
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
                         <pre><code class="language-javascript">// OpenAI-compatible interface
 const result = await localLLM.chat.completions.create({
-  model: "localLLM-pro-2025",
   messages: [
     { role: "system", content: "You are a terse assistant." },
     { role: "user", content: "Hello local world" }
@@ -668,7 +667,6 @@ console.log(result.choices[0].message.content);
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
                         <pre><code class="language-javascript">// Real-time streaming with OpenAI chunks
 const stream = await localLLM.chat.completions.create({
-  model: "localLLM-pro-2025", 
   messages: [
     { role: "user", content: "Write a haiku about AI" }
   ],
@@ -676,9 +674,9 @@ const stream = await localLLM.chat.completions.create({
 });
 
 for await (const chunk of stream) {
-  const content = chunk.choices[0]?.delta?.content;
-  if (content) {
-    process.stdout.write(content);
+  const delta = chunk.choices[0]?.delta?.content;
+  if (delta) {
+    process.stdout.write(delta);
   }
 }</code></pre></div>
 
@@ -686,7 +684,6 @@ for await (const chunk of stream) {
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
                         <pre><code class="language-javascript">// Configure model behavior
 const result = await localLLM.chat.completions.create({
-  model: "localLLM-pro-2025",
   messages: [
     { role: "user", content: "Explain quantum computing" }
   ],
@@ -793,7 +790,6 @@ const result = await localLLM.chat.completions.create({
             try {
                 // Use the new OpenAI-compatible interface
                 const result = await window.localLLM.chat.completions.create({
-                    model: "localLLM-pro-2025",
                     messages: [
                         { role: "system", content: "You are an expert on providing interesting facts in under one sentence about any topic user inquires." },
                         { role: "user", content: "Artificial intelligence" },
@@ -820,7 +816,6 @@ const result = await localLLM.chat.completions.create({
             try {
                 // Use the new OpenAI-compatible streaming interface
                 const stream = await window.localLLM.chat.completions.create({
-                    model: "localLLM-pro-2025",
                     messages: [
                         { role: "user", content: "Write three motivational quotes about technology and innovation." }
                     ],
@@ -838,9 +833,9 @@ const result = await localLLM.chat.completions.create({
                 let chunkCount = 0;
                 for await (const chunk of stream) {
                     chunkCount++;
-                    const content = chunk.choices?.[0]?.delta?.content;
-                    if (content) {
-                        result += content;
+                    const delta = chunk.choices?.[0]?.delta?.content;
+                    if (delta) {
+                        result += delta;
                         document.getElementById(streamingLineId).textContent = result;
                         output.scrollTop = output.scrollHeight;
                     }
