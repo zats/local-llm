@@ -251,6 +251,7 @@ class NativeFoundationModelsService {
     
     private func sendStreamChunkToPage(chunk: [String: Any], requestId: String) async {
         await MainActor.run {
+            #if os(macOS)
             SFSafariApplication.getActiveWindow { window in
                 window?.getActiveTab { tab in
                     tab?.getActivePage { page in
@@ -264,11 +265,15 @@ class NativeFoundationModelsService {
                     }
                 }
             }
+#else
+#warning("Sending info back to safari on iOS is unimplemented")
+#endif
         }
     }
     
     private func sendStreamErrorToPage(error: String, requestId: String) async {
         await MainActor.run {
+#if os(macOS)
             SFSafariApplication.getActiveWindow { window in
                 window?.getActiveTab { tab in
                     tab?.getActivePage { page in
@@ -282,6 +287,9 @@ class NativeFoundationModelsService {
                     }
                 }
             }
+#else
+#warning("Sending info back to safari on iOS is unimplemented")
+#endif
         }
     }
     

@@ -7,9 +7,12 @@
 import SwiftUI
 import Foundation
 import Combine
+#if os(macOS)
 import Sparkle
+#endif
 import SafariServices
 
+#if os(macOS)
 class AppDelegate: NSObject, NSApplicationDelegate {
     fileprivate let updaterController: SPUStandardUpdaterController
     
@@ -27,10 +30,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 }
+#endif
+
 
 @main
 struct NativeFoundationModelsApp: App {
+    #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    #endif
     
     init() {}
     
@@ -38,14 +45,17 @@ struct NativeFoundationModelsApp: App {
         WindowGroup {
             ContentView()
                 .onAppear {
+#if os(macOS)
                     NSApplication.shared.windows.forEach { window in
                         window.titlebarAppearsTransparent = true
                         window.titleVisibility = .hidden
                         window.styleMask.insert(.fullSizeContentView)
                         window.isMovableByWindowBackground = true
                     }
+#endif
                 }
         }
+#if os(macOS)
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
         .commands {
@@ -54,6 +64,7 @@ struct NativeFoundationModelsApp: App {
                 CheckForUpdatesView(updater: appDelegate.updaterController.updater)
             }
         }
+#endif
     }
     
 }
@@ -81,6 +92,7 @@ enum InstallationStep: Int, CaseIterable {
     }
 }
 
+#if os(macOS)
 class InstallationStepManager: ObservableObject {
     @Published var stepStatuses: [InstallationStep: Bool] = [:]
     @Published var stepInProgress: [InstallationStep: Bool] = [:]
@@ -357,3 +369,5 @@ class InstallationStepManager: ObservableObject {
         }
     }
 }
+#endif
+

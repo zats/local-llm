@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5C2E34022E1547B900CB3A24 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5C2E34012E1547B900CB3A24 /* Sparkle */; };
+		5C2E34022E1547B900CB3A24 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; platformFilters = (macos, ); productRef = 5C2E34012E1547B900CB3A24 /* Sparkle */; };
 		5C2E35682E16987100CB3A24 /* SafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5C2E35502E16987100CB3A24 /* SafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -54,6 +54,11 @@
 			membershipExceptions = (
 				Info.plist,
 			);
+			platformFiltersByRelativePath = {
+				AppMover.swift = (macos, );
+				BrowserSelectorView.swift = (macos, );
+				CheckForUpdatesView.swift = (macos, );
+			};
 			target = 5CFFE68B2E1303FB005BAD3F /* LocalLLM */;
 		};
 		5C2E39EE2E18C0FE00CB3A24 /* Exceptions for "SafariExtension" folder in "SafariExtension" target */ = {
@@ -197,7 +202,6 @@
 			);
 			dependencies = (
 				5C2E35672E16987100CB3A24 /* PBXTargetDependency */,
-				5C8B123A2E1ABC1234567896 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5CFFE68E2E1303FB005BAD3F /* NativeFoundationModels */,
@@ -282,17 +286,15 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/NativeFoundationModelsNative",
 			);
 			name = "Bundle Native Host binary";
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Resources/nativefoundationmodels-native",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\n# Copy the native binary into the app bundle\necho \"Creating Resources directory...\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources\"\n\n# Check if source binary exists\nSOURCE_BINARY=\"${BUILT_PRODUCTS_DIR}/NativeFoundationModelsNative\"\nDEST_BINARY=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources/nativefoundationmodels-native\"\n\nif [ -e \"$SOURCE_BINARY\" ]; then\n    echo \"Copying binary from: $SOURCE_BINARY\"\n    echo \"To: $DEST_BINARY\"\n    \n    # Use -L to follow symbolic links and -f to force overwrite\n    cp -Lf \"$SOURCE_BINARY\" \"$DEST_BINARY\"\n    \n    # Ensure the binary is executable\n    chmod +x \"$DEST_BINARY\"\n    \n    # Sign the binary with Hardened Runtime if we have a development team\n    if [ -n \"$DEVELOPMENT_TEAM\" ] && [ \"$CONFIGURATION\" = \"Release\" ]; then\n        echo \"Signing binary with Hardened Runtime...\"\n        codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --options runtime \"$DEST_BINARY\"\n        echo \"Binary signed successfully\"\n    fi\n    \n    echo \"Binary copied and made executable successfully\"\nelse\n    echo \"Error: Source binary not found at $SOURCE_BINARY\"\n    exit 1\nfi\n";
+			shellScript = "set -e\n\n# Only run on macOS\nif [ \"$PLATFORM_NAME\" != \"macosx\" ]; then\n    echo \"Skipping native binary bundling for platform: $PLATFORM_NAME\"\n    exit 0\nfi\n\n# Build the native binary if it doesn't exist\nSOURCE_BINARY=\"${BUILT_PRODUCTS_DIR}/NativeFoundationModelsNative\"\nif [ ! -e \"$SOURCE_BINARY\" ]; then\n    echo \"Building NativeFoundationModelsNative target...\"\n    xcodebuild -project \"${PROJECT_FILE_PATH}\" -target \"NativeFoundationModelsNative\" -configuration \"${CONFIGURATION}\" -arch \"${ARCHS}\" ONLY_ACTIVE_ARCH=NO build\nfi\n\n# Copy the native binary into the app bundle\necho \"Creating Resources directory...\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources\"\n\nDEST_BINARY=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources/nativefoundationmodels-native\"\n\nif [ -e \"$SOURCE_BINARY\" ]; then\n    echo \"Copying binary from: $SOURCE_BINARY\"\n    echo \"To: $DEST_BINARY\"\n    \n    # Use -L to follow symbolic links and -f to force overwrite\n    cp -Lf \"$SOURCE_BINARY\" \"$DEST_BINARY\"\n    \n    # Ensure the binary is executable\n    chmod +x \"$DEST_BINARY\"\n    \n    # Sign the binary with Hardened Runtime if we have a development team\n    if [ -n \"$DEVELOPMENT_TEAM\" ] && [ \"$CONFIGURATION\" = \"Release\" ]; then\n        echo \"Signing binary with Hardened Runtime...\"\n        codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --options runtime \"$DEST_BINARY\"\n        echo \"Binary signed successfully\"\n    fi\n    \n    echo \"Binary copied and made executable successfully\"\nelse\n    echo \"Error: Source binary not found at $SOURCE_BINARY\"\n    exit 1\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -364,10 +366,13 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -401,9 +406,12 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -578,7 +586,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = 5KE88HWMKJ;
-				ENABLE_APP_SANDBOX = NO;
+				"ENABLE_APP_SANDBOX[sdk=iphoneos*]" = YES;
+				"ENABLE_APP_SANDBOX[sdk=iphonesimulator*]" = YES;
+				"ENABLE_APP_SANDBOX[sdk=macosx*]" = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
@@ -607,10 +617,13 @@
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -624,7 +637,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = 5KE88HWMKJ;
-				ENABLE_APP_SANDBOX = NO;
+				"ENABLE_APP_SANDBOX[sdk=iphoneos*]" = YES;
+				"ENABLE_APP_SANDBOX[sdk=iphonesimulator*]" = YES;
+				"ENABLE_APP_SANDBOX[sdk=macosx*]" = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
@@ -653,10 +668,13 @@
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};

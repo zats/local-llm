@@ -16,6 +16,7 @@ struct GradientBackground: View {
     }
 }
 
+#if os(macOS)
 struct ContentView: View {
     @StateObject private var stepManager = InstallationStepManager()
     @State private var heartbeat = false
@@ -445,6 +446,15 @@ extension View {
     }
 }
 
+#else
+struct ContentView: View {
+    var body: some View {
+        GradientBackground()
+            .ignoresSafeArea()
+    }
+}
+#endif
+
 // Color extension for hex colors
 extension Color {
     init(hex: String) {
@@ -476,4 +486,5 @@ extension Color {
 #Preview {
     ContentView()
 }
+
 
