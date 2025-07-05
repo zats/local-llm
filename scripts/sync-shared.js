@@ -20,7 +20,6 @@ const PLATFORM_SPECIFIC_FILES = {
   ],
   safari: [
     'manifest.json',
-    'playground.html',
     '_locales',
     'images',
     'utils'

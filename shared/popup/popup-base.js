@@ -1,3 +1,7 @@
+// Under Construction - This class is being redesigned
+// Original functionality temporarily disabled
+
+/*
 class UnifiedPopup {
   constructor(config) {
     this.config = config;
@@ -348,10 +352,11 @@ class UnifiedPopup {
   // Safari-specific method
   openPlayground() {
     if (this.config.platform === 'safari') {
-      browser.tabs.create({ url: 'playground.html' });
+      browser.tabs.create({ url: 'popup.html' });
     }
   }
 }
 
 // Export for use in generated platform-specific files
 window.UnifiedPopup = UnifiedPopup;
+*/

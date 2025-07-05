@@ -24,10 +24,11 @@ const SafariConfig = {
     downloadDialog: 'download-dialog.js',
     webAccessibleResources: [
       'inject.js',
-      'playground.html',
+      'popup.html',
       'download-dialog.js',
       'popup-api.js',
       'popup.js',
+      'construction-effects.js',
       'brain.png',
       'prism.js/prism.js',
       'prism.js/prism.css'
@@ -46,7 +47,7 @@ const SafariConfig = {
     hasPopupWindow: true,
     hasToolbarIcon: true,
     openInNewTab: true,
-    playgroundUrl: 'playground.html',
+    playgroundUrl: 'popup.html',
     downloadUrl: 'https://github.com/zats/native-foundation-models/releases/latest/download/NativeFoundationModels.app.zip'
   },
   

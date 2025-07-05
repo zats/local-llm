@@ -1,3 +1,7 @@
+// Under Construction - This API class is being redesigned
+// Original functionality temporarily disabled
+
+/*
 class UnifiedPopupAPI {
   constructor(config) {
     this.config = config;
@@ -196,3 +200,4 @@ class UnifiedPopupAPI {
 
 // Export for use in generated platform-specific files
 window.UnifiedPopupAPI = UnifiedPopupAPI;
+*/

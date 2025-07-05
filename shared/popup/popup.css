@@ -1,3 +1,105 @@
+/* Apple-style Under Construction Design */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  color: #1d1d1f;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.construction-container {
+  text-align: center;
+  max-width: 500px;
+  padding: 40px 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.construction-content {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.construction-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 2s infinite;
+}
+
+.construction-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1d1d1f;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+
+.construction-subtitle {
+  font-size: 18px;
+  color: #86868b;
+  margin-bottom: 30px;
+  font-weight: 400;
+}
+
+.construction-description {
+  font-size: 16px;
+  color: #515154;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(1.05);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* Original styles commented out */
+/*
 /* Shared popup styles for LocalLLM extension */
 
 * {
@@ -17,6 +119,7 @@ body {
   overflow-x: hidden;
 }
 
+/*
 .container {
   min-height: 100vh;
   max-width: 800px;
@@ -554,3 +657,4 @@ body {
     max-height: 90vh;
   }
 }
+*/
