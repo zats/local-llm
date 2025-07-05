@@ -52,6 +52,7 @@ The macOS installer application that sets up LocalLLM on your system. This Swift
 - Configuration of native messaging host
 - Chrome extension installation guidance
 - System requirements verification
+- Contains the Safari extension and Chrome native messaging host sources
 
 ### /native-foundation-models-extension
 The Chrome extension that bridges web applications with the native host. Features include:
@@ -132,9 +133,8 @@ pnpm dev
 
 Each component has its own build process and README:
 
-- **macOS Container App**: Xcode project using SwiftUI
-- **Native App**: Swift package with native messaging protocol  
-- **Chrome/Safari Extensions**: Unified codebase with platform-specific builds
+- **macOS Container App**: Xcode project using SwiftUI, includes Safari extension and Chrome native messaging host
+- **Chrome Extension**: Unified codebase with Safari extension using shared architecture
 - **Website**: Static HTML with live demos
 
 ## 🔗 Links

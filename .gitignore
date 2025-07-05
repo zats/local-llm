@@ -8,7 +8,9 @@ build/
 .DS_Store
 .vscode/
 *.xcworkspace/
-*.xcodeproj/
+# *.xcodeproj/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
 
 # Compiled binaries
 *.o

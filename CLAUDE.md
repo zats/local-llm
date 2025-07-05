@@ -13,6 +13,7 @@ This repository contains a cross-browser extension (Chrome and Safari) with a sh
   - `macOS-container-app/SafariExtension/Resources/_locales/` (Safari localization)
   - `macOS-container-app/SafariExtension/Resources/images/` (Safari icons)
   - `macOS-container-app/SafariExtension/Resources/utils/` (Safari utilities)
+  - `macOS-container-app/NativeChromeHost/` (Chrome native messaging host sources)
 
 ## Shared Directory Structure
 
@@ -93,9 +94,28 @@ node scripts/sync-shared.js
 2. Update `scripts/shared-files-util.js` if new generated files are created
 3. Update sync script (`scripts/sync-shared.js`) to handle new file types
 
+## Native Chrome Host
+
+The Chrome native messaging host is built as part of the Xcode project:
+
+- **Source Location**: `macOS-container-app/NativeChromeHost/`
+- **Build Target**: `NativeFoundationModelsNative` (command-line tool)
+- **Product**: `NativeFoundationModelsNative` binary
+- **Installation**: Binary is bundled into the LocalLLM app and installed to `~/bin/nativefoundationmodels-native`
+- **Build Dependencies**: The LocalLLM app depends on this target and automatically includes the binary
+
+### Native Host Build Process
+
+The native host is built automatically when building the LocalLLM app:
+
+1. The `NativeFoundationModelsNative` target compiles Swift sources from `NativeChromeHost/`
+2. The "Bundle Native Host binary" build phase copies the binary into the app bundle
+3. The app installer copies the binary to `~/bin/` for Chrome extension use
+
 ## Important Notes
 
 - Never commit generated files - they're automatically ignored in git
 - Always run sync before testing changes
 - Platform-specific features should be configured through config files, not by editing generated files
 - The sync script ensures both extensions stay in sync with shared logic
+- The native messaging host is built as part of the Xcode project, not as a separate Swift package

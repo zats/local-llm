@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "NativeFoundationModelsNative"
-               BuildableName = "NativeFoundationModelsNative"
-               BlueprintName = "NativeFoundationModelsNative"
-               ReferencedContainer = "container:">
+               BlueprintIdentifier = "5CFFE68B2E1303FB005BAD3F"
+               BuildableName = "LocalLLM.app"
+               BlueprintName = "LocalLLM"
+               ReferencedContainer = "container:LocalLLM.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -29,18 +29,6 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
-      <Testables>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "NativeFoundationModelsNativeTests"
-               BuildableName = "NativeFoundationModelsNativeTests"
-               BlueprintName = "NativeFoundationModelsNativeTests"
-               ReferencedContainer = "container:">
-            </BuildableReference>
-         </TestableReference>
-      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -56,10 +44,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "NativeFoundationModelsNative"
-            BuildableName = "NativeFoundationModelsNative"
-            BlueprintName = "NativeFoundationModelsNative"
-            ReferencedContainer = "container:">
+            BlueprintIdentifier = "5CFFE68B2E1303FB005BAD3F"
+            BuildableName = "LocalLLM.app"
+            BlueprintName = "LocalLLM"
+            ReferencedContainer = "container:LocalLLM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -73,10 +61,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "NativeFoundationModelsNative"
-            BuildableName = "NativeFoundationModelsNative"
-            BlueprintName = "NativeFoundationModelsNative"
-            ReferencedContainer = "container:">
+            BlueprintIdentifier = "5CFFE68B2E1303FB005BAD3F"
+            BuildableName = "LocalLLM.app"
+            BlueprintName = "LocalLLM"
+            ReferencedContainer = "container:LocalLLM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
