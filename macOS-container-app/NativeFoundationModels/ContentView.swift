@@ -83,11 +83,26 @@ struct ContentView: View {
                 }
             
             if !showBrowserSelector, let browser = stepManager.selectedBrowser, let icon = browser.icon {
-                Image(nsImage: icon)
-                    .resizable()
-                    .matchedGeometryEffect(id: "browserIcon-\(browser.rawValue)", in: animation)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 200, height: 200)
+                Button(action: {
+                    if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: browser.bundleIdentifier) {
+                        let config = NSWorkspace.OpenConfiguration()
+                        NSWorkspace.shared.openApplication(at: url, configuration: config)
+                    }
+                }) {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .matchedGeometryEffect(id: "browserIcon-\(browser.rawValue)", in: animation)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 200, height: 200)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .onHover { isHovered in
+                    if isHovered {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
             }
             Image(.brain)
                 .resizable()
@@ -459,3 +474,4 @@ extension Color {
 #Preview {
     ContentView()
 }
+
