@@ -1,6 +1,28 @@
+// Verify LocalLLM class is available - fail fast if not
+function getLocalLLMClass() {
+  if (window.UnifiedInjectedScript?.LocalLLM) {
+    console.log('[PopupAPI] Using UnifiedInjectedScript.LocalLLM');
+    return window.UnifiedInjectedScript.LocalLLM;
+  }
+  
+  if (window.LocalLLMScript?.LocalLLM) {
+    console.log('[PopupAPI] Using LocalLLMScript.LocalLLM');
+    return window.LocalLLMScript.LocalLLM;
+  }
+  
+  // Fail hard - don't allow empty class inheritance
+  console.error('[PopupAPI] CRITICAL ERROR: LocalLLM class not found!');
+  console.error('[PopupAPI] Available window properties:', Object.keys(window).filter(k => k.includes('LLM') || k.includes('Inject')));
+  console.error('[PopupAPI] UnifiedInjectedScript:', window.UnifiedInjectedScript);
+  console.error('[PopupAPI] LocalLLMScript:', window.LocalLLMScript);
+  
+  throw new Error('POPUP API INITIALIZATION FAILED: LocalLLM class not available. injected-base.js must be loaded before popup-api-base.js');
+}
+
 // Reuse the LocalLLM class from injected-base.js but override messaging for extension context
-class UnifiedPopupAPI extends (window.UnifiedInjectedScript?.LocalLLM || window.LocalLLMScript?.LocalLLM || class {}) {
+class UnifiedPopupAPI extends getLocalLLMClass() {
   constructor(config) {
+    console.log('[PopupAPI] Initializing with config:', config);
     super(config);
   }
 
@@ -13,9 +35,7 @@ class UnifiedPopupAPI extends (window.UnifiedInjectedScript?.LocalLLM || window.
   // Check LocalLLM availability status
   async checkStatus() {
     try {
-      const response = await this.sendMessage('checkAvailability');
-      console.log(`🔴🟡🟢 response`, response);
-      
+      const response = await this.sendMessage('checkAvailability');      
       // Parse the native app response format
       if (response.payload && response.payload.available !== undefined) {
         return response.payload.available ? 'available' : 'unavailable';
@@ -44,13 +64,17 @@ class UnifiedPopupAPI extends (window.UnifiedInjectedScript?.LocalLLM || window.
         payload
       });
 
-      if (response && response.success) {
-        return response.data;
+      if (response && (response.success || response.type === 'availabilityResponse')) {
+        if (response.type === 'availabilityResponse') {
+          return response.payload;
+        } else {
+          return response.data;
+        }
       } else {
+        console.error(response)
         throw new Error(response?.error || 'Unknown error');
       }
     } catch (error) {
-      console.error(response)
       console.error('Extension message error:', error);
       throw error;
     }

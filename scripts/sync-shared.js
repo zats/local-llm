@@ -273,6 +273,13 @@ async function generatePopupFiles() {
     '<button class="settings-btn" id="exportCodeBtn" title="Export as Code">💻</button>\n        <button class="settings-btn" id="newChatBtn" title="New Chat">📄</button>'
   );
   
+  // Extract content from IIFE in injected-base.js to avoid race condition
+  const extractedInjectedCode = injectedBaseJs
+    .replace(/^[\s\S]*?\(function\(\) \{\s*'use strict';\s*/, '') // Remove everything before and including IIFE start
+    .replace(/\}\)\(\);?\s*$/, '') // Remove closing IIFE
+    .replace(/^\s*\/\/ Prevent duplicate loading[\s\S]*?return;\s*\}\s*/, '') // Remove duplicate loading check
+    .trim();
+
   const chromePopupApiJs = `// Auto-generated from shared/popup/popup-api-base.js
 // This file integrates shared components - do not edit directly
 
@@ -281,8 +288,8 @@ if (typeof ChromeConfig === 'undefined') {
 ${chromeConfigCode}
 }
 
-// Load shared injected-base.js (LocalLLM class)
-${injectedBaseJs}
+// Load shared injected-base.js (LocalLLM class) - extracted from IIFE to avoid race condition
+${extractedInjectedCode}
 
 // Load shared popup API logic after base classes are available
 ${popupApiBaseJs}
@@ -318,8 +325,8 @@ if (typeof SafariConfig === 'undefined') {
 ${safariConfigCode}
 }
 
-// Load shared injected-base.js (LocalLLM class)
-${injectedBaseJs}
+// Load shared injected-base.js (LocalLLM class) - extracted from IIFE to avoid race condition
+${extractedInjectedCode}
 
 // Load shared popup API logic after base classes are available
 ${popupApiBaseJs}
