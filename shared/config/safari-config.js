@@ -2,7 +2,7 @@
  * Safari-specific configuration for LocalLLM extension
  */
 
-const SafariConfig = {
+var SafariConfig = {
   browser: 'safari',
   
   init() {

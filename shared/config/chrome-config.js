@@ -2,7 +2,7 @@
  * Chrome-specific configuration for LocalLLM extension
  */
 
-const ChromeConfig = {
+var ChromeConfig = {
   browser: 'chrome',
   
   // Native messaging configuration

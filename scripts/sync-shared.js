@@ -263,6 +263,7 @@ async function generatePopupFiles() {
   const popupTemplate = await fs.readFile(path.join(SHARED_DIR, 'popup', 'popup-template.html'), 'utf8');
   const popupBaseJs = await fs.readFile(path.join(SHARED_DIR, 'popup', 'popup-base.js'), 'utf8');
   const popupApiBaseJs = await fs.readFile(path.join(SHARED_DIR, 'popup', 'popup-api-base.js'), 'utf8');
+  const injectedBaseJs = await fs.readFile(path.join(SHARED_DIR, 'core', 'injected-base.js'), 'utf8');
   const chromeConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'chrome-config.js'), 'utf8');
   const safariConfigCode = await fs.readFile(path.join(SHARED_DIR, 'config', 'safari-config.js'), 'utf8');
 
@@ -275,10 +276,18 @@ async function generatePopupFiles() {
   const chromePopupApiJs = `// Auto-generated from shared/popup/popup-api-base.js
 // This file integrates shared components - do not edit directly
 
-// Load Chrome configuration
+// Load Chrome configuration (only if not already defined)
+if (typeof ChromeConfig === 'undefined') {
 ${chromeConfigCode}
+}
 
-// Load shared popup API logic
+// Ensure window.localLLM is undefined so injected-base.js doesn't return early
+delete window.localLLM;
+
+// Load shared injected-base.js (LocalLLM class)
+${injectedBaseJs}
+
+// Load shared popup API logic after base classes are available
 ${popupApiBaseJs}
 
 // Initialize with Chrome configuration
@@ -289,13 +298,10 @@ window.localLLM = popupAPI;
   const chromePopupJs = `// Auto-generated from shared/popup/popup-base.js
 // This file integrates shared components - do not edit directly
 
-// Load Chrome configuration
-${chromeConfigCode}
-
 // Load shared popup logic
 ${popupBaseJs}
 
-// Initialize with Chrome configuration
+// Initialize with Chrome configuration (ChromeConfig already loaded in popup-api.js)
 document.addEventListener('DOMContentLoaded', () => {
   const popup = new UnifiedPopup(ChromeConfig);
 });
@@ -310,10 +316,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const safariPopupApiJs = `// Auto-generated from shared/popup/popup-api-base.js
 // This file integrates shared components - do not edit directly
 
-// Load Safari configuration
+// Load Safari configuration (only if not already defined)
+if (typeof SafariConfig === 'undefined') {
 ${safariConfigCode}
+}
 
-// Load shared popup API logic
+// Ensure window.localLLM is undefined so injected-base.js doesn't return early
+delete window.localLLM;
+
+// Load shared injected-base.js (LocalLLM class)
+${injectedBaseJs}
+
+// Load shared popup API logic after base classes are available
 ${popupApiBaseJs}
 
 // Initialize with Safari configuration
@@ -324,13 +338,10 @@ window.localLLM = popupAPI;
   const safariPopupJs = `// Auto-generated from shared/popup/popup-base.js
 // This file integrates shared components - do not edit directly
 
-// Load Safari configuration
-${safariConfigCode}
-
 // Load shared popup logic
 ${popupBaseJs}
 
-// Initialize with Safari configuration
+// Initialize with Safari configuration (SafariConfig already loaded in popup-api.js)
 document.addEventListener('DOMContentLoaded', () => {
   const popup = new UnifiedPopup(SafariConfig);
 });

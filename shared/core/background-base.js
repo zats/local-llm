@@ -34,6 +34,7 @@ class UnifiedBackground {
   setupMessageHandlers() {
     const runtime = this.config.browser === 'chrome' ? chrome.runtime : browser.runtime;
     runtime.onMessage.addListener(this.handleExtensionMessage.bind(this));
+    runtime.onConnect.addListener(this.handlePortConnection.bind(this));
   }
   
   setupActionHandler() {
@@ -60,6 +61,75 @@ class UnifiedBackground {
         message.action) {
       
       return this.handleNativeFoundationModelsRequest(message, sender, sendResponse);
+    }
+  }
+  
+  handlePortConnection(port) {
+    console.log('[NFM-BG] Port connection established:', port.name);
+    
+    if (port.name === 'localLLM-stream') {
+      port.onMessage.addListener((message) => {
+        console.log('[NFM-BG] Port message received:', message);
+        this.handlePortMessage(message, port);
+      });
+      
+      port.onDisconnect.addListener(() => {
+        console.log('[NFM-BG] Port disconnected');
+      });
+    }
+  }
+  
+  handlePortMessage(message, port) {
+    // Handle streaming requests through port
+    const { command, requestId, payload } = message;
+    
+    if (command === 'getCompletionStream') {
+      const nativeRequest = {
+        command,
+        requestId,
+        payload
+      };
+      
+      console.log('[NFM-BG] Handling streaming request via port:', nativeRequest);
+      
+      // Set up streaming response handler
+      this.requestHandlers.set(requestId, {
+        sendResponse: (response) => {
+          if (response.error) {
+            port.postMessage({ requestId, error: response.error });
+          } else {
+            port.postMessage({ requestId, chunk: response });
+          }
+        },
+        sender: null,
+        isStreaming: true,
+        port: port
+      });
+      
+      // Establish native connection if needed
+      if (!this.nativePort) {
+        try {
+          this.setupPersistentConnection();
+        } catch (error) {
+          port.postMessage({ 
+            requestId, 
+            error: 'Native app not connected',
+            errorType: 'NATIVE_APP_NOT_FOUND'
+          });
+          return;
+        }
+      }
+      
+      // Send to native app
+      try {
+        this.nativePort.postMessage(nativeRequest);
+      } catch (error) {
+        port.postMessage({ 
+          requestId, 
+          error: error.message,
+          errorType: 'MESSAGING_ERROR'
+        });
+      }
     }
   }
   
@@ -190,8 +260,23 @@ class UnifiedBackground {
       const sender = handlerInfo.sender;
       const isStreaming = handlerInfo.isStreaming;
       console.log('[NFM-BG-Chrome] Handler info - isStreaming:', isStreaming, 'hasSender:', !!sender);
+      // For streaming via port (popup), send directly to port
+      if (isStreaming && handlerInfo.port) {
+        console.log('[NFM-BG-Chrome] Sending streaming response to port');
+        try {
+          if (message.type === 'streamEnd' || !message.type) {
+            // Send final chunk and mark as done
+            handlerInfo.port.postMessage({ requestId, chunk: message, done: true });
+          } else {
+            // Send streaming chunk
+            handlerInfo.port.postMessage({ requestId, chunk: message });
+          }
+        } catch (error) {
+          console.error('[NFM-BG-Chrome] Error sending message to port:', error);
+        }
+      }
       // For streaming, send responses directly to content script
-      if (isStreaming && sender && sender.tab) {
+      else if (isStreaming && sender && sender.tab) {
         console.log('[NFM-BG-Chrome] Sending streaming response to content script, tabId:', sender.tab.id);
         if (this.config.browser === 'chrome') {
           chrome.tabs.sendMessage(sender.tab.id, {

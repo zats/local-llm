@@ -1,203 +1,105 @@
-// Under Construction - This API class is being redesigned
-// Original functionality temporarily disabled
-
-/*
-class UnifiedPopupAPI {
+// Reuse the LocalLLM class from injected-base.js but override messaging for extension context
+class UnifiedPopupAPI extends (window.UnifiedInjectedScript?.LocalLLM || window.LocalLLMScript?.LocalLLM || class {}) {
   constructor(config) {
-    this.config = config;
-    this.platform = config.platform;
-    this.sessions = new Map();
-    this.sessionCounter = 0;
+    super(config);
   }
 
-  async checkAvailability() {
+  // Add missing methods that the initialization function expects
+  async* getCompletionStream(prompt, options = {}) {
+    // This is for backward compatibility - redirect to streaming completion
+    yield* this._streamCompletion(prompt, options);
+  }
+
+  // Override sendMessage to use chrome.runtime instead of window.postMessage
+  async sendMessage(command, payload = {}) {
+    const requestId = this.generateRequestId();
+    
     try {
-      if (this.platform === 'chrome') {
-        // Chrome implementation - check with background script
-        return new Promise((resolve) => {
-          chrome.runtime.sendMessage({ action: 'checkAvailability' }, (response) => {
-            resolve(response && response.available);
-          });
-        });
-      } else if (this.platform === 'safari') {
-        // Safari implementation - direct check
-        return new Promise((resolve) => {
-          browser.runtime.sendMessage({ action: 'checkAvailability' }, (response) => {
-            resolve(response && response.available);
-          });
-        });
-      }
-      return false;
-    } catch (error) {
-      console.error('Error checking availability:', error);
-      return false;
-    }
-  }
-
-  async createSession(options = {}) {
-    const sessionId = `session-${++this.sessionCounter}`;
-    
-    const session = {
-      id: sessionId,
-      systemPrompt: options.systemPrompt || 'You are a helpful AI assistant.',
-      temperature: options.temperature || 0.8,
-      maxTokens: options.maxTokens || 1024,
-      samplingMode: options.samplingMode || 'top-p',
-      messages: [],
-      streaming: options.streaming !== false
-    };
-    
-    this.sessions.set(sessionId, session);
-    
-    if (this.platform === 'chrome') {
-      // Chrome uses real sessions with background script
-      return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage({
-          action: 'createSession',
-          sessionId,
-          options
-        }, (response) => {
-          if (response && response.success) {
-            resolve(session);
-          } else {
-            reject(new Error(response?.error || 'Failed to create session'));
-          }
-        });
+      const response = await chrome.runtime.sendMessage({
+        command: command,  // Use 'command' not 'type' to match background script expectations
+        requestId,
+        payload
       });
-    } else if (this.platform === 'safari') {
-      // Safari uses mock sessions
-      return Promise.resolve(session);
-    }
-    
-    return session;
-  }
 
-  async sendMessage(session, message) {
-    if (!session || !this.sessions.has(session.id)) {
-      throw new Error('Invalid session');
-    }
-    
-    const sessionData = this.sessions.get(session.id);
-    sessionData.messages.push({ role: 'user', content: message });
-    
-    if (this.platform === 'chrome') {
-      // Chrome implementation with background script
-      return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage({
-          action: 'sendMessage',
-          sessionId: session.id,
-          message
-        }, (response) => {
-          if (response && response.success) {
-            sessionData.messages.push({ role: 'assistant', content: response.content });
-            resolve(response.content);
-          } else {
-            reject(new Error(response?.error || 'Failed to send message'));
-          }
-        });
-      });
-    } else if (this.platform === 'safari') {
-      // Safari implementation with direct API calls
-      return this.getCompletionSafari(sessionData, message);
-    }
-    
-    throw new Error('Unsupported platform');
-  }
-
-  async getCompletionSafari(session, message) {
-    try {
-      // Build the conversation context
-      const messages = [
-        { role: 'system', content: session.systemPrompt },
-        ...session.messages
-      ];
-      
-      if (session.streaming) {
-        return this.getCompletionStreamSafari(messages, session);
+      if (response && response.success) {
+        return response.data;
       } else {
-        return this.getCompletionDirectSafari(messages, session);
+        throw new Error(response?.error || 'Unknown error');
       }
     } catch (error) {
-      console.error('Error getting completion:', error);
+      console.error('Extension message error:', error);
       throw error;
     }
   }
 
-  async getCompletionDirectSafari(messages, session) {
-    // Safari direct completion (non-streaming)
-    return new Promise((resolve, reject) => {
-      browser.runtime.sendMessage({
-        action: 'getCompletion',
-        messages,
-        options: {
-          temperature: session.temperature,
-          maxTokens: session.maxTokens,
-          samplingMode: session.samplingMode
-        }
-      }, (response) => {
-        if (response && response.success) {
-          resolve(response.content);
-        } else {
-          reject(new Error(response?.error || 'Failed to get completion'));
-        }
-      });
-    });
-  }
-
-  async getCompletionStreamSafari(messages, session) {
-    // Safari streaming completion with simulated streaming
-    return new Promise((resolve, reject) => {
-      browser.runtime.sendMessage({
-        action: 'getCompletionStream',
-        messages,
-        options: {
-          temperature: session.temperature,
-          maxTokens: session.maxTokens,
-          samplingMode: session.samplingMode
-        }
-      }, async (response) => {
-        if (response && response.success) {
-          // Simulate streaming by adding delays between chunks
-          const content = response.content;
-          const words = content.split(' ');
-          let streamedContent = '';
+  // Override _streamCompletion to use chrome.runtime.connect instead of window.postMessage
+  async* _streamCompletion(prompt, options = {}) {
+    const requestId = this.generateRequestId();
+    
+    const port = chrome.runtime.connect({ name: 'localLLM-stream' });
+    
+    const chunks = [];
+    let streamComplete = false;
+    let streamError = null;
+    let chunkWaiters = [];
+    
+    port.onMessage.addListener((message) => {
+      if (message.requestId === requestId) {
+        if (message.error) {
+          streamError = { error: { message: message.error, type: 'stream_error', code: 'stream_failed' } };
+          streamComplete = true;
+        } else if (message.done) {
+          streamComplete = true;
+        } else if (message.chunk) {
+          const responseData = message.chunk.payload || message.chunk.data || message.chunk;
           
-          for (let i = 0; i < words.length; i++) {
-            streamedContent += (i > 0 ? ' ' : '') + words[i];
-            
-            // Simulate streaming delay
-            if (i < words.length - 1) {
-              await this.delay(30);
-            }
+          // Convert to OpenAI format chunks using parent class methods
+          if (responseData.object === 'chat.completion.chunk') {
+            chunks.push(responseData);
+          } else if (responseData.object === 'chat.completion') {
+            const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
+            chunks.push(openAIChunk);
+            streamComplete = true;
+          } else {
+            const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
+            chunks.push(openAIChunk);
           }
-          
-          resolve(content);
-        } else {
-          reject(new Error(response?.error || 'Failed to get completion'));
         }
-      });
+        
+        chunkWaiters.forEach(resolve => resolve());
+        chunkWaiters = [];
+      }
     });
-  }
-
-  async destroySession(session) {
-    if (session && this.sessions.has(session.id)) {
-      this.sessions.delete(session.id);
-      
-      if (this.platform === 'chrome') {
-        // Notify background script
-        chrome.runtime.sendMessage({
-          action: 'destroySession',
-          sessionId: session.id
+    
+    // Send streaming request
+    port.postMessage({
+      command: 'getCompletionStream',  // Use 'command' not 'type'
+      requestId,
+      payload: { prompt, ...options }
+    });
+    
+    try {
+      let chunkIndex = 0;
+      while (true) {
+        if (streamError) {
+          throw streamError;
+        }
+        
+        while (chunkIndex < chunks.length) {
+          yield chunks[chunkIndex];
+          chunkIndex++;
+        }
+        
+        if (streamComplete && chunkIndex >= chunks.length) {
+          break;
+        }
+        
+        await new Promise(resolve => {
+          chunkWaiters.push(resolve);
         });
       }
+    } finally {
+      port.disconnect();
     }
   }
-
-  delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
 }
-
-// Export for use in generated platform-specific files
-window.UnifiedPopupAPI = UnifiedPopupAPI;
-*/
