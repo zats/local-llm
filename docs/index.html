@@ -641,31 +641,25 @@
                 <div class="code-examples">
                     <div class="code-block" data-title="Check Availability">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// Single source of truth for availability
-if (await window.localLLM?.available()) {
+                        <pre><code class="language-javascript">if (await window.localLLM?.available()) {
   console.log('LocalLLM ready! 🚀');
-  // On-device path
 } else {
   console.log('Local LLM unavailable, using cloud');
-  // Cloud fallback path
 }</code></pre></div>
 
                     <div class="code-block" data-title="Basic Chat Completion">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// OpenAI-compatible interface
-const result = await window.localLLM.chat.completions.create({
+                        <pre><code class="language-javascript">const result = await window.localLLM.chat.completions.create({
   messages: [
     { role: "system", content: "You are a terse assistant." },
     { role: "user", content: "Hello local world" }
   ]
 });
 
-console.log(result.choices[0].message.content);
-// Full OpenAI-compatible response format</code></pre></div>
-
+console.log(result.choices[0].message.content);</code></pre></div>
                     <div class="code-block" data-title="Streaming Response">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// Real-time streaming with OpenAI chunks
+                        <pre><code class="language-javascript">
 const stream = await window.localLLM.chat.completions.create({
   messages: [
     { role: "user", content: "Write a haiku about AI" }
@@ -676,13 +670,13 @@ const stream = await window.localLLM.chat.completions.create({
 for await (const chunk of stream) {
   const delta = chunk.choices[0]?.delta?.content;
   if (delta) {
-    process.stdout.write(delta);
+    console.log(delta);
   }
 }</code></pre></div>
 
                     <div class="code-block" data-title="Advanced Configuration">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">// Configure model behavior
+                        <pre><code class="language-javascript">
 const result = await window.localLLM.chat.completions.create({
   messages: [
     { role: "user", content: "Explain quantum computing" }
@@ -788,7 +782,6 @@ const result = await window.localLLM.chat.completions.create({
             }
             
             try {
-                // Use the new OpenAI-compatible interface
                 const result = await window.localLLM.chat.completions.create({
                     messages: [
                         { role: "system", content: "You are an expert on providing interesting facts in under one sentence about any topic user inquires." },
@@ -817,7 +810,6 @@ const result = await window.localLLM.chat.completions.create({
             }
             
             try {
-                // Use the new OpenAI-compatible streaming interface
                 const stream = await window.localLLM.chat.completions.create({
                     messages: [
                         { role: "user", content: "Write three motivational quotes about technology and innovation." }

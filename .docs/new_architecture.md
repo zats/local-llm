@@ -68,7 +68,6 @@ if (window.localLLM?.available) {
 <script>
   (async () => {
     const res = await window.localLLM.chat.completions.create({
-      model: "localLLM-pro-2025",
       messages: [
         { role: "system", content: "You are a terse assistant." },
         { role: "user", content: "Hello local world" }
@@ -92,7 +91,6 @@ const llm = new LocalLLM({
 });
 
 await llm.chat.completions.create({
-  model: "localLLM-pro-2025",
   messages: [
     { role: "system", content: "You are concise." },
     { role: "user", content: "Give me a limerick." }
@@ -115,7 +113,6 @@ const history = [
 async function ask(question: string) {
   history.push({ role: "user", content: question });
   const resp = await llm.chat.completions.create({
-    model: "localLLM-pro-2025",
     messages: history,
     temperature: 0.7
   });
