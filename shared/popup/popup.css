@@ -1,10 +1,51 @@
+:root {
+  --bg-body: #f5f5f5;
+  --bg-container: white;
+  --bg-section: #f8f9fa;
+  --bg-button: white;
+  --bg-button-hover: #f0f0f0;
+  --bg-button-primary: #007AFF;
+  --bg-button-primary-hover: #0056b3;
+  --bg-button-disabled: #ccc;
+  --bg-message-user: #007AFF;
+  --bg-message-assistant: #e9ecef;
+  --color-text: #333;
+  --color-text-light: #666;
+  --color-text-white: white;
+  --border-color: #ddd;
+  --border-color-light: #e0e0e0;
+  --shadow-container: rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-body: #1a1a1a;
+    --bg-container: #2d2d2d;
+    --bg-section: #3a3a3a;
+    --bg-button: #4a4a4a;
+    --bg-button-hover: #5a5a5a;
+    --bg-button-primary: #0a84ff;
+    --bg-button-primary-hover: #409cff;
+    --bg-button-disabled: #666;
+    --bg-message-user: #0a84ff;
+    --bg-message-assistant: #4a4a4a;
+    --color-text: #f0f0f0;
+    --color-text-light: #b0b0b0;
+    --color-text-white: white;
+    --border-color: #555;
+    --border-color-light: #444;
+    --shadow-container: rgba(0, 0, 0, 0.3);
+  }
+}
+
 body {
   margin: 0;
   padding: 20px;
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   font-size: 14px;
-  background: #f5f5f5;
+  background: var(--bg-body);
+  color: var(--color-text);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -27,9 +68,9 @@ body {
   width: 100%;
   max-width: 800px;
   min-height: calc(100vh - 40px);
-  background: white;
+  background: var(--bg-container);
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 12px var(--shadow-container);
   overflow: hidden;
 }
 
@@ -44,8 +85,8 @@ body {
 
 .system-prompt-section {
   padding: 12px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--bg-section);
+  border-bottom: 1px solid var(--border-color-light);
 }
 
 @media (max-width: 768px) {
@@ -71,7 +112,7 @@ body {
 
 .system-prompt-section label {
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -136,10 +177,11 @@ body {
 
 .settings-btn {
   padding: 6px 12px;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--bg-button);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 16px;
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -154,18 +196,20 @@ body {
 }
 
 .settings-btn:hover {
-  background: #f0f0f0;
-  border-color: #999;
+  background: var(--bg-button-hover);
+  border-color: var(--color-text-light);
 }
 
 #systemPrompt {
   width: 100%;
   box-sizing: border-box;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-family: inherit;
   font-size: 13px;
+  background: var(--bg-container);
+  color: var(--color-text);
   resize: vertical;
   min-height: 50px;
   max-height: 100px;
@@ -184,7 +228,7 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 12px;
-  background: white;
+  background: var(--bg-container);
 }
 
 @media (max-width: 768px) {
@@ -211,15 +255,15 @@ body {
 }
 
 .message.user {
-  background: #007AFF;
-  color: white;
+  background: var(--bg-message-user);
+  color: var(--color-text-white);
   align-self: flex-end;
   margin-left: auto;
 }
 
 .message.assistant {
-  background: #e9ecef;
-  color: #333;
+  background: var(--bg-message-assistant);
+  color: var(--color-text);
   align-self: flex-start;
 }
 
@@ -231,7 +275,7 @@ body {
 .message.assistant.typing-indicator {
   background: transparent;
   border: none;
-  color: #666;
+  color: var(--color-text-light);
   animation: typing-dots 1.5s infinite;
 }
 
@@ -253,8 +297,8 @@ body {
 
 .input-section {
   padding: 12px;
-  background: #f8f9fa;
-  border-top: 1px solid #e0e0e0;
+  background: var(--bg-section);
+  border-top: 1px solid var(--border-color-light);
   display: flex;
   gap: 8px;
   align-items: stretch;
@@ -270,10 +314,12 @@ body {
 #messageInput {
   flex: 1;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-family: inherit;
   font-size: 13px;
+  background: var(--bg-container);
+  color: var(--color-text);
   resize: none;
   height: 36px;
   box-sizing: border-box;
@@ -289,8 +335,8 @@ body {
 
 #sendButton {
   padding: 8px 16px;
-  background: #007AFF;
-  color: white;
+  background: var(--bg-button-primary);
+  color: var(--color-text-white);
   border: none;
   border-radius: 4px;
   font-weight: 600;
@@ -310,10 +356,10 @@ body {
 }
 
 #sendButton:hover {
-  background: #0056b3;
+  background: var(--bg-button-primary-hover);
 }
 
 #sendButton:disabled {
-  background: #ccc;
+  background: var(--bg-button-disabled);
   cursor: not-allowed;
 }
