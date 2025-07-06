@@ -117,7 +117,9 @@ class InstallationStepManager: ObservableObject {
     @Published var autoInstallEnabled: Bool = true
     
     private let binaryName = "nativefoundationmodels-native"
-    private let extensionId = "jjmocainopehgedhgjpanckkalhiodmj"
+    private var extensionId: String {
+        ProcessInfo.processInfo.environment["GOOGLE_CHROME_EXTENSION_ID"] ?? "jjmocainopehgedhgjpanckkalhiodmj"
+    }
     private let safariExtensionBundleIdentifier = "com.zats.NativeFoundationModels.SafariExtension"
     private var monitoringTimer: Timer?
     private var hasPerformedAutoInstall = false

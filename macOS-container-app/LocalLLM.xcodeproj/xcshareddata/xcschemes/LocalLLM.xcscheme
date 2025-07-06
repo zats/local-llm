@@ -50,6 +50,13 @@
             ReferencedContainer = "container:LocalLLM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "GOOGLE_CHROME_EXTENSION_ID"
+            value = "gflhiakgkhmcpaiedkjkalbilplchpbe"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
