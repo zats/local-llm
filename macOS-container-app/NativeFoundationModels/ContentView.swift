@@ -5,6 +5,14 @@
 //
 
 import SwiftUI
+#if !os(macOS)
+import UIKit
+import AVKit
+import AVFoundation
+#endif
+#if os(macOS)
+import SafariServices
+#endif
 
 struct GradientBackground: View {
     var body: some View {
@@ -449,181 +457,150 @@ extension View {
 
 #else
 struct ContentView: View {
-    @State private var heartbeat = false
-    @State private var safariExtensionEnabled = false
-    @State private var checkingExtension = true
+    @State private var player: AVPlayer?
+    @State private var videoAspectRatio: CGFloat?
+    @Environment(\.colorScheme) var colorScheme
+    @State private var currentColorScheme: ColorScheme?
     
     var body: some View {
-        ZStack {
-            GradientBackground()
-                .ignoresSafeArea()
+        VStack(spacing: 40) {
+            Spacer()
             
-            VStack(spacing: 40) {
-                // Top spacing for status bar
-                Spacer()
-                    .frame(height: 20)
-                
-                // Main brain logo
-                Image(.brain)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 200, height: 200)
-                    .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
-                    .scaleEffect(heartbeat ? 1.02 : 1.0)
-                    .animation(
-                        .easeInOut(duration: 1.2)
-                        .repeatForever(autoreverses: true),
-                        value: heartbeat
-                    )
-                
-                // Title and description
-                VStack(spacing: 16) {
-                    Text("LocalLLM")
-                        .font(.largeTitle.bold())
-                        .foregroundColor(.white)
-                    
-                    Text("On-device AI for Safari")
-                        .font(.title2)
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }
-                
-                // Safari extension status
-                VStack(spacing: 20) {
-                    if checkingExtension {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            
-                            Text("Checking Safari extension...")
-                                .font(.callout)
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                    } else {
-                        SafariExtensionStatusView(
-                            isEnabled: safariExtensionEnabled,
-                            onEnablePressed: {
-                                openSafariExtensionPreferences()
-                            }
-                        )
-                    }
-                }
-                
-                Spacer()
-                
-                // Bottom instruction text
-                Text("Enable the Safari extension to start using AI features on websites")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.6))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 20)
+            // Video player
+            if let player, let videoAspectRatio {
+                VideoPlayer(player: player)
+                    .disabled(true)
+                    .aspectRatio(videoAspectRatio, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
             }
-            .padding(.horizontal, 32)
+            
+            // Open Safari button
+            Button("Open Safari", systemImage: "safari") {
+                if let url = URL(string: "x-safari-https://apple.com") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .buttonBorderShape(.capsule)
+            .buttonStyle(.borderedProminent)
+            
+            Spacer()
         }
         .onAppear {
-            heartbeat = true
-            checkSafariExtensionStatus()
+            currentColorScheme = colorScheme
+            setupVideoPlayer()
+        }
+        .onChange(of: colorScheme) { newColorScheme in
+            if currentColorScheme != newColorScheme {
+                currentColorScheme = newColorScheme
+                switchVideo(isDark: newColorScheme == .dark)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            // Re-check when app becomes active (user might have changed extension settings)
-            checkSafariExtensionStatus()
+            player?.play()
         }
     }
     
-    private func checkSafariExtensionStatus() {
-        checkingExtension = true
+    private func setupVideoPlayer() {
+        // Configure audio session
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Failed to set audio session: \(error)")
+        }
         
-        #if os(macOS)
-        SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: "com.zats.NativeFoundationModels.SafariExtension") { state, error in
-            DispatchQueue.main.async {
-                self.checkingExtension = false
-                if let state = state {
-                    self.safariExtensionEnabled = state.isEnabled
-                } else {
-                    self.safariExtensionEnabled = false
-                }
-            }
+        let videoName = colorScheme == .dark ? "onboarding_dark" : "onboarding"
+        guard let videoURL = Bundle.main.url(forResource: videoName, withExtension: "mp4") else {
+            return
         }
-        #else
-        // On iOS, there's no API to check extension status
-        // Users must manually enable extensions in Safari Settings
-        DispatchQueue.main.async {
-            self.checkingExtension = false
-            self.safariExtensionEnabled = false // Unknown status - user needs to check manually
-        }
-        #endif
-    }
-    
-    private func openSafariExtensionPreferences() {
-        #if os(macOS)
-        SFSafariApplication.showPreferencesForExtension(withIdentifier: "com.zats.NativeFoundationModels.SafariExtension") { error in
-            if let error = error {
-                print("Error opening Safari extension preferences: \(error)")
-            }
-            // Re-check status after a delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.checkSafariExtensionStatus()
-            }
-        }
-        #else
-        // On iOS, direct user to Settings app
-        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(settingsURL)
-        }
-        #endif
-    }
-}
-
-struct SafariExtensionStatusView: View {
-    let isEnabled: Bool
-    let onEnablePressed: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            // Status indicator
-            HStack(spacing: 12) {
-                Circle()
-                    .fill(isEnabled ? Color.green : Color.orange)
-                    .frame(width: 12, height: 12)
-                
-                Text(isEnabled ? "Safari Extension Enabled" : "Safari Extension Disabled")
-                    .font(.callout.weight(.medium))
-                    .foregroundColor(.white)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-            )
-            
-            // Enable button (only show if not enabled)
-            if !isEnabled {
-                Button(action: onEnablePressed) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "safari")
-                        Text("Enable in Safari Settings")
+        
+        let asset = AVURLAsset(url: videoURL)
+        let newPlayer = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        newPlayer.isMuted = true
+        
+        // Get video dimensions
+        Task {
+            do {
+                let tracks = try await asset.loadTracks(withMediaType: .video)
+                if let track = tracks.first {
+                    let size = try await track.load(.naturalSize)
+                    let transform = try await track.load(.preferredTransform)
+                    
+                    // Apply transform to get correct dimensions
+                    let transformedSize = size.applying(transform)
+                    let width = abs(transformedSize.width)
+                    let height = abs(transformedSize.height)
+                    
+                    await MainActor.run {
+                        self.videoAspectRatio = width / height
+                        self.player?.play()
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(hex: "667eea"), Color(hex: "764ba2")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.2), radius: 4, y: 2)
                 }
+            } catch {
+                print("Failed to load video dimensions: \(error)")
+            }
+        }
+        
+        // Loop video
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: newPlayer.currentItem,
+            queue: .main
+        ) { _ in
+            newPlayer.seek(to: .zero)
+            newPlayer.play()
+        }
+        
+        self.player = newPlayer
+        if videoAspectRatio != nil {
+            newPlayer.play()
+        }
+    }
+    
+    private func switchVideo(isDark: Bool) {
+        guard let currentPlayer = player else { return }
+        
+        // Save current playback position
+        let currentTime = currentPlayer.currentTime()
+        let wasPlaying = currentPlayer.timeControlStatus == .playing
+        
+        // Load new video
+        let videoName = isDark ? "onboarding_dark" : "onboarding"
+        guard let videoURL = Bundle.main.url(forResource: videoName, withExtension: "mp4") else {
+            return
+        }
+        
+        let asset = AVAsset(url: videoURL)
+        let newItem = AVPlayerItem(asset: asset)
+        
+        // Replace player item
+        currentPlayer.replaceCurrentItem(with: newItem)
+        
+        // Restore playback position
+        currentPlayer.seek(to: currentTime) { _ in
+            if wasPlaying {
+                currentPlayer.play()
+            }
+        }
+        
+        // Update aspect ratio for new video
+        Task {
+            do {
+                let tracks = try await asset.loadTracks(withMediaType: .video)
+                if let track = tracks.first {
+                    let size = try await track.load(.naturalSize)
+                    let transform = try await track.load(.preferredTransform)
+                    
+                    let transformedSize = size.applying(transform)
+                    let width = abs(transformedSize.width)
+                    let height = abs(transformedSize.height)
+                    
+                    await MainActor.run {
+                        self.videoAspectRatio = width / height
+                    }
+                }
+            } catch {
+                print("Failed to load video dimensions: \(error)")
             }
         }
     }

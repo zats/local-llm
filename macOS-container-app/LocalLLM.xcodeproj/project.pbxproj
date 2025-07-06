@@ -51,7 +51,7 @@
 		5C2E3EC22E1A055D00CB3A24 /* APIResponseFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIResponseFormatter.swift; sourceTree = "<group>"; };
 		5C2E3EC32E1A055D00CB3A24 /* LanguageModelSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageModelSession.swift; sourceTree = "<group>"; };
 		5C8B12342E1ABC1234567890 /* NativeFoundationModelsNative */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = NativeFoundationModelsNative; sourceTree = BUILT_PRODUCTS_DIR; };
-		5CFFE68C2E1303FB005BAD3F /* LocalLLM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LocalLLM.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5CFFE68C2E1303FB005BAD3F /* LLLLM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LLLLM.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -64,6 +64,8 @@
 				AppMover.swift = (macos, );
 				BrowserSelectorView.swift = (macos, );
 				CheckForUpdatesView.swift = (macos, );
+				onboarding/onboarding.mp4 = (ios, );
+				onboarding/onboarding_dark.mp4 = (ios, );
 			};
 			target = 5CFFE68B2E1303FB005BAD3F /* LocalLLM */;
 		};
@@ -153,7 +155,7 @@
 		5CFFE68D2E1303FB005BAD3F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5CFFE68C2E1303FB005BAD3F /* LocalLLM.app */,
+				5CFFE68C2E1303FB005BAD3F /* LLLLM.app */,
 				5C2E35502E16987100CB3A24 /* SafariExtension.appex */,
 				5C8B12342E1ABC1234567890 /* NativeFoundationModelsNative */,
 			);
@@ -228,7 +230,7 @@
 				5C2E34012E1547B900CB3A24 /* Sparkle */,
 			);
 			productName = NativeFoundationModels;
-			productReference = 5CFFE68C2E1303FB005BAD3F /* LocalLLM.app */;
+			productReference = 5CFFE68C2E1303FB005BAD3F /* LLLLM.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -370,7 +372,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SafariExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "LocalLLM - SafariExtension";
+				INFOPLIST_KEY_CFBundleDisplayName = llllm;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -410,7 +412,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SafariExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "LocalLLM - SafariExtension";
+				INFOPLIST_KEY_CFBundleDisplayName = llllm;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -621,7 +623,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NativeFoundationModels/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = LocalLLM;
+				INFOPLIST_KEY_CFBundleDisplayName = LLLLM;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -629,7 +631,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zats.NativeFoundationModels;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = LLLLM;
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
@@ -672,7 +674,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NativeFoundationModels/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = LocalLLM;
+				INFOPLIST_KEY_CFBundleDisplayName = LLLLM;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -680,7 +682,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zats.NativeFoundationModels;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = LLLLM;
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;

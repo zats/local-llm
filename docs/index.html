@@ -74,6 +74,7 @@
 
         .logo {
             margin: 20px 0;
+            max-width: 500px;
             filter: 
             drop-shadow(0 4px 6px rgba(199, 32, 233, 0.459))
             drop-shadow(0 8px 16px rgba(255, 140, 0, 0.35))
@@ -549,7 +550,7 @@
     <div class="hero">
         <div class="container">
             <h1>LocalLLM</h1>
-            <img class="logo" src="nfm.png" alt="LocalLLM Logo">
+            <img class="logo" src="nfm.png" alt="LocalLLM Logo" id="logoImage">
             <p class="tagline">Local-First Chat Completion API</p>
             <p class="subtitle">
                 OpenAI-compatible interface for on-device language models with zero latency, 
@@ -858,6 +859,24 @@ const result = await window.localLLM.chat.completions.create({
                 setButtonStatus('availability-status', 'error');
             }
         });
+
+        // Dark mode detection for logo
+        function updateLogo() {
+            const logoImg = document.getElementById('logoImage');
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                logoImg.src = 'nfm_dark.png';
+            } else {
+                logoImg.src = 'nfm.png';
+            }
+        }
+
+        // Update logo on load
+        updateLogo();
+
+        // Listen for dark mode changes
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateLogo);
+        }
         
         // Copy code functionality
         function copyCode(button) {
