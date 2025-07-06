@@ -5,6 +5,12 @@
 var ChromeConfig = {
   browser: 'chrome',
   
+  init() {
+    console.log('[NFM-ChromeConfig] Initializing Chrome configuration');
+    console.log('[NFM-ChromeConfig] Native messaging app ID:', this.nativeMessaging.appId);
+    console.log('[NFM-ChromeConfig] Supports persistent connection:', this.nativeMessaging.supportsPersistentConnection);
+  },
+  
   // Native messaging configuration
   nativeMessaging: {
     type: 'persistent',

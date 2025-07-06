@@ -129,6 +129,49 @@ pnpm dev
 # Edit platform-specific code directly in extension directories
 ```
 
+## Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Browser Extensions"
+        CE[Chrome Extension<br/>JS/Web]
+        SE[Safari Extension<br/>JS/Web]
+    end
+
+    subgraph "Native Components"
+        subgraph "Chrome Native Host"
+            NMA[NativeMessagingApp<br/>Serialization Layer]
+        end
+        
+        subgraph "Safari Extension Handler"
+            SWEH[SafariWebExtensionHandler]
+            NFMS[NativeFoundationModelsService]
+        end
+    end
+
+    subgraph "Shared Foundation Models Layer"
+        LMS[LanguageModelSession.swift<br/>• Session management<br/>• Error handling<br/>• Conversation context<br/>• Streaming responses<br/>• Direct completions]
+    end
+
+    subgraph "Apple Framework"
+        FM[Foundation Models<br/>Framework]
+    end
+
+    CE -->|Native Messaging<br/>JSON over stdin/stdout| NMA
+    SE -->|Extension Handler<br/>NSExtensionContext| SWEH
+    SWEH --> NFMS
+    
+    NMA -->|Uses| LMS
+    NFMS -->|Uses| LMS
+    
+    LMS -->|Calls| FM
+
+    style CE fill:#4285f4,color:#fff
+    style SE fill:#ff9500,color:#fff
+    style LMS fill:#34c759,color:#fff
+    style FM fill:#007aff,color:#fff
+```
+
 ### Component Build Processes
 
 Each component has its own build process and README:

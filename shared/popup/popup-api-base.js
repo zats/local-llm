@@ -53,22 +53,34 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
     }
   }
 
-  // Override sendMessage to use chrome.runtime instead of window.postMessage
+  // Override sendMessage to use appropriate runtime API based on browser
   async sendMessage(command, payload = {}) {
     const requestId = this.generateRequestId();
     
     try {
-      const response = await chrome.runtime.sendMessage({
+      // Use browser-specific messaging API
+      const runtimeAPI = this.config.browser === 'safari' ? browser.runtime : chrome.runtime;
+      
+      const response = await runtimeAPI.sendMessage({
         command: command,  // Use 'command' not 'type' to match background script expectations
         requestId,
         payload
       });
 
-      if (response && (response.success || response.type === 'availabilityResponse')) {
+      // Handle successful responses - Safari returns different response types
+      if (response && !response.error) {
         if (response.type === 'availabilityResponse') {
           return response.payload;          
-        } else {
+        } else if (response.type === 'completionResponse') {
+          return response.payload;
+        } else if (response.success) {
           return response.data;
+        } else if (response.payload) {
+          // Direct payload response
+          return response.payload;
+        } else {
+          // Fallback to full response
+          return response;
         }
       } else {
         console.error(response)
@@ -80,10 +92,27 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
     }
   }
 
-  // Override _streamCompletion to use chrome.runtime.connect instead of window.postMessage
+  // Override _streamCompletion to use appropriate messaging for each browser
   async* _streamCompletion(prompt, options = {}) {
     const requestId = this.generateRequestId();
     
+    // Safari doesn't support persistent connections, so we fall back to regular completion
+    if (this.config.browser === 'safari') {
+      // For Safari, convert streaming to regular completion and simulate streaming
+      try {
+        const response = await this.sendMessage('getCompletion', { prompt, ...options });
+        
+        // Convert single response to OpenAI chunk format
+        const openAIChunk = this._formatAsOpenAIChunk(response, options.model);
+        yield openAIChunk;
+        
+      } catch (error) {
+        throw { error: { message: error.message, type: 'stream_error', code: 'stream_failed' } };
+      }
+      return;
+    }
+    
+    // Chrome port-based streaming
     const port = chrome.runtime.connect({ name: 'localLLM-stream' });
     
     const chunks = [];

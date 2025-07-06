@@ -9,6 +9,11 @@ class UnifiedBackground {
     this.nativePort = null;
     this.requestHandlers = new Map();
     
+    // Initialize platform-specific configuration
+    if (this.config.init) {
+      this.config.init();
+    }
+    
     this.init();
   }
   
