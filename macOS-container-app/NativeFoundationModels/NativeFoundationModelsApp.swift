@@ -7,6 +7,7 @@
 import SwiftUI
 import Foundation
 import Combine
+import CryptoKit
 #if os(macOS)
 import Sparkle
 #endif
@@ -96,12 +97,28 @@ enum InstallationStep: Int, CaseIterable {
 class InstallationStepManager: ObservableObject {
     @Published var stepStatuses: [InstallationStep: Bool] = [:]
     @Published var stepInProgress: [InstallationStep: Bool] = [:]
-    @Published var selectedBrowser: Browser?
+    @Published var selectedBrowser: Browser? {
+        didSet {
+            if selectedBrowser != oldValue {
+                checkAllSteps()
+                // Trigger auto-install when browser changes
+                if autoInstallEnabled {
+                    Task {
+                        if let browser = selectedBrowser {
+                            await checkAndInstallComponents(for: browser)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    @Published var autoInstallEnabled: Bool = true
     
     private let binaryName = "nativefoundationmodels-native"
     private let extensionId = "jjmocainopehgedhgjpanckkalhiodmj"
     private let safariExtensionBundleIdentifier = "com.zats.NativeFoundationModels.SafariExtension"
     private var monitoringTimer: Timer?
+    private var hasPerformedAutoInstall = false
     
     private var binaryURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -140,6 +157,11 @@ class InstallationStepManager: ObservableObject {
         }
         checkAllSteps()
         startMonitoring()
+        
+        // Perform auto-install check after a brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.performAutoInstallIfNeeded()
+        }
     }
     
     deinit {
@@ -154,10 +176,126 @@ class InstallationStepManager: ObservableObject {
     
     func checkAllSteps() {
         DispatchQueue.main.async {
-            // Don't auto-complete the binary step - user should always have the option to reinstall
-            // self.stepStatuses[.installBinary] = self.isBinaryStepComplete()
+            self.stepStatuses[.installBinary] = self.isBinaryStepComplete()
             self.stepStatuses[.installExtension] = self.isExtensionInstalled()
         }
+    }
+    
+    /// Performs automatic installation/update if needed
+    func performAutoInstallIfNeeded() {
+        guard autoInstallEnabled && !hasPerformedAutoInstall else { return }
+        hasPerformedAutoInstall = true
+        
+        guard let browser = selectedBrowser else {
+            // No browser selected yet, will retry when browser is selected
+            return
+        }
+        
+        Task {
+            await checkAndInstallComponents(for: browser)
+        }
+    }
+    
+    /// Checks if components need installation/update and performs them automatically
+    private func checkAndInstallComponents(for browser: Browser) async {
+        // Skip Safari as it doesn't need binary components
+        if browser == .safari {
+            return
+        }
+        
+        let needsBinaryUpdate = await needsBinaryUpdate()
+        let needsBinaryInstall = !isBinaryInstalled() || needsBinaryUpdate
+        let needsHostUpdate = await needsHostUpdate()
+        let needsHostInstall = !isNativeMessagingHostInstalled() || needsHostUpdate
+        
+        if needsBinaryInstall || needsHostInstall {
+            DispatchQueue.main.async {
+                self.stepInProgress[.installBinary] = true
+            }
+            
+            do {
+                if needsBinaryInstall {
+                    try await installBinary()
+                }
+                if needsHostInstall {
+                    try await installNativeMessagingHost()
+                }
+                
+                DispatchQueue.main.async {
+                    self.stepInProgress[.installBinary] = false
+                    self.checkAllSteps()
+                    print("Auto-installation completed successfully")
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.stepInProgress[.installBinary] = false
+                    print("Auto-installation failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    /// Checks if the installed binary needs to be updated based on hash comparison
+    private func needsBinaryUpdate() async -> Bool {
+        guard isBinaryInstalled(),
+              let bundledBinaryURL = Bundle.main.url(forResource: binaryName, withExtension: nil) else {
+            return false
+        }
+        
+        let installedHash = await computeFileHash(at: binaryURL)
+        let bundledHash = await computeFileHash(at: bundledBinaryURL)
+        
+        return installedHash != bundledHash
+    }
+    
+    /// Checks if the native messaging host configuration needs to be updated
+    private func needsHostUpdate() async -> Bool {
+        guard let browser = selectedBrowser,
+              let hostURL = nativeMessagingHostURL(for: browser),
+              FileManager.default.fileExists(atPath: hostURL.path) else {
+            return false
+        }
+        
+        // Read the current host configuration
+        do {
+            let currentConfig = try String(contentsOf: hostURL)
+            let expectedConfig = generateHostConfiguration()
+            return currentConfig.trimmingCharacters(in: .whitespacesAndNewlines) != expectedConfig.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            // If we can't read the file, assume it needs update
+            return true
+        }
+    }
+    
+    /// Computes SHA256 hash of a file
+    private func computeFileHash(at url: URL) async -> String? {
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .background).async {
+                do {
+                    let data = try Data(contentsOf: url)
+                    let hash = SHA256.hash(data: data)
+                    let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
+                    continuation.resume(returning: hashString)
+                } catch {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+    
+    /// Generates the expected native messaging host configuration
+    private func generateHostConfiguration() -> String {
+        return """
+{
+  "name": "com.nativefoundationmodels.native",
+  "description": "NativeFoundationModels Native Messaging Host",
+  "path": "\(binaryURL.path)",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://\(extensionId)/"
+  ]
+}
+"""
     }
     
     private func isBinaryStepComplete() -> Bool {
@@ -255,8 +393,6 @@ class InstallationStepManager: ObservableObject {
     }
     
     func executeStep(_ step: InstallationStep) {
-        guard !stepStatuses[step, default: false] else { return }
-        
         stepInProgress[step] = true
         
         switch step {
@@ -277,6 +413,26 @@ class InstallationStepManager: ObservableObject {
                 openExtensionStore()
             }
         }
+    }
+    
+    /// Manually trigger auto-install/update process
+    func triggerAutoInstall() {
+        guard let browser = selectedBrowser else { return }
+        Task {
+            await checkAndInstallComponents(for: browser)
+        }
+    }
+    
+    /// Check if auto-install would do anything (for UI feedback)
+    func wouldAutoInstallDoAnything() async -> Bool {
+        guard let browser = selectedBrowser, browser != .safari else { return false }
+        
+        let needsBinaryUpdate = await needsBinaryUpdate()
+        let needsBinaryInstall = !isBinaryInstalled() || needsBinaryUpdate
+        let needsHostUpdate = await needsHostUpdate()
+        let needsHostInstall = !isNativeMessagingHostInstalled() || needsHostUpdate
+        
+        return needsBinaryInstall || needsHostInstall
     }
     
     private func installBinaryAndHost() {
@@ -323,17 +479,7 @@ class InstallationStepManager: ObservableObject {
         try FileManager.default.createDirectory(at: hostDir, withIntermediateDirectories: true)
         
         // Generate clean native messaging host configuration
-        let hostConfigJSON = """
-{
-  "name": "com.nativefoundationmodels.native",
-  "description": "NativeFoundationModels Native Messaging Host",
-  "path": "\(binaryURL.path)",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://\(extensionId)/"
-  ]
-}
-"""
+        let hostConfigJSON = generateHostConfiguration()
         try hostConfigJSON.write(to: hostURL, atomically: true, encoding: .utf8)
     }
     

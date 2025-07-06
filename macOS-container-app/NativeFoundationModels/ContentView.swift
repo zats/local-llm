@@ -22,6 +22,7 @@ struct ContentView: View {
     @State private var heartbeat = false
     @State private var selectedBrowser: Browser?
     @State private var showBrowserSelector = true
+    @State private var showAutoInstallStatus = false
     @Namespace private var animation
     
     var filteredSteps: [InstallationStep] {
