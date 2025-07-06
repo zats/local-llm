@@ -131,7 +131,10 @@ xcodebuild archive \
     -configuration Release \
     -archivePath "$ARCHIVE_PATH" \
     ARCHS="arm64 x86_64" \
-    ONLY_ACTIVE_ARCH=NO
+    ONLY_ACTIVE_ARCH=NO \
+    CODE_SIGN_IDENTITY="Developer ID Application: Alexander Zats (5KE88HWMKJ)" \
+    CODE_SIGN_STYLE=Manual \
+    DEVELOPMENT_TEAM=5KE88HWMKJ
 
 # Check if archive was created successfully
 if [[ ! -d "$ARCHIVE_PATH" ]]; then
@@ -153,6 +156,61 @@ fi
 # Check if app was copied successfully
 if [[ ! -d "$BUILD_DIR/LocalLLM.app" ]]; then
     error "App extraction failed."
+fi
+
+# Re-sign Sparkle framework components with Developer ID
+log "Re-signing Sparkle framework components..."
+SPARKLE_FRAMEWORK="$BUILD_DIR/LocalLLM.app/Contents/Frameworks/Sparkle.framework"
+
+if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
+    # Sign all Sparkle binaries
+    SPARKLE_BINARIES=(
+        "Versions/B/Updater.app/Contents/MacOS/Updater"
+        "Versions/B/Autoupdate"
+        "Versions/B/XPCServices/Downloader.xpc/Contents/MacOS/Downloader"
+        "Versions/B/XPCServices/Installer.xpc/Contents/MacOS/Installer"
+    )
+    
+    for binary in "${SPARKLE_BINARIES[@]}"; do
+        BINARY_PATH="$SPARKLE_FRAMEWORK/$binary"
+        if [[ -f "$BINARY_PATH" ]]; then
+            log "Signing: $binary"
+            codesign --force \
+                     --sign "Developer ID Application: Alexander Zats (5KE88HWMKJ)" \
+                     --options runtime \
+                     --timestamp \
+                     "$BINARY_PATH"
+        fi
+    done
+    
+    # Sign XPC services and Updater.app bundles
+    XPC_SERVICES=(
+        "Versions/B/XPCServices/Downloader.xpc"
+        "Versions/B/XPCServices/Installer.xpc"
+        "Versions/B/Updater.app"
+    )
+    
+    for service in "${XPC_SERVICES[@]}"; do
+        SERVICE_PATH="$SPARKLE_FRAMEWORK/$service"
+        if [[ -d "$SERVICE_PATH" ]]; then
+            log "Signing service: $service"
+            codesign --force \
+                     --sign "Developer ID Application: Alexander Zats (5KE88HWMKJ)" \
+                     --options runtime \
+                     --timestamp \
+                     "$SERVICE_PATH"
+        fi
+    done
+    
+    # Finally, sign the entire Sparkle framework
+    log "Signing Sparkle framework"
+    codesign --force \
+             --sign "Developer ID Application: Alexander Zats (5KE88HWMKJ)" \
+             --options runtime \
+             --timestamp \
+             "$SPARKLE_FRAMEWORK"
+else
+    warn "Sparkle framework not found - skipping re-signing"
 fi
 
 # The app should now be properly signed by Xcode with Developer ID certificates
@@ -241,7 +299,7 @@ if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
             rm "LocalLLM.zip"
             ditto -c -k --keepParent "LocalLLM.app" "LocalLLM.zip"
         else
-            warn "Notarization failed or invalid. Check the logs:"
+            error "Notarization failed or invalid. Check the logs:"
             # Get detailed logs if submission ID is available
             if [[ -n "$SUBMISSION_ID" ]]; then
                 xcrun notarytool log "$SUBMISSION_ID" \
