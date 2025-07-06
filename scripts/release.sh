@@ -247,7 +247,7 @@ fi
 # Notarize app (requires Apple ID credentials)
 log "Creating ZIP for distribution..."
 cd "$BUILD_DIR"
-ditto -c -k --keepParent "llllm.app" "LocalLLM.zip"
+ditto -c -k --keepParent "llllm.app" "llllm.zip"
 
 # Check for notarization credentials and prompt if needed (local only)
 if [[ -z "$CI" && (-z "$APPLE_ID" || -z "$APPLE_TEAM_ID" || -z "$APPLE_APP_PASSWORD") ]]; then
@@ -275,7 +275,7 @@ if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
     log "Notarizing application..."
     
     # Submit for notarization and capture the submission ID
-    SUBMIT_OUTPUT=$(xcrun notarytool submit "LocalLLM.zip" \
+    SUBMIT_OUTPUT=$(xcrun notarytool submit "llllm.zip" \
         --apple-id "$APPLE_ID" \
         --team-id "$APPLE_TEAM_ID" \
         --password "$APPLE_APP_PASSWORD" \
@@ -296,8 +296,8 @@ if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
             xcrun stapler staple "llllm.app"
             
             # Re-create ZIP with stapled app
-            rm "LocalLLM.zip"
-            ditto -c -k --keepParent "llllm.app" "LocalLLM.zip"
+            rm "llllm.zip"
+            ditto -c -k --keepParent "llllm.app" "llllm.zip"
         else
             error "Notarization failed or invalid. Check the logs:"
             # Get detailed logs if submission ID is available
@@ -341,7 +341,7 @@ $(git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/n
 $(git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "HEAD~10")..HEAD)
 
 ---
-Download: [LocalLLM.zip](https://github.com/zats/local-llm/releases/download/v$VERSION/LocalLLM.zip)
+Download: [llllm.zip](https://github.com/zats/local-llm/releases/download/v$VERSION/llllm.zip)
 EOF
 fi
 
@@ -384,7 +384,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
     log "Creating GitHub release..."
     if command -v gh &> /dev/null; then
         gh release create "v$VERSION" \
-            "$BUILD_DIR/LocalLLM.zip" \
+            "$BUILD_DIR/llllm.zip" \
             --title "Release v$VERSION" \
             --notes-file "$RELEASE_NOTES_DIR/$VERSION.md"
         log "GitHub release created successfully!"
@@ -393,10 +393,10 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
         log "Generating appcast with live GitHub release URLs..."
         
         # Clean up any existing files to avoid conflicts
-        rm -f "$UPDATES_DIR/LocalLLM.zip"
+        rm -f "$UPDATES_DIR/llllm.zip"
         
         # Copy release to updates directory with version in filename (for appcast generation)
-        cp "$BUILD_DIR/LocalLLM.zip" "$UPDATES_DIR/LocalLLM-$VERSION.zip"
+        cp "$BUILD_DIR/llllm.zip" "$UPDATES_DIR/LocalLLM-$VERSION.zip"
         
         # Look for generate_appcast in common locations
         GENERATE_APPCAST_PATH=""
@@ -444,7 +444,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
                 log "Adding new version $VERSION to appcast..."
                 
                 # Get file size of the ZIP
-                ZIP_SIZE=$(stat -f%z "$BUILD_DIR/LocalLLM.zip")
+                ZIP_SIZE=$(stat -f%z "$BUILD_DIR/llllm.zip")
                 
                 # Get current build number from Xcode project
                 BUILD_NUMBER=$(agvtool what-version -terse || echo "1")
@@ -456,7 +456,7 @@ if [[ "$SHOULD_AUTO_PUBLISH" == "true" ]]; then
             <sparkle:version>$BUILD_NUMBER</sparkle:version>
             <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-            <enclosure url=\"$DOWNLOAD_URL_PREFIX/LocalLLM.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
+            <enclosure url=\"$DOWNLOAD_URL_PREFIX/llllm.zip\" length=\"$ZIP_SIZE\" type=\"application/octet-stream\"/>
         </item>"
                 
                 # Show what the new entry will look like
@@ -545,7 +545,7 @@ else
     if [[ "$DRY_RUN" == "true" ]]; then
         log "Dry run completed! 🎉"
         echo ""
-        log "Build artifacts available at: $BUILD_DIR/LocalLLM.zip"
+        log "Build artifacts available at: $BUILD_DIR/llllm.zip"
         warn "No git operations were performed (dry run mode)"
         echo "To create actual release, run: ./scripts/release.sh $VERSION"
     else
@@ -553,7 +553,7 @@ else
         echo ""
         warn "Manual steps required:"
         echo "1. Push changes and tag: git push origin main && git push origin v$VERSION"
-        echo "2. Create GitHub release with ZIP file: $BUILD_DIR/LocalLLM.zip"
+        echo "2. Create GitHub release with ZIP file: $BUILD_DIR/llllm.zip"
         echo "3. Update appcast manually after release is live"
     fi
 fi
