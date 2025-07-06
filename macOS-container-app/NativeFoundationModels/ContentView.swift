@@ -469,19 +469,30 @@ struct ContentView: View {
             // Video player
             if let player, let videoAspectRatio {
                 VideoPlayer(player: player)
+                    .background(.clear)
                     .disabled(true)
                     .aspectRatio(videoAspectRatio, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(-2)
+                    .clipped()
             }
             
             // Open Safari button
-            Button("Open Safari", systemImage: "safari") {
+            Button {
                 if let url = URL(string: "x-safari-https://apple.com") {
                     UIApplication.shared.open(url)
                 }
+            } label: {
+                HStack {
+                    Image(.safari)
+                        .resizable()
+                        .frame(width: 30, height: 30)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+//                        .shadow(color: .primary.opacity(0.2), radius: 4, y: 3)
+                    Text("Open Safari")
+                        .font(.headline)
+                }
             }
-            .buttonBorderShape(.capsule)
-            .buttonStyle(.borderedProminent)
+            .controlSize(.extraLarge)
             
             Spacer()
         }
@@ -570,7 +581,7 @@ struct ContentView: View {
             return
         }
         
-        let asset = AVAsset(url: videoURL)
+        let asset = AVURLAsset(url: videoURL)
         let newItem = AVPlayerItem(asset: asset)
         
         // Replace player item
