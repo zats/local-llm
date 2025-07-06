@@ -23,6 +23,13 @@
 			remoteGlobalIDString = 5C2E354F2E16987100CB3A24;
 			remoteInfo = SafariExtension;
 		};
+		5C8B12402E1ABC1234567896 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5CFFE6842E1303FB005BAD3F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5C8B12362E1ABC1234567892;
+			remoteInfo = NativeFoundationModelsNative;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -211,6 +218,7 @@
 			);
 			dependencies = (
 				5C2E35672E16987100CB3A24 /* PBXTargetDependency */,
+				5C8B12412E1ABC1234567897 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5CFFE68E2E1303FB005BAD3F /* NativeFoundationModels */,
@@ -300,10 +308,11 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Resources/nativefoundationmodels-native",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\n# Only run on macOS\nif [ \"$PLATFORM_NAME\" != \"macosx\" ]; then\n    echo \"Skipping native binary bundling for platform: $PLATFORM_NAME\"\n    exit 0\nfi\n\n# Build the native binary if it doesn't exist\nSOURCE_BINARY=\"${BUILT_PRODUCTS_DIR}/NativeFoundationModelsNative\"\nif [ ! -e \"$SOURCE_BINARY\" ]; then\n    echo \"Building NativeFoundationModelsNative target...\"\n    xcodebuild -project \"${PROJECT_FILE_PATH}\" -target \"NativeFoundationModelsNative\" -configuration \"${CONFIGURATION}\" -arch \"${ARCHS}\" ONLY_ACTIVE_ARCH=NO build\nfi\n\n# Copy the native binary into the app bundle\necho \"Creating Resources directory...\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources\"\n\nDEST_BINARY=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources/nativefoundationmodels-native\"\n\nif [ -e \"$SOURCE_BINARY\" ]; then\n    echo \"Copying binary from: $SOURCE_BINARY\"\n    echo \"To: $DEST_BINARY\"\n    \n    # Use -L to follow symbolic links and -f to force overwrite\n    cp -Lf \"$SOURCE_BINARY\" \"$DEST_BINARY\"\n    \n    # Ensure the binary is executable\n    chmod +x \"$DEST_BINARY\"\n    \n    # Sign the binary with Hardened Runtime if we have a development team\n    if [ -n \"$DEVELOPMENT_TEAM\" ] && [ \"$CONFIGURATION\" = \"Release\" ]; then\n        echo \"Signing binary with Hardened Runtime...\"\n        codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --options runtime \"$DEST_BINARY\"\n        echo \"Binary signed successfully\"\n    fi\n    \n    echo \"Binary copied and made executable successfully\"\nelse\n    echo \"Error: Source binary not found at $SOURCE_BINARY\"\n    exit 1\nfi\n";
+			shellScript = "set -e\n\n# Only run on macOS\nif [ \"$PLATFORM_NAME\" != \"macosx\" ]; then\n    echo \"Skipping native binary bundling for platform: $PLATFORM_NAME\"\n    exit 0\nfi\n\n# The native binary should already be built due to target dependency\nSOURCE_BINARY=\"${BUILT_PRODUCTS_DIR}/NativeFoundationModelsNative\"\n\n# Copy the native binary into the app bundle\necho \"Creating Resources directory...\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources\"\n\nDEST_BINARY=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources/nativefoundationmodels-native\"\n\nif [ -e \"$SOURCE_BINARY\" ]; then\n    echo \"Copying binary from: $SOURCE_BINARY\"\n    echo \"To: $DEST_BINARY\"\n    \n    # Use -L to follow symbolic links and -f to force overwrite\n    cp -Lf \"$SOURCE_BINARY\" \"$DEST_BINARY\"\n    \n    # Ensure the binary is executable\n    chmod +x \"$DEST_BINARY\"\n    \n    # Sign the binary with Hardened Runtime if we have a development team\n    if [ -n \"$DEVELOPMENT_TEAM\" ] && [ \"$CONFIGURATION\" = \"Release\" ]; then\n        echo \"Signing binary with Hardened Runtime...\"\n        codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --options runtime \"$DEST_BINARY\"\n        echo \"Binary signed successfully\"\n    fi\n    \n    echo \"Binary copied and made executable successfully\"\nelse\n    echo \"Error: Source binary not found at $SOURCE_BINARY\"\n    echo \"Available files in BUILT_PRODUCTS_DIR:\"\n    ls -la \"${BUILT_PRODUCTS_DIR}/\" || true\n    exit 1\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -341,6 +350,11 @@
 			target = 5C2E354F2E16987100CB3A24 /* SafariExtension */;
 			targetProxy = 5C2E35662E16987100CB3A24 /* PBXContainerItemProxy */;
 		};
+		5C8B12412E1ABC1234567897 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5C8B12362E1ABC1234567892 /* NativeFoundationModelsNative */;
+			targetProxy = 5C8B12402E1ABC1234567896 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -349,7 +363,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 27;
 				DEVELOPMENT_TEAM = 5KE88HWMKJ;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -389,7 +403,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 27;
 				DEVELOPMENT_TEAM = 5KE88HWMKJ;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -592,7 +606,7 @@
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 27;
 				DEVELOPMENT_TEAM = 5KE88HWMKJ;
 				"ENABLE_APP_SANDBOX[sdk=iphoneos*]" = YES;
 				"ENABLE_APP_SANDBOX[sdk=iphonesimulator*]" = YES;
@@ -643,7 +657,7 @@
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 27;
 				DEVELOPMENT_TEAM = 5KE88HWMKJ;
 				"ENABLE_APP_SANDBOX[sdk=iphoneos*]" = YES;
 				"ENABLE_APP_SANDBOX[sdk=iphonesimulator*]" = YES;
