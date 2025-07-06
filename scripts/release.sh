@@ -145,22 +145,22 @@ fi
 log "Extracting application from archive..."
 
 # The archive contains the app in Products/Applications/
-ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/LocalLLM.app"
+ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/llllm.app"
 if [[ -d "$ARCHIVE_APP_PATH" ]]; then
     log "Copying app from archive..."
-    cp -R "$ARCHIVE_APP_PATH" "$BUILD_DIR/LocalLLM.app"
+    cp -R "$ARCHIVE_APP_PATH" "$BUILD_DIR/llllm.app"
 else
     error "App not found in archive at: $ARCHIVE_APP_PATH"
 fi
 
 # Check if app was copied successfully
-if [[ ! -d "$BUILD_DIR/LocalLLM.app" ]]; then
+if [[ ! -d "$BUILD_DIR/llllm.app" ]]; then
     error "App extraction failed."
 fi
 
 # Re-sign Sparkle framework components with Developer ID
 log "Re-signing Sparkle framework components..."
-SPARKLE_FRAMEWORK="$BUILD_DIR/LocalLLM.app/Contents/Frameworks/Sparkle.framework"
+SPARKLE_FRAMEWORK="$BUILD_DIR/llllm.app/Contents/Frameworks/Sparkle.framework"
 
 if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
     # Sign all Sparkle binaries
@@ -220,7 +220,7 @@ log "Application exported successfully with proper code signatures"
 log "Verifying code signatures..."
 
 # Verify Safari extension signature
-SAFARI_EXTENSION_PATH="$BUILD_DIR/LocalLLM.app/Contents/PlugIns/SafariExtension.appex"
+SAFARI_EXTENSION_PATH="$BUILD_DIR/llllm.app/Contents/PlugIns/SafariExtension.appex"
 if [[ -d "$SAFARI_EXTENSION_PATH" ]]; then
     if codesign --verify --strict "$SAFARI_EXTENSION_PATH"; then
         log "Safari extension signature verified"
@@ -235,10 +235,10 @@ else
 fi
 
 # Verify main app signature
-if codesign --verify --deep --strict "$BUILD_DIR/LocalLLM.app"; then
+if codesign --verify --deep --strict "$BUILD_DIR/llllm.app"; then
     log "Main app signature verified successfully"
     # Check architecture
-    MAIN_ARCH=$(lipo -info "$BUILD_DIR/LocalLLM.app/Contents/MacOS/LocalLLM" 2>/dev/null | grep -o 'x86_64\|arm64' | sort -u | tr '\n' ' ')
+    MAIN_ARCH=$(lipo -info "$BUILD_DIR/llllm.app/Contents/MacOS/LocalLLM" 2>/dev/null | grep -o 'x86_64\|arm64' | sort -u | tr '\n' ' ')
     log "Main app architectures: $MAIN_ARCH"
 else
     warn "Main app signature verification failed"
@@ -247,7 +247,7 @@ fi
 # Notarize app (requires Apple ID credentials)
 log "Creating ZIP for distribution..."
 cd "$BUILD_DIR"
-ditto -c -k --keepParent "LocalLLM.app" "LocalLLM.zip"
+ditto -c -k --keepParent "llllm.app" "LocalLLM.zip"
 
 # Check for notarization credentials and prompt if needed (local only)
 if [[ -z "$CI" && (-z "$APPLE_ID" || -z "$APPLE_TEAM_ID" || -z "$APPLE_APP_PASSWORD") ]]; then
@@ -293,11 +293,11 @@ if [[ -n $APPLE_ID && -n $APPLE_TEAM_ID && -n $APPLE_APP_PASSWORD ]]; then
         # Check if notarization was successful
         if echo "$SUBMIT_OUTPUT" | grep -q '"status":"Accepted"'; then
             log "Notarization successful! Stapling ticket..."
-            xcrun stapler staple "LocalLLM.app"
+            xcrun stapler staple "llllm.app"
             
             # Re-create ZIP with stapled app
             rm "LocalLLM.zip"
-            ditto -c -k --keepParent "LocalLLM.app" "LocalLLM.zip"
+            ditto -c -k --keepParent "llllm.app" "LocalLLM.zip"
         else
             error "Notarization failed or invalid. Check the logs:"
             # Get detailed logs if submission ID is available

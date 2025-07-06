@@ -1,30 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LocalLLM - Local-First Chat Completion API</title>
+    <title>llllm - Local-First Chat Completion API</title>
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://zats.github.io/local-llm/">
-    <meta property="og:title" content="LocalLLM - Local-First Chat Completion API">
+    <meta property="og:url" content="lllm.zats.io/">
+    <meta property="og:title" content="llllm - Local-First Chat Completion API">
     <meta property="og:description" content="OpenAI-compatible interface for on-device language models with zero latency, complete privacy, and native performance.">
-    <meta property="og:image" content="https://zats.github.io/local-llm/thumbnail.png">
+    <meta property="og:image" content="lllm.zats.io/thumbnail.png">
     <meta property="og:image:width" content="985">
     <meta property="og:image:height" content="628">
-    <meta property="og:image:alt" content="LocalLLM - Brain icon with lightning bolt representing local AI integration">
+    <meta property="og:image:alt" content="llllm - Brain icon with lightning bolt representing local AI integration">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://zats.github.io/local-llm/">
-    <meta property="twitter:title" content="LocalLLM - Local-First Chat Completion API">
+    <meta property="twitter:url" content="lllm.zats.io/">
+    <meta property="twitter:title" content="llllm - Local-First Chat Completion API">
     <meta property="twitter:description" content="OpenAI-compatible interface for on-device language models with zero latency, complete privacy, and native performance.">
-    <meta property="twitter:image" content="https://zats.github.io/local-llm/thumbnail.png">
-    <meta property="twitter:image:alt" content="LocalLLM - Brain icon with lightning bolt representing local AI integration">
+    <meta property="twitter:image" content="lllm.zats.io/thumbnail.png">
+    <meta property="twitter:image:alt" content="llllm - Brain icon with lightning bolt representing local AI integration">
 
     <!-- General Meta Tags -->
     <meta name="description" content="OpenAI-compatible interface for on-device language models with zero latency, complete privacy, and native performance.">
     <meta name="keywords" content="AI, machine learning, native apps, web integration, privacy, local AI, language models, macOS, OpenAI compatible">
-    <meta name="author" content="LocalLLM"
+    <meta name="author" content="llllm"
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -549,15 +549,15 @@
 <body>
     <div class="hero">
         <div class="container">
-            <h1>LocalLLM</h1>
-            <img class="logo" src="nfm.png" alt="LocalLLM Logo" id="logoImage">
+            <h1>l<span style="opacity: 0.6">oca</span>lllm</h1>
+            <img class="logo" src="nfm.png" alt="llllm Logo" id="logoImage">
             <p class="tagline">Local-First Chat Completion API</p>
             <p class="subtitle">
                 OpenAI-compatible interface for on-device language models with zero latency, 
                 complete privacy, and native performance. Swap endpoints, not payloads.
             </p>
             <div style="margin-top: 40px;">
-                <a href="https://github.com/zats/local-llm/releases/latest/download/LocalLLM.zip" 
+                <a href="https://github.com/zats/local-llm/releases/latest/download/llllm.zip" 
                    style="display: inline-block; background: white; color: #000; padding: 18px 40px; border-radius: 50px; 
                           text-decoration: none; font-weight: 600; font-size: 1.1em; transition: all 0.3s ease;
                           box-shadow: 0 4px 20px rgba(0,0,0,0.2);"
@@ -576,7 +576,7 @@
     <div class="main-content">
         <div class="container">
             <div class="section">
-                <h2>Why LocalLLM?</h2>
+                <h2>Why llllm?</h2>
                 <div class="features-grid">
                     <div class="feature-card">
                         <span class="feature-icon">🔄</span>
@@ -613,7 +613,7 @@
 
             <div class="demo-section">
                 <h3>🧪 Live Demo</h3>
-                <p>Experience LocalLLM in action. Test the OpenAI-compatible API and see real-time responses.</p>
+                <p>Experience llllm in action. Test the OpenAI-compatible API and see real-time responses.</p>
                 
                 <div class="demo-area">
                     <div class="button-group">
@@ -643,7 +643,7 @@
                     <div class="code-block" data-title="Check Availability">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
                         <pre><code class="language-javascript">if (await window.localLLM?.available()) {
-  console.log('LocalLLM ready! 🚀');
+  console.log('llllm ready! 🚀');
 } else {
   console.log('Local LLM unavailable, using cloud');
 }</code></pre></div>
@@ -722,7 +722,7 @@ for await (const chunk of stream) {
             
             <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; margin-top: 30px;">
                 <p style="color: rgba(255,255,255,0.7); font-size: 0.9em; margin: 0;">
-                    © 2025 LocalLLM. Built with 🖤 for the developer community.
+                    © 2025 llllm. Built with 🖤 for the developer community.
                 </p>
             </div>
         </div>
@@ -746,18 +746,16 @@ for await (const chunk of stream) {
         }
 
         async function testAvailability() {
-            log('🔍 Testing LocalLLM connection...', 'info');
-            setButtonStatus('availability-status', 'loading');
-            
+            setButtonStatus('availability-status', 'loading');            
             if (!window.localLLM) {
-                log('❌ LocalLLM not detected. Please install and configure the extension.', 'error');
+                log('❌ llllm not detected. Please install and configure the extension.', 'error');
                 setButtonStatus('availability-status', 'error');
                 return;
             }
             
             try {
                 const available = await window.localLLM.available();
-                log(`✅ LocalLLM availability: ${available}`, available ? 'success' : 'info');
+                log(`✅ llllm availability: ${available}`, available ? 'success' : 'info');
                 
                 const result = await window.localLLM.checkAvailability();
                 log(`✅ Detailed status: ${JSON.stringify(result)}`, 'success');
@@ -769,11 +767,11 @@ for await (const chunk of stream) {
         }
 
         async function testCompletion() {
-            log('💡 Generating content with LocalLLM...', 'info');
+            log('💡 Generating content with llllm...', 'info');
             setButtonStatus('completion-status', 'loading');
             
             if (!window.localLLM) {
-                log('❌ LocalLLM not available. Please configure the extension first.', 'error');
+                log('❌ llllm not available. Please configure the extension first.', 'error');
                 setButtonStatus('completion-status', 'error');
                 return;
             }
@@ -801,7 +799,7 @@ for await (const chunk of stream) {
             setButtonStatus('streaming-status', 'loading');
             
             if (!window.localLLM) {
-                log('❌ LocalLLM not available. Please configure the extension first.', 'error');
+                log('❌ llllm not available. Please configure the extension first.', 'error');
                 setButtonStatus('streaming-status', 'error');
                 return;
             }
@@ -843,14 +841,14 @@ for await (const chunk of stream) {
             }
         }
 
-        // Auto-detect LocalLLM on page load
+        // Auto-detect llllm on page load
         window.addEventListener('load', async () => {
             if (window.localLLM) {
                 const available = await window.localLLM.available();
                 log(`🔍 Local model availability: ${available}`, available ? 'success' : 'info');
                 setButtonStatus('availability-status', available ? 'success' : 'error');
             } else {
-                log('ℹ️  LocalLLM not detected. Install the extension to begin.', 'info');
+                log('ℹ️  llllm not detected. Install the extension to begin.', 'info');
                 setButtonStatus('availability-status', 'error');
             }
         });
