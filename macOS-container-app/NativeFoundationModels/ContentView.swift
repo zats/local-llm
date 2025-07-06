@@ -535,6 +535,7 @@ struct ContentView: View {
     private func checkSafariExtensionStatus() {
         checkingExtension = true
         
+        #if os(macOS)
         SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: "com.zats.NativeFoundationModels.SafariExtension") { state, error in
             DispatchQueue.main.async {
                 self.checkingExtension = false
@@ -545,9 +546,18 @@ struct ContentView: View {
                 }
             }
         }
+        #else
+        // On iOS, there's no API to check extension status
+        // Users must manually enable extensions in Safari Settings
+        DispatchQueue.main.async {
+            self.checkingExtension = false
+            self.safariExtensionEnabled = false // Unknown status - user needs to check manually
+        }
+        #endif
     }
     
     private func openSafariExtensionPreferences() {
+        #if os(macOS)
         SFSafariApplication.showPreferencesForExtension(withIdentifier: "com.zats.NativeFoundationModels.SafariExtension") { error in
             if let error = error {
                 print("Error opening Safari extension preferences: \(error)")
@@ -557,6 +567,12 @@ struct ContentView: View {
                 self.checkSafariExtensionStatus()
             }
         }
+        #else
+        // On iOS, direct user to Settings app
+        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(settingsURL)
+        }
+        #endif
     }
 }
 
