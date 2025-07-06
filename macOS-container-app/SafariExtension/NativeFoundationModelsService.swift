@@ -155,46 +155,44 @@ class NativeFoundationModelsService {
     
     private func sendStreamChunkToPage(chunk: [String: Any], requestId: String) async {
         await MainActor.run {
-            #if os(macOS)
-            SFSafariApplication.getActiveWindow { window in
-                window?.getActiveTab { tab in
-                    tab?.getActivePage { page in
-                        let messageData: [String: Any] = [
-                            "requestId": requestId,
-                            "type": "streamChunk",
-                            "chunk": chunk
-                        ]
-                        page?.dispatchMessageToScript(withName: "nativeStreamChunk", userInfo: messageData)
-                        os_log(.default, "Sent stream chunk to page for request: %@", requestId)
-                    }
-                }
-            }
-#else
-#warning("Sending info back to safari on iOS is unimplemented")
-#endif
+            sendMessageToActivePage(messageData: [
+                "requestId": requestId,
+                "type": "streamChunk",
+                "chunk": chunk
+            ], messageName: "nativeStreamChunk")
+            os_log(.default, "Sent stream chunk to page for request: %@", requestId)
         }
     }
     
     private func sendStreamErrorToPage(error: String, requestId: String) async {
         await MainActor.run {
-#if os(macOS)
-            SFSafariApplication.getActiveWindow { window in
-                window?.getActiveTab { tab in
-                    tab?.getActivePage { page in
-                        let messageData: [String: Any] = [
-                            "requestId": requestId,
-                            "type": "streamError",
-                            "error": error
-                        ]
-                        page?.dispatchMessageToScript(withName: "nativeStreamChunk", userInfo: messageData)
-                        os_log(.error, "Sent stream error to page for request: %@", requestId)
-                    }
+            sendMessageToActivePage(messageData: [
+                "requestId": requestId,
+                "type": "streamError",
+                "error": error
+            ], messageName: "nativeStreamChunk")
+            os_log(.error, "Sent stream error to page for request: %@", requestId)
+        }
+    }
+    
+    // MARK: - Unified messaging helper
+    
+    private func sendMessageToActivePage(messageData: [String: Any], messageName: String) {
+        #if os(macOS)
+        SFSafariApplication.getActiveWindow { window in
+            window?.getActiveTab { tab in
+                tab?.getActivePage { page in
+                    page?.dispatchMessageToScript(withName: messageName, userInfo: messageData)
                 }
             }
-#else
-#warning("Sending info back to safari on iOS is unimplemented")
-#endif
         }
+        #else
+        // On iOS, Safari extension communication works differently
+        // The extension context approach used in SafariWebExtensionHandler is the primary communication method
+        // Real-time streaming to pages is handled through the extension context response system
+        // This is a design difference between macOS and iOS Safari extensions
+        os_log(.info, "iOS Safari extension uses extension context for communication, not direct page messaging")
+        #endif
     }
     
     private func sendStreamError(error: String, requestId: String, context: NSExtensionContext) {

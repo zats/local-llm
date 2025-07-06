@@ -449,9 +449,167 @@ extension View {
 
 #else
 struct ContentView: View {
+    @State private var heartbeat = false
+    @State private var safariExtensionEnabled = false
+    @State private var checkingExtension = true
+    
     var body: some View {
-        GradientBackground()
-            .ignoresSafeArea()
+        ZStack {
+            GradientBackground()
+                .ignoresSafeArea()
+            
+            VStack(spacing: 40) {
+                // Top spacing for status bar
+                Spacer()
+                    .frame(height: 20)
+                
+                // Main brain logo
+                Image(.brain)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 200, height: 200)
+                    .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
+                    .scaleEffect(heartbeat ? 1.02 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 1.2)
+                        .repeatForever(autoreverses: true),
+                        value: heartbeat
+                    )
+                
+                // Title and description
+                VStack(spacing: 16) {
+                    Text("LocalLLM")
+                        .font(.largeTitle.bold())
+                        .foregroundColor(.white)
+                    
+                    Text("On-device AI for Safari")
+                        .font(.title2)
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
+                
+                // Safari extension status
+                VStack(spacing: 20) {
+                    if checkingExtension {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            
+                            Text("Checking Safari extension...")
+                                .font(.callout)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                    } else {
+                        SafariExtensionStatusView(
+                            isEnabled: safariExtensionEnabled,
+                            onEnablePressed: {
+                                openSafariExtensionPreferences()
+                            }
+                        )
+                    }
+                }
+                
+                Spacer()
+                
+                // Bottom instruction text
+                Text("Enable the Safari extension to start using AI features on websites")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 20)
+            }
+            .padding(.horizontal, 32)
+        }
+        .onAppear {
+            heartbeat = true
+            checkSafariExtensionStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Re-check when app becomes active (user might have changed extension settings)
+            checkSafariExtensionStatus()
+        }
+    }
+    
+    private func checkSafariExtensionStatus() {
+        checkingExtension = true
+        
+        SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: "com.zats.NativeFoundationModels.SafariExtension") { state, error in
+            DispatchQueue.main.async {
+                self.checkingExtension = false
+                if let state = state {
+                    self.safariExtensionEnabled = state.isEnabled
+                } else {
+                    self.safariExtensionEnabled = false
+                }
+            }
+        }
+    }
+    
+    private func openSafariExtensionPreferences() {
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: "com.zats.NativeFoundationModels.SafariExtension") { error in
+            if let error = error {
+                print("Error opening Safari extension preferences: \(error)")
+            }
+            // Re-check status after a delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.checkSafariExtensionStatus()
+            }
+        }
+    }
+}
+
+struct SafariExtensionStatusView: View {
+    let isEnabled: Bool
+    let onEnablePressed: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Status indicator
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(isEnabled ? Color.green : Color.orange)
+                    .frame(width: 12, height: 12)
+                
+                Text(isEnabled ? "Safari Extension Enabled" : "Safari Extension Disabled")
+                    .font(.callout.weight(.medium))
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            )
+            
+            // Enable button (only show if not enabled)
+            if !isEnabled {
+                Button(action: onEnablePressed) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "safari")
+                        Text("Enable in Safari Settings")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(hex: "667eea"), Color(hex: "764ba2")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.2), radius: 4, y: 2)
+                }
+            }
+        }
     }
 }
 #endif

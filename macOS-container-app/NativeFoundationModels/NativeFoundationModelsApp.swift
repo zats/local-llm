@@ -65,6 +65,8 @@ struct NativeFoundationModelsApp: App {
                 CheckForUpdatesView(updater: appDelegate.updaterController.updater)
             }
         }
+#else
+        .windowResizability(.contentSize)
 #endif
     }
     
