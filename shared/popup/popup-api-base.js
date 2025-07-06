@@ -52,37 +52,69 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
   async sendMessage(command, payload = {}) {
     const requestId = this.generateRequestId();
     
+    console.log(`[PopupAPI-DEBUG] Starting sendMessage - command: ${command}, requestId: ${requestId}`);
+    console.log(`[PopupAPI-DEBUG] Payload:`, payload);
+    console.log(`[PopupAPI-DEBUG] Browser: ${this.config.browser}`);
+    
     try {
       // Use browser-specific messaging API
       const runtimeAPI = this.config.browser === 'safari' ? browser.runtime : chrome.runtime;
       
-      const response = await runtimeAPI.sendMessage({
+      const messageToSend = {
         command: command,  // Use 'command' not 'type' to match background script expectations
         requestId,
         payload
-      });
+      };
+      
+      console.log(`[PopupAPI-DEBUG] Sending message:`, messageToSend);
+      
+      const response = await runtimeAPI.sendMessage(messageToSend);
+      
+      console.log(`[PopupAPI-DEBUG] Received response:`, response);
+      console.log(`[PopupAPI-DEBUG] Response type: ${typeof response}, has error: ${!!response?.error}`);
 
       // Handle successful responses - Safari returns different response types
       if (response && !response.error) {
+        console.log(`[PopupAPI-DEBUG] Processing successful response, response.type: ${response.type}`);
+        
         if (response.type === 'availabilityResponse') {
+          console.log(`[PopupAPI-DEBUG] Returning availability payload:`, response.payload);
           return response.payload;          
         } else if (response.type === 'completionResponse') {
+          console.log(`[PopupAPI-DEBUG] Returning completion payload:`, response.payload);
           return response.payload;
         } else if (response.success) {
+          console.log(`[PopupAPI-DEBUG] Returning success data:`, response.data);
           return response.data;
         } else if (response.payload) {
+          console.log(`[PopupAPI-DEBUG] Returning direct payload:`, response.payload);
           // Direct payload response
           return response.payload;
         } else {
+          console.log(`[PopupAPI-DEBUG] Returning full response:`, response);
           // Fallback to full response
           return response;
         }
       } else {
-        console.error(response)
-        throw new Error(response?.error || 'Unknown error');
+        console.error(`[PopupAPI-DEBUG] Error response received:`, response);
+        console.log(`[PopupAPI-DEBUG] response.error:`, response?.error);
+        console.log(`[PopupAPI-DEBUG] response.payload:`, response?.payload);
+        console.log(`[PopupAPI-DEBUG] response.payload.error:`, response?.payload?.error);
+        
+        const errorMessage = response?.error || response?.payload?.error || 'Unknown error';
+        const errorDetails = response?.payload?.error || response?.error;
+        
+        console.log(`[PopupAPI-DEBUG] Extracted error message:`, errorMessage);
+        console.log(`[PopupAPI-DEBUG] Extracted error details:`, errorDetails);
+        
+        const error = new Error(errorMessage);
+        error.cause = errorDetails;
+        throw error;
       }
     } catch (error) {
-      console.error('Extension message error:', error);
+      console.error('[PopupAPI-DEBUG] Exception in sendMessage:', error);
+      console.log(`[PopupAPI-DEBUG] Error message: ${error.message}`);
+      console.log(`[PopupAPI-DEBUG] Error cause:`, error.cause);
       throw error;
     }
   }
@@ -91,23 +123,40 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
   async* _streamCompletion(messages, options = {}) {
     const requestId = this.generateRequestId();
     
-    // Safari doesn't support persistent connections, so we fall back to regular completion
+    // Safari doesn't support persistent connections, so we use batched streaming
     if (this.config.browser === 'safari') {
-      // For Safari, convert streaming to regular completion and simulate streaming
+      // For Safari, request streaming which will return all chunks at once
       try {
         const response = await this.sendMessage('chatCompletion', { 
           messages, 
           model: options.model || 'localLLM-default',
-          stream: false,
+          stream: true,  // Request streaming to get chunks
           ...options 
         });
         
-        // Convert single response to OpenAI chunk format
-        const openAIChunk = this._formatAsOpenAIChunk(response, options.model);
-        yield openAIChunk;
+        console.log('[PopupAPI-DEBUG] Safari streaming response:', response);
+        
+        // Check if we got a streamResponse with chunks
+        if (response && response.data && response.data.chunks) {
+          // Yield each chunk from the batched response
+          for (const chunk of response.data.chunks) {
+            yield chunk;
+          }
+        } else if (response && response.chunks) {
+          // Direct chunks array
+          for (const chunk of response.chunks) {
+            yield chunk;
+          }
+        } else {
+          // Fallback: Convert single response to OpenAI chunk format
+          const openAIChunk = this._formatAsOpenAIChunk(response, options.model);
+          yield openAIChunk;
+        }
         
       } catch (error) {
-        throw { error: { message: error.message, type: 'stream_error', code: 'stream_failed' } };
+        const streamError = new Error(error.message);
+        streamError.cause = error.cause || error;
+        throw streamError;
       }
       return;
     }
@@ -123,15 +172,25 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
     port.onMessage.addListener((message) => {
       if (message.requestId === requestId) {
         if (message.error) {
-          streamError = { error: { message: message.error, type: 'stream_error', code: 'stream_failed' } };
+          const error = new Error(message.error);
+          error.cause = message.errorDetails || message.error;
+          streamError = error;
           streamComplete = true;
         } else if (message.done) {
           streamComplete = true;
         } else if (message.chunk) {
           const responseData = message.chunk.payload || message.chunk.data || message.chunk;
           
+          // Handle error responses in chunk format
+          if (responseData.type === 'error' || responseData.error) {
+            const errorMessage = responseData.error || responseData.payload?.error || responseData.payload?.message || 'Unknown error';
+            const error = new Error(errorMessage);
+            error.cause = responseData.payload?.error || responseData.error || responseData;
+            streamError = error;
+            streamComplete = true;
+          }
           // Convert to OpenAI format chunks using parent class methods
-          if (responseData.object === 'chat.completion.chunk') {
+          else if (responseData.object === 'chat.completion.chunk') {
             chunks.push(responseData);
           } else if (responseData.object === 'chat.completion') {
             const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);

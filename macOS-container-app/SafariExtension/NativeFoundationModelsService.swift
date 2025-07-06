@@ -168,50 +168,62 @@ class NativeFoundationModelsService {
                 let session = try LanguageModelSession(systemPrompt: systemPrompt)
                 var streamContext = APIResponseFormatter.StreamContext()
                 
+                // Collect all chunks like the getCompletionStream method does
+                var chunks: [[String: Any]] = []
+                
+                // Add initial role chunk
+                let roleChunk = APIResponseFormatter.streamChunk(
+                    id: streamContext.id,
+                    role: "assistant",
+                    timestamp: streamContext.timestamp
+                )
+                chunks.append(roleChunk)
+                
                 for try await accumulatedContent in session.streamResponseDirect(to: prompt, options: generationOptions) {
-                    let deltaContent = streamContext.processAccumulatedContent(accumulatedContent)
-                    
-                    // Send role chunk on first message
-                    if streamContext.isFirstChunk {
-                        await sendStreamChunkToPage(
-                            chunk: APIResponseFormatter.streamChunk(
-                                id: streamContext.id,
-                                role: "assistant",
-                                timestamp: streamContext.timestamp
-                            ),
-                            requestId: requestId
-                        )
-                        streamContext.isFirstChunk = false
+                    // Check if task was cancelled
+                    if Task.isCancelled {
+                        break
                     }
                     
-                    // Send content chunk (if we have content)
+                    let deltaContent = streamContext.processAccumulatedContent(accumulatedContent)
+                    
+                    // Add content chunk (if we have content)
                     if !deltaContent.isEmpty {
-                        await sendStreamChunkToPage(
-                            chunk: APIResponseFormatter.streamChunk(
-                                id: streamContext.id,
-                                content: deltaContent,
-                                timestamp: streamContext.timestamp
-                            ),
-                            requestId: requestId
+                        let contentChunk = APIResponseFormatter.streamChunk(
+                            id: streamContext.id,
+                            content: deltaContent,
+                            timestamp: streamContext.timestamp
                         )
+                        chunks.append(contentChunk)
                     }
                 }
                 
-                // Send final chunk
-                await sendStreamChunkToPage(
-                    chunk: APIResponseFormatter.streamChunk(
+                // Add final chunk
+                if !Task.isCancelled {
+                    let finalChunk = APIResponseFormatter.streamChunk(
                         id: streamContext.id,
                         isLast: true,
                         timestamp: streamContext.timestamp
-                    ),
-                    requestId: requestId
-                )
+                    )
+                    chunks.append(finalChunk)
+                    
+                    // Send complete streaming response as a single message
+                    sendCompleteStreamResponse(
+                        chunks: chunks,
+                        fullResponse: streamContext.previousContent,
+                        prompt: prompt,
+                        id: streamContext.id,
+                        timestamp: streamContext.timestamp,
+                        requestId: requestId,
+                        context: context
+                    )
+                }
                 
                 os_log(.default, "Completed chat completion stream for request: %@", requestId)
                 
             } catch {
                 os_log(.error, "Error in chat completion stream: %@", error.localizedDescription)
-                await sendStreamErrorToPage(error: error.localizedDescription, requestId: requestId)
+                sendStreamError(error: error.localizedDescription, requestId: requestId, context: context)
             }
         }
         

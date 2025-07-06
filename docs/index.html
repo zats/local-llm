@@ -799,6 +799,9 @@ const result = await window.localLLM.chat.completions.create({
                 setButtonStatus('completion-status', 'success');
             } catch (error) {
                 log(`❌ Generation failed: ${error.message}`, 'error');
+                if (error.cause) {
+                    log(`   📋 Error details: ${JSON.stringify(error.cause, null, 2)}`, 'error');
+                }
                 setButtonStatus('completion-status', 'error');
             }
         }
@@ -845,6 +848,9 @@ const result = await window.localLLM.chat.completions.create({
                 setButtonStatus('streaming-status', 'success');
             } catch (error) {
                 log(`❌ Streaming failed: ${error.message}`, 'error');
+                if (error.cause) {
+                    log(`   📋 Error details: ${JSON.stringify(error.cause, null, 2)}`, 'error');
+                }
                 setButtonStatus('streaming-status', 'error');
             }
         }

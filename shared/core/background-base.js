@@ -100,8 +100,9 @@ class UnifiedBackground {
       // Set up streaming response handler
       this.requestHandlers.set(requestId, {
         sendResponse: (response) => {
-          if (response.error) {
-            port.postMessage({ requestId, error: response.error });
+          if (response.error || response.type === 'error') {
+            const errorMessage = response.error || response.payload?.error || response.payload?.message || 'Unknown error';
+            port.postMessage({ requestId, error: errorMessage });
           } else {
             port.postMessage({ requestId, chunk: response });
           }
@@ -139,7 +140,11 @@ class UnifiedBackground {
   }
   
   handleNativeFoundationModelsRequest(message, sender, sendResponse) {
-    console.log('[NFM-BG] Handling native foundation models request:', message);
+    console.log('[NFM-BG-DEBUG] ===== HANDLING EXTENSION REQUEST =====');
+    console.log('[NFM-BG-DEBUG] Full message:', JSON.stringify(message, null, 2));
+    console.log('[NFM-BG-DEBUG] Sender:', sender);
+    console.log('[NFM-BG-DEBUG] sendResponse type:', typeof sendResponse);
+    
     // Normalize the request format
     let nativeRequest;
     
@@ -256,21 +261,34 @@ class UnifiedBackground {
   }
   
   handleNativeMessage(message) {
-    console.log('[NFM-BG-Chrome] Received message from native app:', message);
+    console.log('[NFM-BG-DEBUG] ===== NATIVE MESSAGE RECEIVED =====');
+    console.log('[NFM-BG-DEBUG] Full message:', JSON.stringify(message, null, 2));
+    console.log('[NFM-BG-DEBUG] Message type:', typeof message);
+    console.log('[NFM-BG-DEBUG] Message keys:', Object.keys(message));
+    console.log('[NFM-BG-DEBUG] requestId:', message.requestId);
+    console.log('[NFM-BG-DEBUG] type:', message.type);
+    console.log('[NFM-BG-DEBUG] payload:', message.payload);
+    console.log('[NFM-BG-DEBUG] error:', message.error);
+    
     // Handle response from native app (Chrome only)
     const { requestId, type } = message;
     if (requestId && this.requestHandlers.has(requestId)) {
-      console.log('[NFM-BG-Chrome] Found request handler for requestId:', requestId, 'type:', type);
+      console.log('[NFM-BG-DEBUG] Found request handler for requestId:', requestId, 'type:', type);
       const handlerInfo = this.requestHandlers.get(requestId);
       const sendResponse = typeof handlerInfo === 'function' ? handlerInfo : handlerInfo.sendResponse;
       const sender = handlerInfo.sender;
       const isStreaming = handlerInfo.isStreaming;
-      console.log('[NFM-BG-Chrome] Handler info - isStreaming:', isStreaming, 'hasSender:', !!sender);
+      console.log('[NFM-BG-DEBUG] Handler info - isStreaming:', isStreaming, 'hasSender:', !!sender);
+      console.log('[NFM-BG-DEBUG] Handler info full:', handlerInfo);
       // For streaming via port (popup), send directly to port
       if (isStreaming && handlerInfo.port) {
         console.log('[NFM-BG-Chrome] Sending streaming response to port');
         try {
-          if (type === 'streamEnd' || type === 'error') {
+          if (type === 'error') {
+            // Send error message
+            const errorMessage = message.payload?.error || message.payload?.message || message.error || 'Unknown error';
+            handlerInfo.port.postMessage({ requestId, error: errorMessage });
+          } else if (type === 'streamEnd') {
             // Send final chunk and mark as done
             handlerInfo.port.postMessage({ requestId, chunk: message, done: true });
           } else {
@@ -315,12 +333,16 @@ class UnifiedBackground {
           }
         }
       } else {
-        console.log('[NFM-BG-Chrome] Sending non-streaming response via sendResponse');
+        console.log('[NFM-BG-DEBUG] Sending non-streaming response via sendResponse');
+        console.log('[NFM-BG-DEBUG] About to call sendResponse with:', message);
+        console.log('[NFM-BG-DEBUG] sendResponse function:', typeof sendResponse);
         // For non-streaming, use normal sendResponse
         try {
-          sendResponse(message);
+          const result = sendResponse(message);
+          console.log('[NFM-BG-DEBUG] sendResponse result:', result);
         } catch (error) {
-          console.error('[NFM-BG-Chrome] Error calling sendResponse:', error);
+          console.error('[NFM-BG-DEBUG] Error calling sendResponse:', error);
+          console.log('[NFM-BG-DEBUG] Error details:', error.message, error.stack);
         }
       }
       
