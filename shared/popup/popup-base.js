@@ -227,38 +227,35 @@ class UnifiedPopup {
   }
 
   exportAsCode() {
-    const messages = this.chatManager.messages;
+    const messages = [...this.chatManager.messages];
     const systemPrompt = this.chatManager.systemPrompt;
     
-    const code = `// Chat export from Native Foundation Models extension
-const messages = ${JSON.stringify([
+    const currentInput = this.chatManager.messageInput?.value?.trim();
+    if (currentInput) {
+      messages.push({ role: 'user', content: currentInput });
+    }
+    
+    const allMessages = [
       { role: 'system', content: systemPrompt },
       ...messages
-    ], null, 2)};
-
-// Example usage with localLLM API
-async function runChat() {
-  if (window.localLLM && await window.localLLM.available()) {
-    const response = await window.localLLM.chat.completions.create({
-      messages: messages,
-      stream: true
-    });
+    ];
     
-    for await (const chunk of response) {
-      process.stdout.write(chunk.choices[0]?.delta?.content || '');
-    }
-  }
+    const code = `const response = await window.localLLM.chat.completions.create({
+  messages: ${JSON.stringify(allMessages, null, 2)},
+  stream: true
+});
+
+for await (const chunk of response) {
+  showMessageChunk(chunk.choices[0]?.delta?.content);
 }`;
 
-    // Copy to clipboard
     navigator.clipboard.writeText(code).then(() => {
-      // Show feedback
       const btn = document.getElementById('exportCodeBtn');
       const originalText = btn.textContent;
       btn.textContent = '✓';
       setTimeout(() => {
         btn.textContent = originalText;
-      }, 2000);
+      }, 1000);
     });
   }
 }

@@ -660,8 +660,7 @@
 console.log(result.choices[0].message.content);</code></pre></div>
                     <div class="code-block" data-title="Streaming Response">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">
-const stream = await window.localLLM.chat.completions.create({
+                        <pre><code class="language-javascript">const stream = await window.localLLM.chat.completions.create({
   messages: [
     { role: "user", content: "Write a haiku about AI" }
   ],
@@ -677,8 +676,7 @@ for await (const chunk of stream) {
 
                     <div class="code-block" data-title="Advanced Configuration">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
-                        <pre><code class="language-javascript">
-const result = await window.localLLM.chat.completions.create({
+                        <pre><code class="language-javascript">const result = await window.localLLM.chat.completions.create({
   messages: [
     { role: "user", content: "Explain quantum computing" }
   ],
@@ -758,11 +756,9 @@ const result = await window.localLLM.chat.completions.create({
             }
             
             try {
-                // Check availability using the async method
                 const available = await window.localLLM.available();
                 log(`✅ LocalLLM availability: ${available}`, available ? 'success' : 'info');
                 
-                // Also test the legacy checkAvailability method for compatibility
                 const result = await window.localLLM.checkAvailability();
                 log(`✅ Detailed status: ${JSON.stringify(result)}`, 'success');
                 setButtonStatus('availability-status', 'success');
@@ -818,7 +814,6 @@ const result = await window.localLLM.chat.completions.create({
                     stream: true
                 });
                 
-                // Create streaming display
                 const output = document.getElementById('output');
                 const timestamp = new Date().toLocaleTimeString();
                 const streamingLineId = 'streaming-' + Date.now();
@@ -891,7 +886,7 @@ const result = await window.localLLM.chat.completions.create({
                 setTimeout(() => {
                     button.textContent = originalText;
                     button.classList.remove('copied');
-                }, 2000);
+                }, 1000);
             }).catch(err => {
                 // Fallback for older browsers
                 const textArea = document.createElement('textarea');
@@ -908,7 +903,7 @@ const result = await window.localLLM.chat.completions.create({
                 setTimeout(() => {
                     button.textContent = 'Copy';
                     button.classList.remove('copied');
-                }, 2000);
+                }, 1000);
             });
         }
     </script>
