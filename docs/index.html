@@ -73,7 +73,6 @@
         }
 
         .logo {
-            margin: 20px 0;
             max-width: 500px;
             filter: 
             drop-shadow(0 4px 6px rgba(199, 32, 233, 0.459))
@@ -84,7 +83,6 @@
         .hero h1 {
             font-size: 4em;
             font-weight: 700;
-            margin-bottom: 20px;
             background: linear-gradient(45deg, #fff, #e0e6ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -549,12 +547,12 @@
 <body>
     <div class="hero">
         <div class="container">
-            <h1>l<span style="opacity: 0.3; -webkit-text-fill-color: rgba(255,255,255,0.3); background: none;">oca</span>lllm</h1>
+            <h1>l<span style="opacity: 0.3; -webkit-text-fill-color: rgba(255,255,255,0.3); background: none; user-select: none;">oca</span>lllm</h1>
             <img class="logo" src="nfm.png" alt="llllm Logo" id="logoImage">
             <p class="tagline">Local-First Chat Completion API</p>
             <p class="subtitle">
                 OpenAI-compatible interface for on-device language models with zero latency, 
-                complete privacy, and native performance. Swap endpoints, not payloads.
+                complete privacy, and native performance.
             </p>
             <div style="margin-top: 40px;">
                 <a href="https://github.com/zats/local-llm/releases/latest/download/llllm.zip" 
@@ -579,11 +577,6 @@
                 <h2>Why llllm?</h2>
                 <div class="features-grid">
                     <div class="feature-card">
-                        <span class="feature-icon">🔄</span>
-                        <h4>OpenAI Compatible</h4>
-                        <p>Drop-in replacement for OpenAI's API. Use the same request/response formats you already know and love.</p>
-                    </div>
-                    <div class="feature-card">
                         <span class="feature-icon">🏠</span>
                         <h4>Local-First Design</h4>
                         <p>When local models are available, requests execute locally. Otherwise, gracefully fall back to cloud APIs.</p>
@@ -604,9 +597,14 @@
                         <p>OpenAI-compatible streaming with chat.completion.chunk format. Perfect for responsive chat interfaces.</p>
                     </div>
                     <div class="feature-card">
-                        <span class="feature-icon">🧠</span>
-                        <h4>Single Source of Truth</h4>
-                        <p>Check await window.localLLM.available() for authoritative model availability. Simple, reliable, no duplicate checks needed.</p>
+                        <span class="feature-icon">💾</span>
+                        <h4>No Downloads Required</h4>
+                        <p>Uses models built into macOS. No need to download multi-gigabyte model files or manage local storage.</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🔄</span>
+                        <h4>OpenAI Compatible</h4>
+                        <p>Drop-in replacement for OpenAI's API. Use the same request/response formats you already know and love.</p>
                     </div>
                 </div>
             </div>
