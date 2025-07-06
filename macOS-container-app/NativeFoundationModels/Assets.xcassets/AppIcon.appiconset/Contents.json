@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "1024 1.png",
+      "filename" : "New Project.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "brain_dark.png",
+      "filename" : "brain_dark (1).png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "brain_b_w.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
