@@ -41,7 +41,8 @@ class UnifiedContentScript {
           type: this.config.messaging.responseType,
           requestId: message.requestId,
           success: true,
-          data: message.data
+          data: message.data,
+          nativeType: message.nativeType
         };        
         // Send response back to page
         window.postMessage(transformedResponse, '*');

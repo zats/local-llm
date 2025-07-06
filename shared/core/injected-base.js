@@ -151,7 +151,7 @@
           this._isAvailable = result.available;
           return result;
         } else {
-          // Fallback
+          // Fallback - handle direct response
           this._isAvailable = response.available;
           return response;
         }
@@ -227,7 +227,7 @@
       
       const messageHandler = (event) => {
         if (event.data && event.data.type === this.config.messaging.responseType && event.data.requestId === requestId) {
-          const { success, data, error } = event.data;
+          const { success, data, error, nativeType } = event.data;
           
           if (!success) {
             if (event.data.errorType === 'NATIVE_APP_NOT_FOUND' && window.nfmDownloadDialog) {
@@ -244,12 +244,29 @@
           
           const responseData = data.payload || data.data || data;
           
-          // Convert to OpenAI format chunks
-          if (responseData.object === 'chat.completion.chunk') {
+          // Handle native response types from Swift implementation
+          if (nativeType === 'streamChunk' || data.type === 'streamChunk') {
+            // This is a streaming chunk from native app
+            const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
+            chunks.push(openAIChunk);
+          } else if (nativeType === 'streamEnd' || data.type === 'streamEnd') {
+            // Stream has ended
+            streamComplete = true;
+            // Add final chunk if there's content
+            if (responseData && (responseData.content || responseData.choices)) {
+              const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
+              chunks.push(openAIChunk);
+            }
+          } else if (nativeType === 'completionResponse' || data.type === 'completionResponse') {
+            // Single, complete response - convert to streaming format
+            const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
+            chunks.push(openAIChunk);
+            streamComplete = true;
+          } else if (responseData.object === 'chat.completion.chunk') {
             // This is already a standard streaming chunk
             chunks.push(responseData);
           } else if (responseData.object === 'chat.completion') {
-            // This is a single, complete response (Safari behavior).
+            // This is a single, complete response (Safari behavior)
             // Convert to OpenAI streaming format
             const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
             chunks.push(openAIChunk);
@@ -276,11 +293,6 @@
             // Convert any other format to OpenAI chunk
             const openAIChunk = this._formatAsOpenAIChunk(responseData, options.model);
             chunks.push(openAIChunk);
-          }
-          
-          // Handle stream end signal
-          if (data.type === 'streamEnd') {
-            streamComplete = true;
           }
           
           // Wake up the generator loop
@@ -334,7 +346,7 @@
           if (event.data.type === this.config.messaging.responseType && event.data.requestId === requestId) {
             window.removeEventListener('message', messageHandler);
             
-            const { success, data, error } = event.data;
+            const { success, data, error, nativeType } = event.data;
             if (success) {
               resolve(data);
             } else {

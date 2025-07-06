@@ -38,7 +38,17 @@ var SafariConfig = {
   // Message types and protocols
   messaging: {
     requestType: 'nativeRequest',
-    responseType: 'nativeResponse'
+    responseType: 'nativeResponse',
+    // Safari expects 'action' field instead of 'command'
+    actionField: 'action',
+    // Native response types from Swift implementation
+    nativeResponseTypes: {
+      availability: 'response',
+      completion: 'response',
+      streamChunk: 'response',
+      streamEnd: 'response',
+      error: 'error'
+    }
   },
   
   // UI configuration

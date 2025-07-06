@@ -252,9 +252,9 @@ class UnifiedBackground {
   handleNativeMessage(message) {
     console.log('[NFM-BG-Chrome] Received message from native app:', message);
     // Handle response from native app (Chrome only)
-    const { requestId } = message;
+    const { requestId, type } = message;
     if (requestId && this.requestHandlers.has(requestId)) {
-      console.log('[NFM-BG-Chrome] Found request handler for requestId:', requestId);
+      console.log('[NFM-BG-Chrome] Found request handler for requestId:', requestId, 'type:', type);
       const handlerInfo = this.requestHandlers.get(requestId);
       const sendResponse = typeof handlerInfo === 'function' ? handlerInfo : handlerInfo.sendResponse;
       const sender = handlerInfo.sender;
@@ -264,7 +264,7 @@ class UnifiedBackground {
       if (isStreaming && handlerInfo.port) {
         console.log('[NFM-BG-Chrome] Sending streaming response to port');
         try {
-          if (message.type === 'streamEnd' || !message.type) {
+          if (type === 'streamEnd' || type === 'error') {
             // Send final chunk and mark as done
             handlerInfo.port.postMessage({ requestId, chunk: message, done: true });
           } else {
@@ -282,7 +282,8 @@ class UnifiedBackground {
           chrome.tabs.sendMessage(sender.tab.id, {
             type: 'streamingResponse',
             requestId: message.requestId,
-            data: message
+            data: message,
+            nativeType: type
           }).catch(error => {
             console.error('[NFM-BG-Chrome] Error sending streaming message to content script:', error);
           });
@@ -290,14 +291,15 @@ class UnifiedBackground {
           browser.tabs.sendMessage(sender.tab.id, {
             type: 'streamingResponse',
             requestId: message.requestId,
-            data: message
+            data: message,
+            nativeType: type
           }).catch(error => {
             console.error('[NFM-BG-Chrome] Error sending streaming message to content script:', error);
           });
         }
         
         // Only call sendResponse for the first chunk to establish the connection
-        if (message.type === 'streamChunk' && !handlerInfo.firstChunkSent) {
+        if (type === 'streamChunk' && !handlerInfo.firstChunkSent) {
           console.log('[NFM-BG-Chrome] Sending first chunk response via sendResponse');
           handlerInfo.firstChunkSent = true;
           try {
@@ -317,7 +319,7 @@ class UnifiedBackground {
       }
       
       // Only delete handler for non-streaming responses or when stream ends
-      if (message.type !== 'streamChunk') {
+      if (type !== 'streamChunk') {
         console.log('[NFM-BG-Chrome] Deleting request handler for requestId:', requestId);
         this.requestHandlers.delete(requestId);
       }

@@ -28,7 +28,17 @@ var ChromeConfig = {
   // Message types and protocols
   messaging: {
     requestType: 'nativefoundationmodels-request',
-    responseType: 'nativefoundationmodels-response'
+    responseType: 'nativefoundationmodels-response',
+    // Native response types from Swift implementation
+    nativeResponseTypes: {
+      availability: 'availabilityResponse',
+      completion: 'completionResponse',
+      streamChunk: 'streamChunk',
+      streamEnd: 'streamEnd',
+      error: 'error',
+      sessionStarted: 'playgroundSessionStarted',
+      sessionEnded: 'sessionEnded'
+    }
   },
   
   // UI configuration
