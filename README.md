@@ -56,11 +56,22 @@ if (await window.localLLM.available()) {
 }
 
 // Generate text (OpenAI-compatible)
-const response = await window.localLLM.getCompletion('Explain quantum computing');
+const response = await window.localLLM.chat.completions.create({
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Explain quantum computing' }
+  ]
+});
 console.log(response.choices[0].message.content);
 
 // Stream responses
-const stream = await window.localLLM.getCompletionStream('Write a story');
+const stream = await window.localLLM.chat.completions.create({
+  messages: [
+    { role: 'user', content: 'Write a story' }
+  ],
+  stream: true
+});
+
 for await (const chunk of stream) {
   const content = chunk.choices[0]?.delta?.content;
   if (content) process(content);

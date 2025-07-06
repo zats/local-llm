@@ -117,6 +117,10 @@ class NativeMessagingApp: @unchecked Sendable {
             logMessage("Received endPlaygroundSession command.", type: .info)
             handleEndPlaygroundSession(requestId: requestId, payload: payload)
             
+        case "chatCompletion":
+            logMessage("Received chatCompletion command.", type: .info)
+            handleChatCompletion(requestId: requestId, payload: payload)
+            
         default:
             logMessage("Received unknown command: \(command)", type: .error)
             sendError("Unknown command: \(command)", requestId: requestId)
@@ -398,6 +402,131 @@ class NativeMessagingApp: @unchecked Sendable {
         }
     }
     
+    private func handleChatCompletion(requestId: String, payload: [String: Any]?) {
+        guard let payload = payload,
+              let messages = payload["messages"] as? [[String: Any]] else {
+            sendError("Missing messages array", requestId: requestId)
+            return
+        }
+        
+        // Convert OpenAI messages to prompt format
+        let prompt = convertMessagesToPrompt(messages)
+        let isStreaming = payload["stream"] as? Bool ?? false
+        
+        // Copy values before Task to avoid capturing non-Sendable dictionary
+        let options = APIResponseFormatter.parseGenerationOptions(from: payload)
+        let systemPrompt = extractSystemPrompt(from: messages)
+        let promptCopy = prompt
+        let requestIdCopy = requestId
+        
+        if isStreaming {
+            // Handle streaming chat completion
+            Task {
+                do {
+                    let session = try LanguageModelSession(systemPrompt: systemPrompt)
+                    var streamContext = APIResponseFormatter.StreamContext()
+                    
+                    for try await accumulatedContent in session.streamResponseDirect(to: promptCopy, options: options) {
+                        let deltaContent = streamContext.processAccumulatedContent(accumulatedContent)
+                        
+                        // Send role chunk on first message
+                        if streamContext.isFirstChunk {
+                            let roleChunkMessage: [String: Any] = [
+                                "requestId": requestIdCopy,
+                                "type": "streamChunk",
+                                "payload": APIResponseFormatter.streamChunk(
+                                    id: streamContext.id,
+                                    role: "assistant",
+                                    timestamp: streamContext.timestamp
+                                )
+                            ]
+                            sendMessage(roleChunkMessage)
+                            streamContext.isFirstChunk = false
+                        }
+                        
+                        // Send content chunk (if we have content)
+                        if !deltaContent.isEmpty {
+                            let chunkMessage: [String: Any] = [
+                                "requestId": requestIdCopy,
+                                "type": "streamChunk",
+                                "payload": APIResponseFormatter.streamChunk(
+                                    id: streamContext.id,
+                                    content: deltaContent,
+                                    timestamp: streamContext.timestamp
+                                )
+                            ]
+                            sendMessage(chunkMessage)
+                        }
+                    }
+                    
+                    let endMessage: [String: Any] = [
+                        "requestId": requestIdCopy,
+                        "type": "streamEnd",
+                        "payload": APIResponseFormatter.streamChunk(
+                            id: streamContext.id,
+                            isLast: true,
+                            timestamp: streamContext.timestamp
+                        )
+                    ]
+                    sendMessage(endMessage)
+                    
+                } catch {
+                    sendStructuredError(error, requestId: requestIdCopy)
+                }
+            }
+        } else {
+            // Handle non-streaming chat completion
+            Task {
+                do {
+                    let session = try LanguageModelSession(systemPrompt: systemPrompt)
+                    let response = try await session.generateResponseDirect(to: promptCopy, options: options)
+                    
+                    let responseMessage: [String: Any] = [
+                        "requestId": requestIdCopy,
+                        "type": "completionResponse", 
+                        "payload": APIResponseFormatter.completionResponse(content: response)
+                    ]
+                    
+                    sendMessage(responseMessage)
+                } catch {
+                    sendStructuredError(error, requestId: requestIdCopy)
+                }
+            }
+        }
+    }
+    
+    private func convertMessagesToPrompt(_ messages: [[String: Any]]) -> String {
+        var prompt = ""
+        for message in messages {
+            if let role = message["role"] as? String,
+               let content = message["content"] as? String {
+                switch role {
+                case "system":
+                    // System messages are handled separately
+                    continue
+                case "user":
+                    prompt += "User: \(content)\n\n"
+                case "assistant":
+                    prompt += "Assistant: \(content)\n\n"
+                default:
+                    prompt += "\(content)\n\n"
+                }
+            }
+        }
+        return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private func extractSystemPrompt(from messages: [[String: Any]]) -> String? {
+        for message in messages {
+            if let role = message["role"] as? String,
+               let content = message["content"] as? String,
+               role == "system" {
+                return content
+            }
+        }
+        return nil
+    }
+
     private func sendError(_ message: String, requestId: String? = nil) {
         var errorMessage: [String: Any] = [
             "type": "error",

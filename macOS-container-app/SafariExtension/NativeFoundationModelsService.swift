@@ -124,6 +124,136 @@ class NativeFoundationModelsService {
         os_log(.default, "Cancelled stream: %@", requestId)
     }
     
+    func getChatCompletion(messages: [[String: Any]], options: [String: Any] = [:]) async -> [String: Any] {
+        // Convert OpenAI messages to prompt format
+        let prompt = convertMessagesToPrompt(messages)
+        let systemPrompt = extractSystemPrompt(from: messages)
+        
+        // Extract options
+        let generationOptions = APIResponseFormatter.parseGenerationOptions(from: options)
+        
+        os_log(.default, "Generating chat completion for messages count: %d (temp: %f, maxTokens: %d)", messages.count, generationOptions.temperature, generationOptions.maximumResponseTokens)
+        
+        do {
+            // Create session with system prompt if available
+            let session = try LanguageModelSession(systemPrompt: systemPrompt)
+            
+            // Generate response
+            let response = try await session.generateResponseDirect(to: prompt, options: generationOptions)
+            return APIResponseFormatter.completionResponse(content: response)
+        } catch {
+            os_log(.error, "Error generating chat completion: %@", error.localizedDescription)
+            return APIResponseFormatter.errorResponse(error: error)
+        }
+    }
+    
+    func getChatCompletionStream(
+        messages: [[String: Any]],
+        options: [String: Any] = [:],
+        requestId: String,
+        context: NSExtensionContext
+    ) async {
+        let task = Task {
+            do {
+                // Convert OpenAI messages to prompt format
+                let prompt = convertMessagesToPrompt(messages)
+                let systemPrompt = extractSystemPrompt(from: messages)
+                
+                // Extract options
+                let generationOptions = APIResponseFormatter.parseGenerationOptions(from: options)
+                
+                os_log(.default, "Starting chat completion stream for messages count: %d (temp: %f, maxTokens: %d)", messages.count, generationOptions.temperature, generationOptions.maximumResponseTokens)
+                
+                // Create session with system prompt if available
+                let session = try LanguageModelSession(systemPrompt: systemPrompt)
+                var streamContext = APIResponseFormatter.StreamContext()
+                
+                for try await accumulatedContent in session.streamResponseDirect(to: prompt, options: generationOptions) {
+                    let deltaContent = streamContext.processAccumulatedContent(accumulatedContent)
+                    
+                    // Send role chunk on first message
+                    if streamContext.isFirstChunk {
+                        await sendStreamChunkToPage(
+                            chunk: APIResponseFormatter.streamChunk(
+                                id: streamContext.id,
+                                role: "assistant",
+                                timestamp: streamContext.timestamp
+                            ),
+                            requestId: requestId
+                        )
+                        streamContext.isFirstChunk = false
+                    }
+                    
+                    // Send content chunk (if we have content)
+                    if !deltaContent.isEmpty {
+                        await sendStreamChunkToPage(
+                            chunk: APIResponseFormatter.streamChunk(
+                                id: streamContext.id,
+                                content: deltaContent,
+                                timestamp: streamContext.timestamp
+                            ),
+                            requestId: requestId
+                        )
+                    }
+                }
+                
+                // Send final chunk
+                await sendStreamChunkToPage(
+                    chunk: APIResponseFormatter.streamChunk(
+                        id: streamContext.id,
+                        isLast: true,
+                        timestamp: streamContext.timestamp
+                    ),
+                    requestId: requestId
+                )
+                
+                os_log(.default, "Completed chat completion stream for request: %@", requestId)
+                
+            } catch {
+                os_log(.error, "Error in chat completion stream: %@", error.localizedDescription)
+                await sendStreamErrorToPage(error: error.localizedDescription, requestId: requestId)
+            }
+        }
+        
+        activeStreams[requestId] = task
+        await task.value
+        activeStreams.removeValue(forKey: requestId)
+    }
+    
+    // MARK: - Private Methods
+    
+    private func convertMessagesToPrompt(_ messages: [[String: Any]]) -> String {
+        var prompt = ""
+        for message in messages {
+            if let role = message["role"] as? String,
+               let content = message["content"] as? String {
+                switch role {
+                case "system":
+                    // System messages are handled separately
+                    continue
+                case "user":
+                    prompt += "User: \(content)\n\n"
+                case "assistant":
+                    prompt += "Assistant: \(content)\n\n"
+                default:
+                    prompt += "\(content)\n\n"
+                }
+            }
+        }
+        return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private func extractSystemPrompt(from messages: [[String: Any]]) -> String? {
+        for message in messages {
+            if let role = message["role"] as? String,
+               let content = message["content"] as? String,
+               role == "system" {
+                return content
+            }
+        }
+        return nil
+    }
+    
     // MARK: - Private Methods
     
     private func sendCompleteStreamResponse(

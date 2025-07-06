@@ -50,13 +50,11 @@
     async _createRegularCompletion(options) {
       const { messages, model = 'localLLM-default', ...otherOptions } = options;
       
-      // Convert to our internal format
-      const prompt = this._messagesToPrompt(messages);
-      
       try {
-        const response = await this.sendMessage('getCompletion', { 
-          prompt, 
-          model, 
+        const response = await this.sendMessage('chatCompletion', { 
+          messages,
+          model,
+          stream: false,
           ...otherOptions 
         });
         
@@ -70,10 +68,9 @@
     
     _createStreamingCompletion(options) {
       const { messages, model = 'localLLM-default', ...otherOptions } = options;
-      const prompt = this._messagesToPrompt(messages);
       
       // Return async generator for streaming
-      return this._streamCompletion(prompt, { model, ...otherOptions });
+      return this._streamCompletion(messages, { model, stream: true, ...otherOptions });
     }
     
     _messagesToPrompt(messages) {
@@ -185,33 +182,8 @@
       return session;
     }
 
-    async getCompletion(prompt, options = {}) {
-      try {
-        const response = await this.sendMessage('getCompletion', { prompt, ...options });
-        
-        // Handle different response formats between Chrome and Safari
-        if (response.payload) {
-          // Chrome format: {type: 'completionResponse', payload: {...}}
-          return response.payload;
-        } else if (response.data) {
-          // Safari format: {type: 'response', data: {...}}
-          return response.data;
-        } else {
-          // Fallback
-          return response;
-        }
-      } catch (error) {
-        throw {
-          error: {
-            message: error.message,
-            type: 'completion_error',
-            code: 'completion_failed'
-          }
-        };
-      }
-    }
 
-    async* _streamCompletion(prompt, options = {}) {
+    async* _streamCompletion(messages, options = {}) {
       
       // This function is designed to handle two scenarios:
       // 1. True streaming: The native connection supports sending multiple "chunks" over time (e.g., Chrome).
@@ -308,8 +280,8 @@
         const requestMessage = {
           type: this.config.messaging.requestType,
           requestId,
-          command: 'getCompletionStream',
-          payload: { prompt, ...options }
+          command: 'chatCompletion',
+          payload: { messages, ...options }
         };
         window.postMessage(requestMessage, '*');
         
@@ -553,8 +525,6 @@
       
       // Legacy compatibility methods (deprecated)
       checkAvailability: localLLMInstance.checkAvailability.bind(localLLMInstance),
-      getCompletion: localLLMInstance.getCompletion.bind(localLLMInstance),
-      getCompletionStream: localLLMInstance.getCompletionStream.bind(localLLMInstance),
       createSession: localLLMInstance.createSession.bind(localLLMInstance),
       
       // Internal reference

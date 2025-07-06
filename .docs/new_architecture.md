@@ -67,7 +67,7 @@ if (window.localLLM?.available) {
 <script src="localLLM-injected.js"></script>
 <script>
   (async () => {
-    const res = await localLLM.chat.completions.create({
+    const res = await window.localLLM.chat.completions.create({
       model: "localLLM-pro-2025",
       messages: [
         { role: "system", content: "You are a terse assistant." },

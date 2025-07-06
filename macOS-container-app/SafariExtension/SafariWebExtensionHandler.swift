@@ -141,6 +141,27 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 responseData = ["success": true]
                 type = "streamEnd"
                 
+            case "chatCompletion":
+                let messages = data["messages"] as? [[String: Any]] ?? []
+                let options = data
+                let stream = data["stream"] as? Bool ?? false
+                
+                if stream {
+                    await nativeFoundationModels.getChatCompletionStream(
+                        messages: messages,
+                        options: options,
+                        requestId: requestId,
+                        context: context
+                    )
+                    return
+                } else {
+                    responseData = await nativeFoundationModels.getChatCompletion(
+                        messages: messages,
+                        options: options
+                    )
+                    type = "completionResponse"
+                }
+                
             default:
                 throw NSError(domain: "NativeFoundationModels", code: 400, userInfo: [
                     NSLocalizedDescriptionKey: "Unknown action: \(action)"

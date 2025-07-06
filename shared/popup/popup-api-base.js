@@ -26,11 +26,6 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
     super(config);
   }
 
-  // Add missing methods that the initialization function expects
-  async* getCompletionStream(prompt, options = {}) {
-    // This is for backward compatibility - redirect to streaming completion
-    yield* this._streamCompletion(prompt, options);
-  }
 
   // Check LocalLLM availability status
   async checkStatus() {
@@ -93,14 +88,19 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
   }
 
   // Override _streamCompletion to use appropriate messaging for each browser
-  async* _streamCompletion(prompt, options = {}) {
+  async* _streamCompletion(messages, options = {}) {
     const requestId = this.generateRequestId();
     
     // Safari doesn't support persistent connections, so we fall back to regular completion
     if (this.config.browser === 'safari') {
       // For Safari, convert streaming to regular completion and simulate streaming
       try {
-        const response = await this.sendMessage('getCompletion', { prompt, ...options });
+        const response = await this.sendMessage('chatCompletion', { 
+          messages, 
+          model: options.model || 'localLLM-default',
+          stream: false,
+          ...options 
+        });
         
         // Convert single response to OpenAI chunk format
         const openAIChunk = this._formatAsOpenAIChunk(response, options.model);
@@ -150,9 +150,14 @@ class UnifiedPopupAPI extends getLocalLLMClass() {
     
     // Send streaming request
     port.postMessage({
-      command: 'getCompletionStream',  // Use 'command' not 'type'
+      command: 'chatCompletion',  // Use OpenAI-compatible command
       requestId,
-      payload: { prompt, ...options }
+      payload: { 
+        messages, 
+        model: options.model || 'localLLM-default',
+        stream: true,
+        ...options 
+      }
     });
     
     try {

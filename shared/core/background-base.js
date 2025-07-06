@@ -88,7 +88,7 @@ class UnifiedBackground {
     // Handle streaming requests through port
     const { command, requestId, payload } = message;
     
-    if (command === 'getCompletionStream') {
+    if (command === 'chatCompletion' || command === 'getCompletionStream') {
       const nativeRequest = {
         command,
         requestId,
@@ -199,7 +199,8 @@ class UnifiedBackground {
     
     // Store response handler and sender info for streaming
     if (requestId) {
-      const isStreaming = nativeRequest.command === 'getCompletionStream';
+      const isStreaming = nativeRequest.command === 'getCompletionStream' || 
+                         (nativeRequest.command === 'chatCompletion' && nativeRequest.payload?.stream);
       console.log('[NFM-BG-Chrome] Storing request handler for requestId:', requestId, 'isStreaming:', isStreaming);
       this.requestHandlers.set(requestId, { 
         sendResponse,

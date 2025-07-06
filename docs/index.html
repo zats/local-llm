@@ -653,7 +653,7 @@ if (await window.localLLM?.available()) {
                     <div class="code-block" data-title="Basic Chat Completion">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
                         <pre><code class="language-javascript">// OpenAI-compatible interface
-const result = await localLLM.chat.completions.create({
+const result = await window.localLLM.chat.completions.create({
   messages: [
     { role: "system", content: "You are a terse assistant." },
     { role: "user", content: "Hello local world" }
@@ -666,7 +666,7 @@ console.log(result.choices[0].message.content);
                     <div class="code-block" data-title="Streaming Response">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
                         <pre><code class="language-javascript">// Real-time streaming with OpenAI chunks
-const stream = await localLLM.chat.completions.create({
+const stream = await window.localLLM.chat.completions.create({
   messages: [
     { role: "user", content: "Write a haiku about AI" }
   ],
@@ -683,7 +683,7 @@ for await (const chunk of stream) {
                     <div class="code-block" data-title="Advanced Configuration">
                         <button class="copy-button" onclick="copyCode(this)">Copy</button>
                         <pre><code class="language-javascript">// Configure model behavior
-const result = await localLLM.chat.completions.create({
+const result = await window.localLLM.chat.completions.create({
   messages: [
     { role: "user", content: "Explain quantum computing" }
   ],
