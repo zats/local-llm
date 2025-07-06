@@ -16,76 +16,27 @@ class NativeFoundationModelsService {
     // MARK: - Public API
     
     func checkAvailability() async -> [String: Any] {
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let id = "availability-\(UUID().uuidString.prefix(8))"
         let available = LanguageModelSession.isAvailable()
-        
-        return [
-            "id": id,
-            "object": "availability.check",
-            "created": timestamp,
-            "available": available,
-            "reason": available ? "Ready" : "LLM framework not available"
-        ]
+        return APIResponseFormatter.availabilityResponse(available: available)
     }
     
     func getCompletion(prompt: String, options: [String: Any] = [:]) async -> [String: Any] {
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let id = "chatcmpl-\(UUID().uuidString.prefix(8))"
-        
         // Extract options
-        let temperature = options["temperature"] as? Double ?? 0.8
-        let maxTokens = options["maximumResponseTokens"] as? Int ?? 512
+        let generationOptions = APIResponseFormatter.parseGenerationOptions(from: options)
         let systemPrompt = options["systemPrompt"] as? String
         
-        os_log(.default, "Generating completion for prompt: %@ (temp: %f, maxTokens: %d)", prompt, temperature, maxTokens)
+        os_log(.default, "Generating completion for prompt: %@ (temp: %f, maxTokens: %d)", prompt, generationOptions.temperature, generationOptions.maximumResponseTokens)
         
         do {
             // Create session with optional system prompt
             let session = try LanguageModelSession(systemPrompt: systemPrompt)
             
-            // Create generation options
-            var generationOptions = GenerationOptions()
-            generationOptions.temperature = temperature
-            generationOptions.maximumResponseTokens = maxTokens
-            
             // Generate response
-            let response = try await session.generateResponseDirect(to: prompt, options: generationOptions)            
-            return [
-                "id": id,
-                "object": "chat.completion",
-                "created": timestamp,
-                "choices": [[
-                    "index": 0,
-                    "message": [
-                        "role": "assistant",
-                        "content": response
-                    ],
-                    "finish_reason": "stop"
-                ]]
-            ]
-        } catch let error as LanguageModelError {
-            os_log(.error, "Language model error: %@", error.userFriendlyMessage)
-            return [
-                "id": id,
-                "object": "chat.completion",
-                "created": timestamp,
-                "error": [
-                    "message": error.userFriendlyMessage,
-                    "type": "language_model_error"
-                ]
-            ]
+            let response = try await session.generateResponseDirect(to: prompt, options: generationOptions)
+            return APIResponseFormatter.completionResponse(content: response)
         } catch {
-            os_log(.error, "Unexpected error: %@", error.localizedDescription)
-            return [
-                "id": id,
-                "object": "chat.completion",
-                "created": timestamp,
-                "error": [
-                    "message": "An unexpected error occurred: \(error.localizedDescription)",
-                    "type": "internal_error"
-                ]
-            ]
+            os_log(.error, "Error generating completion: %@", error.localizedDescription)
+            return APIResponseFormatter.errorResponse(error: error)
         }
     }
     
@@ -101,29 +52,23 @@ class NativeFoundationModelsService {
                 let id = "chatcmpl-\(UUID().uuidString.prefix(8))"
                 
                 // Extract options
-                let temperature = options["temperature"] as? Double ?? 0.8
-                let maxTokens = options["maximumResponseTokens"] as? Int ?? 512
+                let generationOptions = APIResponseFormatter.parseGenerationOptions(from: options)
                 let systemPrompt = options["systemPrompt"] as? String
                 
-                os_log(.default, "Starting streaming completion for prompt: %@ (temp: %f, maxTokens: %d)", prompt, temperature, maxTokens)
+                os_log(.default, "Starting streaming completion for prompt: %@ (temp: %f, maxTokens: %d)", prompt, generationOptions.temperature, generationOptions.maximumResponseTokens)
                 
                 // Create session with optional system prompt
                 let session = try LanguageModelSession(systemPrompt: systemPrompt)
-                
-                // Create generation options
-                var generationOptions = GenerationOptions()
-                generationOptions.temperature = temperature
-                generationOptions.maximumResponseTokens = maxTokens
                 
                 // Collect all chunks like Chrome does, but send as batch
                 var chunks: [[String: Any]] = []
                 
                 // Add initial role chunk
-                let roleChunk = createStreamChunk(id: id, content: "", timestamp: timestamp, role: "assistant")
+                let roleChunk = APIResponseFormatter.streamChunk(id: id, role: "assistant", timestamp: timestamp)
                 chunks.append(roleChunk)
                 
                 // Collect content chunks as they arrive
-                var previousContent = ""
+                var streamContext = APIResponseFormatter.StreamContext(id: id)
                 for try await accumulatedContent in session.streamResponseDirect(to: prompt, options: generationOptions) {
                     // Check if task was cancelled
                     if Task.isCancelled {
@@ -131,25 +76,24 @@ class NativeFoundationModelsService {
                     }
                     
                     // Calculate the delta (new content only)
-                    let deltaContent = String(accumulatedContent.dropFirst(previousContent.count))
-                    previousContent = accumulatedContent
+                    let deltaContent = streamContext.processAccumulatedContent(accumulatedContent)
                     
                     // Add content chunk (if we have content)
                     if !deltaContent.isEmpty {
-                        let streamChunk = createStreamChunk(id: id, content: deltaContent, timestamp: timestamp)
+                        let streamChunk = APIResponseFormatter.streamChunk(id: id, content: deltaContent, timestamp: timestamp)
                         chunks.append(streamChunk)
                     }
                 }
                 
                 // Add final chunk
                 if !Task.isCancelled {
-                    let finalChunk = createStreamChunk(id: id, content: "", timestamp: timestamp, isLast: true)
+                    let finalChunk = APIResponseFormatter.streamChunk(id: id, isLast: true, timestamp: timestamp)
                     chunks.append(finalChunk)
                     
                     // Send complete streaming response as a single message
                     sendCompleteStreamResponse(
                         chunks: chunks,
-                        fullResponse: previousContent,
+                        fullResponse: streamContext.previousContent,
                         prompt: prompt,
                         id: id,
                         timestamp: timestamp,
@@ -182,33 +126,6 @@ class NativeFoundationModelsService {
     
     // MARK: - Private Methods
     
-    private func createStreamChunk(id: String, content: String, timestamp: Int, role: String? = nil, isLast: Bool = false) -> [String: Any] {
-        var delta: [String: Any] = [:]
-        
-        if let role = role {
-            delta["role"] = role
-        }
-        
-        if !content.isEmpty {
-            delta["content"] = content
-        }
-        
-        if isLast {
-            delta = [:]
-        }
-        
-        return [
-            "id": id,
-            "object": "chat.completion.chunk",
-            "created": timestamp,
-            "choices": [[
-                "index": 0,
-                "delta": delta,
-                "finish_reason": isLast ? "stop" : NSNull()
-            ]]
-        ]
-    }
-    
     private func sendCompleteStreamResponse(
         chunks: [[String: Any]],
         fullResponse: String,
@@ -222,25 +139,12 @@ class NativeFoundationModelsService {
         let responseDict: [String: Any] = [
             "requestId": requestId,
             "type": "streamResponse",
-            "data": [
-                "id": id,
-                "object": "chat.completion.stream",
-                "created": timestamp,
-                "chunks": chunks,
-                "fullResponse": [
-                    "id": id,
-                    "object": "chat.completion",
-                    "created": timestamp,
-                    "choices": [[
-                        "index": 0,
-                        "message": [
-                            "role": "assistant",
-                            "content": fullResponse
-                        ],
-                        "finish_reason": "stop"
-                    ]],
-                ]
-            ]
+            "data": APIResponseFormatter.completeStreamResponse(
+                chunks: chunks,
+                fullResponse: fullResponse,
+                id: id,
+                timestamp: timestamp
+            )
         ]
         
         response.userInfo = [ SFExtensionMessageKey: responseDict ]

@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		5C2E34022E1547B900CB3A24 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; platformFilters = (macos, ); productRef = 5C2E34012E1547B900CB3A24 /* Sparkle */; };
 		5C2E35682E16987100CB3A24 /* SafariExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5C2E35502E16987100CB3A24 /* SafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5C2E3EC52E1A055D00CB3A24 /* APIResponseFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C2E3EC22E1A055D00CB3A24 /* APIResponseFormatter.swift */; };
+		5C2E3EC62E1A055D00CB3A24 /* LanguageModelSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C2E3EC32E1A055D00CB3A24 /* LanguageModelSession.swift */; };
+		5C2E3EC72E1A055D00CB3A24 /* APIResponseFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C2E3EC22E1A055D00CB3A24 /* APIResponseFormatter.swift */; };
+		5C2E3EC82E1A055D00CB3A24 /* LanguageModelSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C2E3EC32E1A055D00CB3A24 /* LanguageModelSession.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -18,13 +22,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 5C2E354F2E16987100CB3A24;
 			remoteInfo = SafariExtension;
-		};
-		5C8B123B2E1ABC1234567897 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 5CFFE6842E1303FB005BAD3F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 5C8B12362E1ABC1234567892;
-			remoteInfo = NativeFoundationModelsNative;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -44,6 +41,8 @@
 
 /* Begin PBXFileReference section */
 		5C2E35502E16987100CB3A24 /* SafariExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C2E3EC22E1A055D00CB3A24 /* APIResponseFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIResponseFormatter.swift; sourceTree = "<group>"; };
+		5C2E3EC32E1A055D00CB3A24 /* LanguageModelSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageModelSession.swift; sourceTree = "<group>"; };
 		5C8B12342E1ABC1234567890 /* NativeFoundationModelsNative */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = NativeFoundationModelsNative; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CFFE68C2E1303FB005BAD3F /* LocalLLM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LocalLLM.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -124,6 +123,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5C2E3EC42E1A055D00CB3A24 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				5C2E3EC22E1A055D00CB3A24 /* APIResponseFormatter.swift */,
+				5C2E3EC32E1A055D00CB3A24 /* LanguageModelSession.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		5CFFE6832E1303FB005BAD3F = {
 			isa = PBXGroup;
 			children = (
@@ -131,6 +139,7 @@
 				5C2E35512E16987100CB3A24 /* SafariExtension */,
 				5C8B12352E1ABC1234567891 /* NativeChromeHost */,
 				5CFFE68D2E1303FB005BAD3F /* Products */,
+				5C2E3EC42E1A055D00CB3A24 /* Shared */,
 			);
 			sourceTree = "<group>";
 		};
@@ -303,6 +312,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C2E3EC52E1A055D00CB3A24 /* APIResponseFormatter.swift in Sources */,
+				5C2E3EC62E1A055D00CB3A24 /* LanguageModelSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,6 +321,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C2E3EC72E1A055D00CB3A24 /* APIResponseFormatter.swift in Sources */,
+				5C2E3EC82E1A055D00CB3A24 /* LanguageModelSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -327,11 +340,6 @@
 			isa = PBXTargetDependency;
 			target = 5C2E354F2E16987100CB3A24 /* SafariExtension */;
 			targetProxy = 5C2E35662E16987100CB3A24 /* PBXContainerItemProxy */;
-		};
-		5C8B123A2E1ABC1234567896 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 5C8B12362E1ABC1234567892 /* NativeFoundationModelsNative */;
-			targetProxy = 5C8B123B2E1ABC1234567897 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

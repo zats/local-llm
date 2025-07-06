@@ -130,13 +130,7 @@ class NativeMessagingApp: @unchecked Sendable {
         let response: [String: Any] = [
             "requestId": requestId,
             "type": "availabilityResponse",
-            "payload": [
-                "id": "availability-\(UUID().uuidString)",
-                "object": "availability.check",
-                "created": Int(Date().timeIntervalSince1970),
-                "available": available,
-                "reason": available ? "Ready" : "LLM framework not available"
-            ]
+            "payload": APIResponseFormatter.availabilityResponse(available: available)
         ]
         
         sendMessage(response)
@@ -150,30 +144,20 @@ class NativeMessagingApp: @unchecked Sendable {
         }
         
         // Copy values before Task to avoid capturing non-Sendable dictionary
-        let options = createGenerationOptions(from: payload)
+        let options = APIResponseFormatter.parseGenerationOptions(from: payload)
+        let systemPrompt = payload["systemPrompt"] as? String
         let promptCopy = prompt
         let requestIdCopy = requestId
         
         Task {
             do {
-                let session = try LanguageModelSession()
+                let session = try LanguageModelSession(systemPrompt: systemPrompt)
                 let response = try await session.generateResponseDirect(to: promptCopy, options: options)
                 
                 let responseMessage: [String: Any] = [
                     "requestId": requestIdCopy,
                     "type": "completionResponse", 
-                    "payload": [
-                        "id": "chatcmpl-\(UUID().uuidString)",
-                        "object": "chat.completion",
-                        "created": Int(Date().timeIntervalSince1970),
-                        "choices": [[
-                            "message": [
-                                "role": "assistant",
-                                "content": response
-                            ],
-                            "finish_reason": "stop"
-                        ]]
-                    ]
+                    "payload": APIResponseFormatter.completionResponse(content: response)
                 ]
                 
                 sendMessage(responseMessage)
@@ -191,42 +175,35 @@ class NativeMessagingApp: @unchecked Sendable {
         }
         
         // Copy values before Task to avoid capturing non-Sendable dictionary
-        let options = createGenerationOptions(from: payload)
+        let options = APIResponseFormatter.parseGenerationOptions(from: payload)
+        let systemPrompt = payload["systemPrompt"] as? String
         let promptCopy = prompt
         let requestIdCopy = requestId
         
         Task {
             do {
                 // Use streamResponseDirect for API calls (no conversation history)
-                let session = try LanguageModelSession()
-                let streamId = "chatcmpl-\(UUID().uuidString)"
-                let createdTime = Int(Date().timeIntervalSince1970)
+                let session = try LanguageModelSession(systemPrompt: systemPrompt)
+                var streamContext = APIResponseFormatter.StreamContext()
                 
-                var previousContent = ""
-                var isFirstChunk = true
                 for try await accumulatedContent in session.streamResponseDirect(to: promptCopy, options: options) {
                     // Calculate the delta (new content only)
-                    let deltaContent = String(accumulatedContent.dropFirst(previousContent.count))
-                    previousContent = accumulatedContent
+                    let deltaContent = streamContext.processAccumulatedContent(accumulatedContent)
                     
                     // Send role in first chunk if we have content
-                    if isFirstChunk && !deltaContent.isEmpty {
+                    if streamContext.isFirstChunk && !deltaContent.isEmpty {
                         // First send role-only chunk
                         let roleChunkMessage: [String: Any] = [
                             "requestId": requestIdCopy,
                             "type": "streamChunk",
-                            "payload": [
-                                "id": streamId,
-                                "object": "chat.completion.chunk",
-                                "created": createdTime,
-                                "choices": [[
-                                    "delta": ["role": "assistant"],
-                                    "finish_reason": NSNull()
-                                ]]
-                            ]
+                            "payload": APIResponseFormatter.streamChunk(
+                                id: streamContext.id,
+                                role: "assistant",
+                                timestamp: streamContext.timestamp
+                            )
                         ]
                         sendMessage(roleChunkMessage)
-                        isFirstChunk = false
+                        streamContext.isFirstChunk = false
                     }
                     
                     // Send content chunk (if we have content)
@@ -234,15 +211,11 @@ class NativeMessagingApp: @unchecked Sendable {
                         let chunkMessage: [String: Any] = [
                             "requestId": requestIdCopy,
                             "type": "streamChunk",
-                            "payload": [
-                                "id": streamId,
-                                "object": "chat.completion.chunk",
-                                "created": createdTime,
-                                "choices": [[
-                                    "delta": ["content": deltaContent],
-                                    "finish_reason": NSNull()
-                                ]]
-                            ]
+                            "payload": APIResponseFormatter.streamChunk(
+                                id: streamContext.id,
+                                content: deltaContent,
+                                timestamp: streamContext.timestamp
+                            )
                         ]
                         sendMessage(chunkMessage)
                     }
@@ -251,15 +224,11 @@ class NativeMessagingApp: @unchecked Sendable {
                 let endMessage: [String: Any] = [
                     "requestId": requestIdCopy,
                     "type": "streamEnd",
-                    "payload": [
-                        "id": streamId,
-                        "object": "chat.completion.chunk",
-                        "created": createdTime,
-                        "choices": [[
-                            "delta": [:],
-                            "finish_reason": "stop"
-                        ]]
-                    ]
+                    "payload": APIResponseFormatter.streamChunk(
+                        id: streamContext.id,
+                        isLast: true,
+                        timestamp: streamContext.timestamp
+                    )
                 ]
                 sendMessage(endMessage)
                 
@@ -305,77 +274,73 @@ class NativeMessagingApp: @unchecked Sendable {
         }
         
         // Copy values before Task to avoid capturing non-Sendable types
-        let options = createGenerationOptions(from: payload)
+        let options = APIResponseFormatter.parseGenerationOptions(from: payload)
         let promptCopy = prompt
         let sessionIdCopy = sessionId
         let requestIdCopy = requestId
         
         Task {
             do {
-                let streamId = "chatcmpl-\(UUID().uuidString)"
-                let createdTime = Int(Date().timeIntervalSince1970)
+                var streamContext = APIResponseFormatter.StreamContext()
                 
-                var previousContent = ""
-                var isFirstChunk = true
                 for try await accumulatedContent in session.streamResponse(to: promptCopy, options: options) {
                     // Calculate the delta (new content only)
-                    let deltaContent = String(accumulatedContent.dropFirst(previousContent.count))
-                    previousContent = accumulatedContent
+                    let deltaContent = streamContext.processAccumulatedContent(accumulatedContent)
                     
                     // Send role in first chunk if we have content
-                    if isFirstChunk && !deltaContent.isEmpty {
+                    if streamContext.isFirstChunk && !deltaContent.isEmpty {
                         // First send role-only chunk
+                        var roleChunk = APIResponseFormatter.streamChunk(
+                            id: streamContext.id,
+                            role: "assistant",
+                            timestamp: streamContext.timestamp
+                        )
+                        // Add sessionId to payload
+                        var rolePayload = roleChunk
+                        rolePayload["sessionId"] = sessionIdCopy
+                        
                         let roleChunkMessage: [String: Any] = [
                             "requestId": requestIdCopy,
                             "type": "streamChunk",
-                            "payload": [
-                                "sessionId": sessionIdCopy,
-                                "id": streamId,
-                                "object": "chat.completion.chunk",
-                                "created": createdTime,
-                                "choices": [[
-                                    "delta": ["role": "assistant"],
-                                    "finish_reason": NSNull()
-                                ]]
-                            ]
+                            "payload": rolePayload
                         ]
                         sendMessage(roleChunkMessage)
-                        isFirstChunk = false
+                        streamContext.isFirstChunk = false
                     }
                     
                     // Send content chunk (if we have content)
                     if !deltaContent.isEmpty {
+                        var contentChunk = APIResponseFormatter.streamChunk(
+                            id: streamContext.id,
+                            content: deltaContent,
+                            timestamp: streamContext.timestamp
+                        )
+                        // Add sessionId to payload
+                        var contentPayload = contentChunk
+                        contentPayload["sessionId"] = sessionIdCopy
+                        
                         let chunkMessage: [String: Any] = [
                             "requestId": requestIdCopy,
                             "type": "streamChunk",
-                            "payload": [
-                                "sessionId": sessionIdCopy,
-                                "id": streamId,
-                                "object": "chat.completion.chunk",
-                                "created": createdTime,
-                                "choices": [[
-                                    "delta": ["content": deltaContent],
-                                    "finish_reason": NSNull()
-                                ]]
-                            ]
+                            "payload": contentPayload
                         ]
                         sendMessage(chunkMessage)
                     }
                 }
                 
+                var finalChunk = APIResponseFormatter.streamChunk(
+                    id: streamContext.id,
+                    isLast: true,
+                    timestamp: streamContext.timestamp
+                )
+                // Add sessionId to payload
+                var finalPayload = finalChunk
+                finalPayload["sessionId"] = sessionIdCopy
+                
                 let endMessage: [String: Any] = [
                     "requestId": requestIdCopy,
                     "type": "streamEnd",
-                    "payload": [
-                        "sessionId": sessionIdCopy,
-                        "id": streamId,
-                        "object": "chat.completion.chunk",
-                        "created": createdTime,
-                        "choices": [[
-                            "delta": [:],
-                            "finish_reason": "stop"
-                        ]]
-                    ]
+                    "payload": finalPayload
                 ]
                 sendMessage(endMessage)
                 
@@ -404,36 +369,6 @@ class NativeMessagingApp: @unchecked Sendable {
         ]
         
         sendMessage(response)
-    }
-    
-    private func createGenerationOptions(from payload: [String: Any]) -> GenerationOptions {
-        var options = GenerationOptions()
-        
-        if let temperature = payload["temperature"] as? Double {
-            options.temperature = temperature
-        }
-        
-        if let maxTokens = payload["maximumResponseTokens"] as? Int {
-            options.maximumResponseTokens = maxTokens
-        }
-        
-        if let samplingModeString = payload["samplingMode"] as? String {
-            switch samplingModeString {
-            case "top-p":
-                // Use default parameters for top-p
-                options.samplingMode = .topP()
-            case "top-k":
-                // Use default parameters for top-k
-                options.samplingMode = .topK()
-            case "greedy":
-                options.samplingMode = .greedy
-            default:
-                // Keep default (topP)
-                break
-            }
-        }
-        
-        return options
     }
     
     private func sendMessage(_ message: [String: Any]) {
@@ -484,93 +419,23 @@ class NativeMessagingApp: @unchecked Sendable {
     }
     
     private func sendStructuredError(_ error: Error, requestId: String) {
-        var errorCode = "generation_failed"
-        var userMessage = "An error occurred while generating a response."
-        
-        if let languageModelError = error as? LanguageModelError {
-            switch languageModelError {
-            case .assetsUnavailable:
-                errorCode = "assets_unavailable"
-                userMessage = languageModelError.userFriendlyMessage
-            case .contextWindowExceeded:
-                errorCode = "context_window_exceeded"
-                userMessage = languageModelError.userFriendlyMessage
-            case .guardrailViolation:
-                errorCode = "guardrail_violation"
-                userMessage = languageModelError.userFriendlyMessage
-            case .decodingFailure:
-                errorCode = "decoding_failure"
-                userMessage = languageModelError.userFriendlyMessage
-            case .unsupportedGuide:
-                errorCode = "unsupported_guide"
-                userMessage = languageModelError.userFriendlyMessage
-            case .sessionNotAvailable:
-                errorCode = "session_not_available"
-                userMessage = languageModelError.userFriendlyMessage
-            case .generationFailed:
-                errorCode = "generation_failed"
-                userMessage = languageModelError.userFriendlyMessage
-            }
-        }
-        
         let errorMessage: [String: Any] = [
             "requestId": requestId,
             "type": "error",
-            "payload": [
-                "error": [
-                    "message": userMessage,
-                    "type": errorCode,
-                    "param": NSNull(),
-                    "code": errorCode
-                ]
-            ]
+            "payload": APIResponseFormatter.errorResponse(error: error)
         ]
         
         sendMessage(errorMessage)
     }
     
     private func sendStructuredSessionError(_ error: Error, requestId: String, sessionId: String) {
-        var errorCode = "generation_failed"
-        var userMessage = "An error occurred while generating a response."
-        
-        if let languageModelError = error as? LanguageModelError {
-            switch languageModelError {
-            case .assetsUnavailable:
-                errorCode = "assets_unavailable"
-                userMessage = languageModelError.userFriendlyMessage
-            case .contextWindowExceeded:
-                errorCode = "context_window_exceeded"
-                userMessage = languageModelError.userFriendlyMessage
-            case .guardrailViolation:
-                errorCode = "guardrail_violation"
-                userMessage = languageModelError.userFriendlyMessage
-            case .decodingFailure:
-                errorCode = "decoding_failure"
-                userMessage = languageModelError.userFriendlyMessage
-            case .unsupportedGuide:
-                errorCode = "unsupported_guide"
-                userMessage = languageModelError.userFriendlyMessage
-            case .sessionNotAvailable:
-                errorCode = "session_not_available"
-                userMessage = languageModelError.userFriendlyMessage
-            case .generationFailed:
-                errorCode = "generation_failed"
-                userMessage = languageModelError.userFriendlyMessage
-            }
-        }
+        var errorPayload = APIResponseFormatter.errorResponse(error: error)
+        errorPayload["sessionId"] = sessionId
         
         let errorMessage: [String: Any] = [
             "requestId": requestId,
             "type": "error",
-            "payload": [
-                "sessionId": sessionId,
-                "error": [
-                    "message": userMessage,
-                    "type": errorCode,
-                    "param": NSNull(),
-                    "code": errorCode
-                ]
-            ]
+            "payload": errorPayload
         ]
         
         sendMessage(errorMessage)
