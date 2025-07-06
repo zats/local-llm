@@ -11,6 +11,16 @@ body {
   box-sizing: border-box;
 }
 
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+    font-size: 16px; /* Larger font size for mobile */
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile keyboards */
+  }
+}
+
 .chat-container {
   display: flex;
   flex-direction: column;
@@ -23,10 +33,25 @@ body {
   overflow: hidden;
 }
 
+@media (max-width: 768px) {
+  .chat-container {
+    min-height: calc(100vh - 20px);
+    min-height: calc(100dvh - 20px); /* Dynamic viewport height for mobile keyboards */
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
 .system-prompt-section {
   padding: 12px;
   background: #f8f9fa;
   border-bottom: 1px solid #e0e0e0;
+}
+
+@media (max-width: 768px) {
+  .system-prompt-section {
+    padding: 16px;
+  }
 }
 
 .system-prompt-header {
@@ -34,6 +59,14 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
+}
+
+@media (max-width: 768px) {
+  .system-prompt-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 }
 
 .system-prompt-section label {
@@ -93,6 +126,14 @@ body {
   margin-top: 8px;
 }
 
+@media (max-width: 768px) {
+  .settings-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+
 .settings-btn {
   padding: 6px 12px;
   background: white;
@@ -101,6 +142,15 @@ body {
   font-size: 16px;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+@media (max-width: 768px) {
+  .settings-btn {
+    padding: 12px 16px;
+    font-size: 16px;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+  }
 }
 
 .settings-btn:hover {
@@ -121,11 +171,26 @@ body {
   max-height: 100px;
 }
 
+@media (max-width: 768px) {
+  #systemPrompt {
+    padding: 12px;
+    font-size: 16px;
+    min-height: 60px;
+    max-height: 120px;
+  }
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
   padding: 12px;
   background: white;
+}
+
+@media (max-width: 768px) {
+  .chat-messages {
+    padding: 16px;
+  }
 }
 
 .message {
@@ -135,6 +200,14 @@ body {
   max-width: 300px;
   word-wrap: break-word;
   white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+  .message {
+    padding: 12px 16px;
+    max-width: 85%;
+    margin-bottom: 16px;
+  }
 }
 
 .message.user {
@@ -187,6 +260,13 @@ body {
   align-items: stretch;
 }
 
+@media (max-width: 768px) {
+  .input-section {
+    padding: 16px;
+    gap: 12px;
+  }
+}
+
 #messageInput {
   flex: 1;
   padding: 8px;
@@ -197,6 +277,14 @@ body {
   resize: none;
   height: 36px;
   box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  #messageInput {
+    padding: 12px;
+    font-size: 16px;
+    height: 44px;
+  }
 }
 
 #sendButton {
@@ -210,6 +298,15 @@ body {
   transition: background 0.2s;
   height: 36px;
   box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  #sendButton {
+    padding: 12px 20px;
+    font-size: 16px;
+    height: 44px;
+    touch-action: manipulation;
+  }
 }
 
 #sendButton:hover {
