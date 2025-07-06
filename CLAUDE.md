@@ -1,121 +1,196 @@
-# Cross-Browser Extension Architecture - Development Guide
+# LocalLLM Cross-Browser Extension Project - Development Guide
 
-This repository contains a cross-browser extension (Chrome and Safari) with a shared codebase architecture. Files in the `shared/` directory are the sources of truth and are automatically synchronized to both browser extension directories during development.
+This repository contains a sophisticated cross-browser extension (Chrome and Safari) that provides on-device AI capabilities using Apple's FoundationModels framework. The project uses a **shared codebase architecture** to maintain consistency between platforms while accommodating platform-specific differences.
 
-## Critical Architecture Rules
+## Project Overview
 
+This is a macOS app with integrated browser extensions that enables web applications to use local AI models. The project includes:
+- **macOS Container App** - Main application with SwiftUI interface
+- **Chrome Extension** - Web extension with native messaging
+- **Safari Extension** - Web extension with Safari-specific handlers
+- **Native Messaging Host** - Chrome native messaging binary
+- **Shared Codebase** - Common extension logic across platforms
 
-### ONLY EDIT THESE SOURCE FILES:
-- `shared/` directory - ALL shared logic and components
-- Platform-specific files:
-  - `native-foundation-models-extension/manifest.json` (Chrome manifest)
-  - `macOS-container-app/SafariExtension/Resources/manifest.json` (Safari manifest)
-  - `macOS-container-app/SafariExtension/Resources/_locales/` (Safari localization)
-  - `macOS-container-app/SafariExtension/Resources/images/` (Safari icons)
-  - `macOS-container-app/SafariExtension/Resources/utils/` (Safari utilities)
-  - `macOS-container-app/NativeChromeHost/` (Chrome native messaging host sources)
+## 🔴 CRITICAL: Source Files vs Generated Files
 
-## Shared Directory Structure
+### ✅ ONLY EDIT THESE SOURCE FILES:
 
-```
-shared/
-├── assets/
-│   ├── images/brain.png           # Extension icon
-│   └── prism.js/                  # Syntax highlighting
-├── config/
-│   ├── chrome-config.js           # Chrome-specific configuration
-│   └── safari-config.js           # Safari-specific configuration
-├── core/
-│   ├── background-base.js         # Shared background script logic
-│   ├── browser-compat.js          # Cross-browser compatibility layer
-│   ├── content-base.js            # Shared content script logic
-│   ├── download-dialog.js         # Download functionality
-│   ├── injected-base.js           # Shared injected script logic
-│   └── utils/                     # Shared utilities
-└── popup/
-    ├── popup-api-base.js          # Shared popup API logic
-    ├── popup-base.js              # Shared popup UI logic
-    ├── popup-template.html        # HTML template with platform placeholders
-    └── popup.css                  # Shared popup styles
-```
+#### **Shared Extension Logic (Primary Sources)**
+- **`shared/`** - ALL shared extension logic and components
+  - `shared/assets/` - Static assets (brain.png, prism.js)
+  - `shared/config/` - Platform-specific configurations
+  - `shared/core/` - Core extension logic (background, content, injected scripts)
+  - `shared/popup/` - Popup interface components
 
-## Generated Files
+#### **Platform-Specific Sources**
+- **`native-foundation-models-extension/manifest.json`** - Chrome manifest
+- **`macOS-container-app/SafariExtension/Resources/manifest.json`** - Safari manifest
+- **`macOS-container-app/SafariExtension/Resources/_locales/`** - Safari localization
+- **`macOS-container-app/SafariExtension/Resources/images/`** - Safari icons
+- **`macOS-container-app/SafariExtension/Resources/utils/`** - Safari utilities
 
+#### **Native macOS Components**
+- **`macOS-container-app/NativeChromeHost/`** - Chrome native messaging host
+- **`macOS-container-app/NativeFoundationModels/`** - Main macOS app
+- **`macOS-container-app/SafariExtension/`** - Safari extension handler
+- **`macOS-container-app/Shared/`** - Shared Swift components
+
+#### **Build & Development Tools**
+- **`scripts/`** - Build automation and sync scripts
+- **`package.json`** - Node.js dependencies and scripts
+- **Shell scripts** - Setup and utility scripts
+
+### 🚫 NEVER EDIT THESE GENERATED FILES:
+
+#### **Chrome Extension (`native-foundation-models-extension/`)**
+- `background.js`, `content.js`, `injected.js`
+- `popup.html`, `popup.js`, `popup-api.js`, `popup.css`
+- `browser-compat.js`, `download-dialog.js`
+- `brain.png`, `prism.js/`
+
+#### **Safari Extension (`macOS-container-app/SafariExtension/Resources/`)**
+- `background.js`, `content.js`, `inject.js` (note different filename)
+- `popup.html`, `popup.js`, `popup-api.js`, `popup.css`
+- `browser-compat.js`, `download-dialog.js`
+- `brain.png`, `prism.js/`
+
+All these files are automatically generated by the sync script and marked with header comments indicating they're generated.
+
+## Architecture Overview
+
+### **Shared Codebase Strategy**
+Files in `shared/` are the **single source of truth** and are automatically synchronized to both browser extension directories during development.
+
+### **Platform Differences**
+- **Chrome**: Service worker background, persistent native messaging, `injected.js`
+- **Safari**: Traditional background scripts, message-based native messaging, `inject.js`
+
+### **Build Process**
 The sync script (`scripts/sync-shared.js`) generates platform-specific files by:
-
-1. **Copying shared assets** directly (brain.png, prism.js, browser-compat.js, download-dialog.js)
+1. **Copying shared assets** directly
 2. **Generating platform-specific scripts** by combining:
    - Browser compatibility layer
    - Platform configuration (Chrome/Safari)
    - Shared base logic
    - Platform-specific initialization
-
-### Generated File Mapping:
-- `background.js` → Combines browser-compat + config + background-base
-- `content.js` → Combines browser-compat + config + content-base  
-- `injected.js` (Chrome) / `inject.js` (Safari) → Combines config + injected-base
-- `popup.html` → Template with platform-specific buttons
-- `popup-api.js` → Combines config + injected-base + popup-api-base
-- `popup.js` → Combines popup-base + platform initialization
+3. **Creating platform-specific HTML** by replacing placeholders in templates
 
 ## Development Workflow
 
-### Setup
+### **Setup & Dependencies**
 ```bash
-pnpm install
+pnpm install  # Install Node.js dependencies
 ```
 
-### Development (with file watching)
+### **Development Commands**
 ```bash
+# Start development with file watching
 pnpm dev
-# or
-node scripts/sync-shared.js --watch
+
+# One-time sync (without watching)
+pnpm dev
 ```
 
-### One-time sync
-```bash
-node scripts/sync-shared.js
-```
+### **File Watching**
+The development watcher monitors `shared/` directory and automatically:
+- Syncs changes to both Chrome and Safari extensions
+- Provides real-time console feedback
+- Debounces sync operations (500ms) to prevent excessive rebuilds
 
 ## Making Changes
 
-### For Shared Logic
+### **For Shared Extension Logic**
 1. Edit files in `shared/` directory
 2. The watcher will automatically sync changes to both extensions
 3. Test in both Chrome and Safari
 
-### For Platform-Specific Features
+### **For Platform-Specific Features**
 1. Add configuration to `shared/config/chrome-config.js` or `shared/config/safari-config.js`
 2. Use conditional logic in shared base files based on config
-3. For platform-specific buttons, update `popup-template.html` placeholder comments
+3. For platform-specific UI elements, update `popup-template.html` placeholder comments
 
-### For New Shared Components
+### **For New Shared Components**
 1. Add to appropriate `shared/` subdirectory
 2. Update `scripts/shared-files-util.js` if new generated files are created
 3. Update sync script (`scripts/sync-shared.js`) to handle new file types
 
-## Native Chrome Host
+## macOS Native Components
 
-The Chrome native messaging host is built as part of the Xcode project:
+### **Container App Structure**
+- **`NativeFoundationModels/`** - Main SwiftUI app
+- **`SafariExtension/`** - Safari extension handler bridge
+- **`Shared/`** - Shared Swift components (LLM session management)
+- **`NativeChromeHost/`** - Chrome native messaging host
 
-- **Source Location**: `macOS-container-app/NativeChromeHost/`
-- **Build Target**: `NativeFoundationModelsNative` (command-line tool)
-- **Product**: `NativeFoundationModelsNative` binary
-- **Installation**: Binary is bundled into the LocalLLM app and installed to `~/bin/nativefoundationmodels-native`
-- **Build Dependencies**: The LocalLLM app depends on this target and automatically includes the binary
+### **Native Messaging**
+- **Chrome**: Persistent connection via native messaging host binary
+- **Safari**: Message-based communication via Safari extension handler
+- **Binary Location**: `~/bin/nativefoundationmodels-native` (installed by app)
 
-### Native Host Build Process
+### **Build Process**
+The native host is built automatically when building the macOS app:
+1. `NativeFoundationModelsNative` target compiles Swift sources
+2. Binary is bundled into the app and installed to `~/bin/`
+3. Chrome extension uses the binary for native messaging
 
-The native host is built automatically when building the LocalLLM app:
+## Key Configuration Files
 
-1. The `NativeFoundationModelsNative` target compiles Swift sources from `NativeChromeHost/`
-2. The "Bundle Native Host binary" build phase copies the binary into the app bundle
-3. The app installer copies the binary to `~/bin/` for Chrome extension use
+### **Chrome Configuration (`shared/config/chrome-config.js`)**
+- Persistent native messaging connection
+- Service worker background type
+- Chrome Web Store compatible manifest
+- Different web accessible resources
 
-## Important Notes
+### **Safari Configuration (`shared/config/safari-config.js`)**
+- Message-based native messaging
+- Traditional background scripts
+- Safari extension manifest format
+- Additional UI permissions and localization
 
-- Never commit generated files - they're automatically ignored in git
-- Always run sync before testing changes
-- Platform-specific features should be configured through config files, not by editing generated files
-- The sync script ensures both extensions stay in sync with shared logic
-- The native messaging host is built as part of the Xcode project, not as a separate Swift package
+## Package Management
+
+### **Dependencies**
+- **Node.js** with **pnpm** package manager
+- **chokidar** - File watching for development
+- **fs-extra** - Enhanced file system operations
+
+### **Scripts**
+- `pnpm dev` - Development with file watching
+- `pnpm build` - Production build
+- `pnpm sync` - One-time sync operation
+
+## Git Integration
+
+### **Version Control Strategy**
+- **Commit**: Source files in `shared/`, platform-specific manifests, native code
+- **Ignore**: All generated files are automatically excluded from git
+- **Automatic**: Sync script updates `.gitignore` as needed
+
+### **Ignored Files**
+- All generated extension files
+- Build artifacts and Node modules
+- macOS system files and Xcode user data
+- Sparkle signing keys and release binaries
+
+## Important Development Notes
+
+### **Critical Rules**
+- **Never commit generated files** - they're automatically ignored in git
+- **Always run sync before testing changes** - ensures both extensions are updated
+- **Platform-specific features should be configured through config files** - not by editing generated files
+- **The sync script ensures both extensions stay in sync** with shared logic
+
+### **Architecture Benefits**
+- **Single source of truth** for core logic
+- **Consistent behavior** across platforms
+- **Reduced maintenance** overhead
+- **Easier debugging** and testing
+- **Platform flexibility** through configuration
+
+### **Development Efficiency**
+- **Automatic synchronization** during development
+- **Real-time file watching** with debounced rebuilds
+- **Clear separation** between source and generated files
+- **Comprehensive tooling** for build and release processes
+
+This architecture successfully balances code sharing with platform-specific requirements, providing a maintainable and efficient development experience for cross-browser extension development with native macOS integration.

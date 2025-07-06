@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <strong>Native AI Integration for the Modern Web</strong>
+  <strong>Private AI for Web Applications</strong>
 </p>
 
 <p align="center">
-  Seamlessly integrate powerful language models directly into web applications with zero latency, complete privacy, and native performance on macOS.
+  Run powerful language models locally in your web apps with zero latency, complete privacy, and native macOS performance.
 </p>
 
 <p align="center">
@@ -19,187 +19,105 @@
 </p>
 
 <p align="center">
-  <sub>Requires macOS® 26 Tahoe and Apple Intelligence®</sub>
+  <sub>Requires macOS 15+ with Apple Intelligence</sub>
 </p>
+
+## What is LocalLLM?
+
+LocalLLM brings Apple's on-device AI models directly to web applications through a simple JavaScript API. It bridges the gap between powerful local language models and modern web development, enabling developers to build AI-powered experiences without compromising user privacy or dealing with API costs and latency.
 
 ## Why LocalLLM?
 
-### 🚀 Zero Latency
-Run language models locally with no network delays. Instant responses for real-time applications and interactive experiences.
+**For Users:**
+- 🔒 **Complete Privacy** - Your data never leaves your device
+- 🚀 **Zero Latency** - Instant responses with no network delays
+- 💰 **No API Costs** - Use powerful AI models without subscription fees
+- ⚡ **Native Performance** - Optimized for Apple Silicon
 
-### 🔒 Complete Privacy
-Your data never leaves your device. Process sensitive information locally without sending it to external APIs or cloud services.
+**For Developers:**
+- 🌐 **Simple Integration** - OpenAI-compatible JavaScript API
+- 📡 **Real-time Streaming** - Token-by-token response streaming
+- 🔧 **Framework Agnostic** - Works with React, Vue, vanilla JS, etc.
+- 🛠️ **TypeScript Support** - Full type definitions included
 
-### ⚡ Native Performance
-Leverage Apple's FoundationModels framework for optimized performance on macOS with hardware acceleration.
+## Quick Start
 
-### 🌐 Web Integration
-Simple JavaScript API that works with any web framework. Add AI capabilities to existing applications in minutes.
+### 1. Install LocalLLM
+Download and run the [macOS installer](https://github.com/zats/local-llm/releases/latest/download/NativeFoundationModels.zip). It will:
+- Install the native binary and Chrome extension
+- Set up Safari extension (if needed)
+- Verify system requirements
 
-### 📡 Real-time Streaming
-Stream responses token by token for responsive user experiences. Perfect for chat interfaces and live content generation.
-
-### 🔧 Developer Friendly
-Clean, modern API with TypeScript support, comprehensive documentation, and easy integration patterns.
-
-## 📦 Repository Structure
-
-This repository contains all the components needed to run LocalLLM on your Mac:
-
-### /macOS-container-app
-The macOS installer application that sets up LocalLLM on your system. This SwiftUI app handles:
-- Installation of the native binary to `~/bin`
-- Configuration of native messaging host
-- Chrome extension installation guidance
-- System requirements verification
-- Contains the Safari extension and Chrome native messaging host sources
-
-### /native-foundation-models-extension
-The Chrome extension that bridges web applications with the native host. Features include:
-- JavaScript API (`window.localLLM`)
-- Automatic connection management
-- Error handling and retries
-- TypeScript type definitions
-
-### /docs
-The project website and documentation, including:
-- Interactive demos
-- API documentation
-- Integration examples
-- Getting started guide
-
-## 🚀 Quick Start
-
-1. **Download the installer**: [Download NativeFoundationModels.zip](https://github.com/zats/local-llm/releases/latest/download/NativeFoundationModels.zip)
-2. **Run the macOS app**: Open the downloaded app and follow the installation steps
-3. **Install the Chrome extension**: The app will guide you to install the browser extension
-4. **Start coding**: Use the simple JavaScript API in your web applications
-
+### 2. Use in Your Web App
 ```javascript
-// Check if LocalLLM is available (OpenAI-compatible)
+// Check availability
 if (await window.localLLM.available()) {
-  console.log('Ready to use!');
+  console.log('LocalLLM is ready!');
 }
 
-// Generate content (OpenAI-compatible format)
-const result = await window.localLLM.getCompletion('Explain quantum computing');
-console.log(result.choices[0].message.content);
+// Generate text (OpenAI-compatible)
+const response = await window.localLLM.getCompletion('Explain quantum computing');
+console.log(response.choices[0].message.content);
 
-// Stream responses (yields OpenAI-compatible chunks)
+// Stream responses
 const stream = await window.localLLM.getCompletionStream('Write a story');
 for await (const chunk of stream) {
   const content = chunk.choices[0]?.delta?.content;
-  if (content) {
-    updateUI(content); // Extract content from chunk
-  }
+  if (content) process(content);
 }
 ```
 
-## 🛠️ Development
+### 3. Test Your Integration
+Open any website with LocalLLM installed and use the browser's developer console to test the API immediately.
 
-### Shared Extension Architecture
+## Development
 
-This project uses a **unified codebase** for Chrome and Safari extensions to minimize duplication:
+This project uses a shared codebase architecture for Chrome and Safari extensions with native macOS integration.
 
-```bash
-# Start watching the changes to the shared JS files
-pnpm dev
-```
-
-## 🔧 Compilation Guide
-
-### Prerequisites
-- Node.js and pnpm installed
-- Xcode (for Safari extension)
-- macOS 15+ with Apple Intelligence
-
-### Initial Setup
+### Setup
 ```bash
 # Install dependencies
 pnpm install
-```
 
-### Development Workflow
-```bash
-# Start development mode with file watching
+# Start development with file watching
 pnpm dev
-
-# The watcher will automatically sync shared files when you make changes
-# Edit shared code in: shared/core/, shared/config/, shared/assets/
-# Edit platform-specific code directly in extension directories
 ```
 
-## Architecture Overview
+### Architecture
+- **`shared/`** - Common extension logic (edit these files)
+- **`macOS-container-app/`** - Native macOS app with Safari extension
+- **`native-foundation-models-extension/`** - Chrome extension (generated files)
+- **`scripts/`** - Build automation and sync tools
 
-```mermaid
-graph TB
-    subgraph "Browser Extensions"
-        CE[Chrome Extension<br/>JS/Web]
-        SE[Safari Extension<br/>JS/Web]
-    end
+The sync script automatically generates platform-specific files from shared sources. See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
 
-    subgraph "Native Components"
-        subgraph "Chrome Native Host"
-            NMA[NativeMessagingApp<br/>Serialization Layer]
-        end
-        
-        subgraph "Safari Extension Handler"
-            SWEH[SafariWebExtensionHandler]
-            NFMS[NativeFoundationModelsService]
-        end
-    end
+## Links
 
-    subgraph "Shared Foundation Models Layer"
-        LMS[LanguageModelSession.swift<br/>• Session management<br/>• Error handling<br/>• Conversation context<br/>• Streaming responses<br/>• Direct completions]
-    end
+- [🌐 Website & Demos](https://zats.github.io/native-foundation-models/)
+- [🔗 Chrome Extension](https://chromewebstore.google.com/detail/native-foundation-models/jjmocainopehgedhgjpanckkalhiodmj)
+- [📚 Full Documentation](https://zats.github.io/native-foundation-models/docs/)
 
-    subgraph "Apple Framework"
-        FM[Foundation Models<br/>Framework]
-    end
+## Contributing
 
-    CE -->|Native Messaging<br/>JSON over stdin/stdout| NMA
-    SE -->|Extension Handler<br/>NSExtensionContext| SWEH
-    SWEH --> NFMS
-    
-    NMA -->|Uses| LMS
-    NFMS -->|Uses| LMS
-    
-    LMS -->|Calls| FM
+Contributions are welcome! Please:
 
-    style CE fill:#4285f4,color:#fff
-    style SE fill:#ff9500,color:#fff
-    style LMS fill:#34c759,color:#fff
-    style FM fill:#007aff,color:#fff
-```
+1. **Read [CLAUDE.md](CLAUDE.md)** for project architecture and development guidelines
+2. **Check existing [issues](https://github.com/zats/local-llm/issues)** or create new ones
+3. **Fork and create a pull request** with your changes
+4. **Test on both Chrome and Safari** before submitting
 
-### Component Build Processes
+### Development Guidelines
+- Edit shared code in `shared/` directory only
+- Use `pnpm dev` for development with file watching
+- Follow the existing code style and patterns
+- Ensure changes work on both Chrome and Safari
 
-Each component has its own build process and README:
+## License
 
-- **macOS Container App**: Xcode project using SwiftUI, includes Safari extension and Chrome native messaging host
-- **Chrome Extension**: Unified codebase with Safari extension using shared architecture
-- **Website**: Static HTML with live demos
-
-## 🔗 Links
-
-- [Website](https://zats.github.io/native-foundation-models/)
-- [Chrome Extension](https://chromewebstore.google.com/detail/native-foundation-models/jjmocainopehgedhgjpanckkalhiodmj)
-- [Issues](https://github.com/zats/local-llm/issues)
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 👨‍💻 Author
-
-Created by [@zats](https://x.com/zats)
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
 <p align="center">
-  Built with 🖤 for the developer community
+  Created by <a href="https://x.com/zats">@zats</a> • Built with 🖤 for the developer community
 </p>
