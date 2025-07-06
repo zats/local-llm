@@ -138,34 +138,21 @@ if [[ ! -d "$ARCHIVE_PATH" ]]; then
     error "Archive creation failed."
 fi
 
-# Export the archive for Developer ID distribution
-log "Exporting application for distribution..."
-EXPORT_OPTIONS_PLIST="$BUILD_DIR/ExportOptions.plist"
+# Export the application from archive
+log "Extracting application from archive..."
 
-# Create export options plist for Developer ID distribution
-cat > "$EXPORT_OPTIONS_PLIST" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>developer-id</string>
-    <key>teamID</key>
-    <string>5KE88HWMKJ</string>
-    <key>signingStyle</key>
-    <string>automatic</string>
-</dict>
-</plist>
-EOF
+# The archive contains the app in Products/Applications/
+ARCHIVE_APP_PATH="$ARCHIVE_PATH/Products/Applications/LocalLLM.app"
+if [[ -d "$ARCHIVE_APP_PATH" ]]; then
+    log "Copying app from archive..."
+    cp -R "$ARCHIVE_APP_PATH" "$BUILD_DIR/LocalLLM.app"
+else
+    error "App not found in archive at: $ARCHIVE_APP_PATH"
+fi
 
-xcodebuild -exportArchive \
-    -archivePath "$ARCHIVE_PATH" \
-    -exportPath "$BUILD_DIR" \
-    -exportOptionsPlist "$EXPORT_OPTIONS_PLIST"
-
-# Check if app was exported successfully
+# Check if app was copied successfully
 if [[ ! -d "$BUILD_DIR/LocalLLM.app" ]]; then
-    error "App export failed."
+    error "App extraction failed."
 fi
 
 # The app should now be properly signed by Xcode with Developer ID certificates
