@@ -64,6 +64,9 @@
 				AppMover.swift = (macos, );
 				BrowserSelectorView.swift = (macos, );
 				CheckForUpdatesView.swift = (macos, );
+				Views/IOSContentView.swift = (ios, );
+				Views/InstallationComponents.swift = (macos, );
+				Views/MacContentView.swift = (macos, );
 				onboarding/onboarding.mp4 = (ios, );
 				onboarding/onboarding_dark.mp4 = (ios, );
 			};
