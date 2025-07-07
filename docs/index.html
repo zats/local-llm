@@ -717,16 +717,24 @@
             <div class="ios-signup-section">
                 <h3 class="ios-signup-title">📱 iOS TestFlight Beta</h3>
                 <p class="ios-signup-subtitle">Be among the first to test llllm on iOS - Join our exclusive TestFlight beta program</p>
-                <form id="ios-waitlist-form" class="waitlist">
+                <form action="https://formsubmit.co/llllm@zats.io" method="POST" class="waitlist">
                     <div class="form-group">
-                        <input type="text" name="name" required placeholder="Your Name" class="form-input" id="waitlist-name">
-                        <input type="email" name="email" required placeholder="you@example.com" class="form-input" id="waitlist-email">
+                        <input type="text" name="name" required placeholder="Your Name" class="form-input">
+                        <input type="email" name="email" required placeholder="you@example.com" class="form-input">
                     </div>
-                    <button type="submit" class="submit-btn" id="submit-btn">
+                    <button type="submit" class="submit-btn">
                         <span class="btn-icon">🚀</span>
                         <span class="btn-text">Join iOS TestFlight Beta</span>
                     </button>
-                    <p class="form-note" id="form-message">Get early access to test builds and shape the future of llllm on iOS</p>
+                    <p class="form-note">Get early access to test builds and shape the future of llllm on iOS</p>
+                    
+                    <!-- FormSubmit configuration -->
+                    <input type="hidden" name="_subject" value="New iOS TestFlight Beta Signup!">
+                    <input type="hidden" name="_webhook" value="https://script.google.com/macros/s/AKfycbxIlWedsGegRJdMRFi84DMxosgo8jS3gbqc_7OmT0Nus2t8VeUuy0E0sra4L38v_6-jag/exec">
+                    <input type="hidden" name="_captcha" value="false">
+                    <input type="hidden" name="_template" value="table">
+                    <input type="hidden" name="_next" value="https://llllm.zats.io/thank-you.html">
+                    <input type="hidden" name="signup_type" value="iOS TestFlight Beta">
                 </form>
             </div>
         </div>
@@ -1064,98 +1072,6 @@ for await (const chunk of stream) {
             });
         }
 
-        // iOS Waitlist Form Submission
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('ios-waitlist-form');
-            const submitBtn = document.getElementById('submit-btn');
-            const btnText = submitBtn.querySelector('.btn-text');
-            const formMessage = document.getElementById('form-message');
-            const nameInput = document.getElementById('waitlist-name');
-            const emailInput = document.getElementById('waitlist-email');
-            
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                // Disable form during submission
-                submitBtn.disabled = true;
-                nameInput.disabled = true;
-                emailInput.disabled = true;
-                
-                // Update button state
-                const originalText = btnText.textContent;
-                btnText.textContent = 'Submitting...';
-                submitBtn.style.opacity = '0.7';
-                
-                try {
-                    // Prepare form data
-                    const formData = {
-                        name: nameInput.value,
-                        email: emailInput.value,
-                        signup_type: "iOS TestFlight Beta",
-                        timestamp: new Date().toISOString()
-                    };
-                    
-                    // Submit to Google Apps Script webhook
-                    const response = await fetch("https://script.google.com/macros/s/AKfycbxIlWedsGegRJdMRFi84DMxosgo8jS3gbqc_7OmT0Nus2t8VeUuy0E0sra4L38v_6-jag/exec?gid=0", {
-                        method: "POST",
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(formData)
-                    });
-                    
-                    // Google Apps Script returns JSON
-                    const data = await response.json();
-                    
-                    if (response.ok && data.status === 'success') {
-                        // Success state
-                        btnText.textContent = '✅ Successfully Joined!';
-                        submitBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
-                        submitBtn.style.color = 'white';
-                        formMessage.textContent = '🎉 Thank you! We\'ll contact you when iOS TestFlight spots are available.';
-                        formMessage.style.color = '#2ecc71';
-                        
-                        // Clear form
-                        nameInput.value = '';
-                        emailInput.value = '';
-                        
-                        // Reset button after 5 seconds
-                        setTimeout(() => {
-                            btnText.textContent = originalText;
-                            submitBtn.style.background = '';
-                            submitBtn.style.color = '';
-                            submitBtn.style.opacity = '';
-                            submitBtn.disabled = false;
-                            nameInput.disabled = false;
-                            emailInput.disabled = false;
-                            formMessage.textContent = 'Get early access to test builds and shape the future of llllm on iOS';
-                            formMessage.style.color = '';
-                        }, 5000);
-                    } else {
-                        throw new Error('Submission failed');
-                    }
-                } catch (error) {
-                    // Error state
-                    console.error('Form submission error:', error);
-                    btnText.textContent = '❌ Submission Failed';
-                    submitBtn.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
-                    submitBtn.style.color = 'white';
-                    formMessage.textContent = 'Something went wrong. Please try again or email us directly at llllm@zats.io';
-                    formMessage.style.color = '#e74c3c';
-                    
-                    // Reset button after 3 seconds
-                    setTimeout(() => {
-                        btnText.textContent = originalText;
-                        submitBtn.style.background = '';
-                        submitBtn.style.color = '';
-                        submitBtn.style.opacity = '';
-                        submitBtn.disabled = false;
-                        nameInput.disabled = false;
-                        emailInput.disabled = false;
-                    }, 3000);
-                }
-            });
-        });
     </script>
     <script src="prism.js"></script>
 </body>
