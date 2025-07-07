@@ -1091,36 +1091,23 @@ for await (const chunk of stream) {
                     const formData = {
                         name: nameInput.value,
                         email: emailInput.value,
-                        _webhook: "https://script.google.com/macros/s/AKfycbxkXmILSrSs91HbWBCtv7NARafdC0-2xvRGrdlMEgf6OF_fIz8ma9P2Kjca5UqyLLImJg/exec",
-                        _captcha: false
+                        signup_type: "iOS TestFlight Beta",
+                        timestamp: new Date().toISOString()
                     };
                     
-                    // Submit to FormSubmit.co
-                    const response = await fetch("https://formsubmit.co/ajax/llllm@zats.io", {
+                    // Submit to Google Apps Script webhook
+                    const response = await fetch("https://script.google.com/macros/s/AKfycbxIlWedsGegRJdMRFi84DMxosgo8jS3gbqc_7OmT0Nus2t8VeUuy0E0sra4L38v_6-jag/exec?gid=0", {
                         method: "POST",
                         headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(formData)
                     });
                     
-                    // Check if response is JSON or text
-                    const contentType = response.headers.get("content-type");
-                    let data;
+                    // Google Apps Script returns JSON
+                    const data = await response.json();
                     
-                    if (contentType && contentType.indexOf("application/json") !== -1) {
-                        data = await response.json();
-                    } else {
-                        // FormSubmit might return text for activation
-                        const text = await response.text();
-                        if (text.toLowerCase().includes("activation required")) {
-                            throw new Error("ACTIVATION_REQUIRED");
-                        }
-                        data = { success: response.ok };
-                    }
-                    
-                    if (response.ok && (data.success || data.success === undefined)) {
+                    if (response.ok && data.status === 'success') {
                         // Success state
                         btnText.textContent = '✅ Successfully Joined!';
                         submitBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
@@ -1150,79 +1137,6 @@ for await (const chunk of stream) {
                 } catch (error) {
                     // Error state
                     console.error('Form submission error:', error);
-                    
-                    if (error.message === 'ACTIVATION_REQUIRED') {
-                        // Activation required - submit via regular form
-                        console.log('FormSubmit activation required, falling back to regular submission');
-                        
-                        // Create a temporary form for activation
-                        const tempForm = document.createElement('form');
-                        tempForm.action = 'https://formsubmit.co/llllm@zats.io';
-                        tempForm.method = 'POST';
-                        tempForm.target = '_blank';
-                        
-                        const nameField = document.createElement('input');
-                        nameField.type = 'hidden';
-                        nameField.name = 'name';
-                        nameField.value = nameInput.value;
-                        tempForm.appendChild(nameField);
-                        
-                        const emailField = document.createElement('input');
-                        emailField.type = 'hidden';
-                        emailField.name = 'email';
-                        emailField.value = emailInput.value;
-                        tempForm.appendChild(emailField);
-                        
-                        const webhookField = document.createElement('input');
-                        webhookField.type = 'hidden';
-                        webhookField.name = '_webhook';
-                        webhookField.value = 'https://script.google.com/macros/s/AKfycbxkXmILSrSs91HbWBCtv7NARafdC0-2xvRGrdlMEgf6OF_fIz8ma9P2Kjca5UqyLLImJg/exec';
-                        tempForm.appendChild(webhookField);
-                        
-                        const captchaField = document.createElement('input');
-                        captchaField.type = 'hidden';
-                        captchaField.name = '_captcha';
-                        captchaField.value = 'false';
-                        tempForm.appendChild(captchaField);
-                        
-                        const subjectField = document.createElement('input');
-                        subjectField.type = 'hidden';
-                        subjectField.name = '_subject';
-                        subjectField.value = 'New iOS TestFlight Beta Signup!';
-                        tempForm.appendChild(subjectField);
-                        
-                        document.body.appendChild(tempForm);
-                        tempForm.submit();
-                        document.body.removeChild(tempForm);
-                        
-                        // Update UI
-                        btnText.textContent = '✅ Check your email!';
-                        submitBtn.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
-                        submitBtn.style.color = 'white';
-                        formMessage.textContent = '📧 Form submitted! Check llllm@zats.io for activation email from FormSubmit.';
-                        formMessage.style.color = '#3498db';
-                        
-                        // Clear form
-                        nameInput.value = '';
-                        emailInput.value = '';
-                        
-                        // Reset after delay
-                        setTimeout(() => {
-                            btnText.textContent = 'Join iOS TestFlight Beta';
-                            submitBtn.style.background = '';
-                            submitBtn.style.color = '';
-                            submitBtn.style.opacity = '';
-                            submitBtn.disabled = false;
-                            nameInput.disabled = false;
-                            emailInput.disabled = false;
-                            formMessage.textContent = 'Get early access to test builds and shape the future of llllm on iOS';
-                            formMessage.style.color = '';
-                        }, 5000);
-                        
-                        return;
-                    }
-                    
-                    // Other errors
                     btnText.textContent = '❌ Submission Failed';
                     submitBtn.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
                     submitBtn.style.color = 'white';
