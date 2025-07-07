@@ -733,18 +733,19 @@
 <script>
 /* Your published Apps Script “web app” endpoint */
 const ENDPOINT =
-  'https://script.google.com/macros/s/AKfycbwnB8yzyPZki3YmoJhHJ05eShblOdWejgT9UxSbdbmSWDT5Sk--SIZUk1D5-Fbi0uZF/exec';
+  'https://script.google.com/macros/s/AKfycbx38zVC8QXpvjP_wS4ah4h9dcKBbUnhEwfA2HMy_Bl2j204KXxaHnWxnCzl8M5q-Qqk/exec';
 
 document.getElementById('tf').addEventListener('submit', async (ev) => {
   ev.preventDefault();                         // stay on the page
   const data = Object.fromEntries(new FormData(ev.target).entries());
 
   try {
-    const r = await fetch(ENDPOINT, {
-      redirect: 'follow',
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(data),
+    // Build URL with query parameters for GET request
+    const url = new URL(ENDPOINT);
+    Object.keys(data).forEach(key => url.searchParams.append(key, data[key]));
+    
+    const r = await fetch(url, {
+      method: 'GET'
     });
 
     if (!r.ok) throw new Error(await r.text()); // surfaces quota / auth errors
