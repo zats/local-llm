@@ -105,15 +105,13 @@
         
         .main-content {
             background: #f8f9fa;
-            padding: 80px 0;
+            padding: 0;
         }
         
         .section {
             background: white;
-            border-radius: 20px;
-            padding: 50px;
-            margin-bottom: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 80px 0 0 0;
+            margin-bottom: 0;
             position: relative;
             overflow: hidden;
         }
@@ -185,45 +183,62 @@
         .code-section {
             background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
-            border-radius: 20px;
-            padding: 50px;
-            margin: 50px 0;
+            padding: 60px 0;
+            margin: 0;
         }
         
         .code-section h3 {
             color: white;
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             font-size: 2em;
         }
         
         .code-examples {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 30px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            align-items: stretch;
         }
         
         .code-block {
             background: rgba(0,0,0,0.3);
             border-radius: 12px;
-            padding: 25px;
+            padding: 20px;
+            padding-top: 35px;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 14px;
-            line-height: 1.6;
+            line-height: 1.5;
             position: relative;
             border: 1px solid rgba(255,255,255,0.1);
             white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-x: auto;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .code-block pre {
+            margin: 0;
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .code-block code {
+            width: 100%;
         }
         
         .copy-button {
             position: absolute;
-            top: 15px;
-            right: 15px;
+            top: 8px;
+            right: 8px;
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
             color: rgba(255,255,255,0.7);
             padding: 6px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 12px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -255,23 +270,23 @@
         .code-block::before {
             content: attr(data-title);
             position: absolute;
-            top: -10px;
-            left: 20px;
+            top: 8px;
+            left: 8px;
             background: linear-gradient(45deg, #667eea, #764ba2);
             color: white;
             padding: 5px 15px;
-            border-radius: 20px;
+            border-radius: 8px;
             font-size: 12px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
+            z-index: 1;
         }
         
         .demo-section {
             background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
             color: white;
-            border-radius: 20px;
-            padding: 50px;
+            padding: 80px 0;
             text-align: center;
         }
         
@@ -373,9 +388,8 @@
             background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
             color: white;
             text-align: center;
-            padding: 60px 50px;
-            border-radius: 20px;
-            margin-top: 50px;
+            padding: 80px 0;
+            margin: 0;
         }
         
         .getting-started h3 {
@@ -409,6 +423,25 @@
             border-radius: 6px;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 0.9em;
+        }
+        
+        /* TestFlight Section at Bottom */
+        .testflight-section {
+            background: linear-gradient(135deg, #0084ff 0%, #00a2ff 25%, #00b4ff 50%, #00c3ff 75%, #00d0ff 100%);
+            padding: 80px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .testflight-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="2" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
+            opacity: 0.3;
         }
         
         /* iOS TestFlight Signup Styles */
@@ -518,6 +551,18 @@
             margin-bottom: 0;
         }
         
+        @media (max-width: 1200px) {
+            .code-examples {
+                grid-template-columns: 1fr;
+                max-width: 700px;
+                margin: 0 auto;
+            }
+            
+            .code-block {
+                font-size: 13px;
+            }
+        }
+        
         @media (max-width: 768px) {
             .hero {
                 padding: 40px 0;
@@ -542,8 +587,7 @@
             }
             
             .section {
-                padding: 30px 20px;
-                margin-bottom: 20px;
+                padding: 40px 0 0 0;
             }
             
             .section h2 {
@@ -555,12 +599,11 @@
             }
             
             .code-section {
-                padding: 30px 20px;
-                margin: 30px 0;
+                padding: 40px 0;
             }
             
             .demo-section {
-                padding: 30px 20px;
+                padding: 40px 0;
             }
             
             .demo-area {
@@ -573,12 +616,11 @@
             }
             
             .code-block {
-                padding: 20px 15px;
+                padding: 15px;
                 padding-top: 30px;
                 font-size: 12px;
                 overflow-x: auto;
                 word-wrap: break-word;
-                margin-top: 20px;
             }
             
             .code-block pre {
@@ -590,7 +632,7 @@
                 font-size: 10px;
                 padding: 4px 10px;
                 top: 8px;
-                left: 10px;
+                left: 8px;
                 border-radius: 8px;
             }
             
@@ -642,8 +684,8 @@
             
             .copy-button {
                 opacity: 1;
-                top: 10px;
-                right: 10px;
+                top: 8px;
+                right: 8px;
                 padding: 5px 10px;
                 font-size: 11px;
                 width: auto;
@@ -687,6 +729,17 @@
                 font-size: 0.85em;
                 padding: 0 10px;
             }
+            
+            /* Mobile button layout */
+            .hero > .container > div:first-of-type {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .hero > .container > div:first-of-type a {
+                width: 100%;
+                max-width: 280px;
+            }
         }
     </style>
 </head>
@@ -700,7 +753,7 @@
                 OpenAI-compatible interface for on-device language models with zero latency, 
                 complete privacy, and native performance.
             </p>
-            <div style="margin-top: 40px;">
+            <div style="margin-top: 40px; display: flex; gap: 20px; justify-content: center; align-items: center; flex-wrap: wrap;">
                 <a href="https://github.com/zats/local-llm/releases/latest/download/llllm.zip" 
                    style="display: inline-block; background: white; color: #000; padding: 18px 40px; border-radius: 50px; 
                           text-decoration: none; font-weight: 600; font-size: 1.1em; transition: all 0.3s ease;
@@ -708,84 +761,29 @@
                    onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 30px rgba(0,0,0,0.3)';"
                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.2)';">
                    <span style="font-size: 1.7em; vertical-align: middle; line-height: 1; padding-right: 0.4em;"></span>
-                   <span style="font-size: 1.3em; vertical-align: middle;"> Download for macOS</span>
+                   <span style="font-size: 1.3em; vertical-align: middle;">Download for macOS</span>
                 </a>
-                <p style="margin-top: 0.5em; color: rgba(255,255,255,0.3); font-size: 0.8em; font-weight: 400;">
-                    Requires macOS® 26 Tahoe and Apple Intelligence®
-                </p>
+                <a href="#testflight-signup" 
+                   style="display: inline-block; background: white; color: #000; padding: 18px 40px; border-radius: 50px; 
+                          text-decoration: none; font-weight: 600; font-size: 1.1em; transition: all 0.3s ease;
+                          box-shadow: 0 4px 20px rgba(0,0,0,0.2);"
+                   onclick="document.getElementById('testflight-signup').scrollIntoView({ behavior: 'smooth' }); return false;"
+                   onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 30px rgba(0,0,0,0.3)';"
+                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.2)';">
+                   <span style="font-size: 1.7em; vertical-align: middle; line-height: 1; padding-right: 0.4em;">✈</span>
+                   <span style="font-size: 1.3em; vertical-align: middle;">Join iOS Beta</span>
+                </a>
             </div>
-            <div class="ios-signup-section">
-                <h3 class="ios-signup-title">📱 iOS TestFlight Beta</h3>
-                <p class="ios-signup-subtitle">Be among the first to test llllm on iOS - Join our exclusive TestFlight beta program</p>
-
-                <form id="tf" autocomplete="off" class="waitlist">
-                    <div class="form-group">
-                        <input name="name" required placeholder="Your Name" class="form-input">
-                        <input name="email" type="email" required placeholder="you@example.com" class="form-input">
-                    </div>
-                    <button type="submit" class="submit-btn">
-                        <span class="btn-icon">🚀</span>
-                        <span class="btn-text">Join iOS TestFlight Beta</span>
-                    </button>
-                    <p class="form-note" id="msg">Get early access to test builds and shape the future of llllm on iOS</p>
-                </form>
-
-<script>
-/* Your published Apps Script “web app” endpoint */
-const ENDPOINT =
-  'https://script.google.com/macros/s/AKfycbx38zVC8QXpvjP_wS4ah4h9dcKBbUnhEwfA2HMy_Bl2j204KXxaHnWxnCzl8M5q-Qqk/exec';
-
-document.getElementById('tf').addEventListener('submit', async (ev) => {
-  ev.preventDefault();                         // stay on the page
-  const data = Object.fromEntries(new FormData(ev.target).entries());
-
-  try {
-    // Build URL with query parameters for GET request
-    const url = new URL(ENDPOINT);
-    Object.keys(data).forEach(key => url.searchParams.append(key, data[key]));
-    
-    const r = await fetch(url, {
-      method: 'GET'
-    });
-
-    if (!r.ok) throw new Error(await r.text()); // surfaces quota / auth errors
-    document.getElementById('msg').textContent =
-      '✅ You’re on the list — watch your inbox.';
-    ev.target.reset();
-  } catch (err) {
-    console.error(err);
-    
-    // Error state styling
-    const submitBtn = ev.target.querySelector('.submit-btn');
-    const btnText = submitBtn.querySelector('.btn-text');
-    const formMessage = document.getElementById('msg');
-    
-    btnText.textContent = '❌ Submission Failed';
-    submitBtn.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
-    submitBtn.style.color = 'white';
-    formMessage.textContent = 'Something went wrong. Please try again or email us directly at llllm@zats.io';
-    formMessage.style.color = '#e74c3c';
-    
-    // Reset styling after 3 seconds
-    setTimeout(() => {
-      btnText.textContent = 'Join iOS TestFlight Beta';
-      submitBtn.style.background = '';
-      submitBtn.style.color = '';
-      formMessage.textContent = 'Get early access to test builds and shape the future of llllm on iOS';
-      formMessage.style.color = '';
-    }, 3000);
-  }
-});
-</script>
-
+            <p style="margin-top: 0.5em; color: rgba(255,255,255,0.3); font-size: 0.8em; font-weight: 400; text-align: center;">
+                    Requires macOS 26 Tahoe, iOS 26, and Apple Intelligence
+                </p>
             </div>
         </div>
     </div>
     
-    <div class="main-content">
+    <div class="section">
         <div class="container">
-            <div class="section">
-                <h2>Why llllm?</h2>
+            <h2>Why llllm?</h2>
                 <div class="features-grid">
                     <div class="feature-card">
                         <span class="feature-icon">🏠</span>
@@ -816,11 +814,12 @@ document.getElementById('tf').addEventListener('submit', async (ev) => {
                         <span class="feature-icon">🔄</span>
                         <h4>OpenAI Compatible</h4>
                         <p>Drop-in replacement for OpenAI's API. Use the same request/response formats you already know and love.</p>
-                    </div>
                 </div>
-            </div>
+        </div>
+    </div>
 
-            <div class="demo-section">
+    <div class="demo-section">
+        <div class="container">
                 <h3>🧪 Live Demo</h3>
                 <p>Experience llllm in action. Test the OpenAI-compatible API and see real-time responses.</p>
                 
@@ -842,11 +841,12 @@ document.getElementById('tf').addEventListener('submit', async (ev) => {
                     </div>
                     
                     <div id="output"></div>
-                </div>
             </div>
+        </div>
+    </div>
 
-
-                        <div class="code-section">
+    <div class="code-section">
+        <div class="container">
                 <h3>OpenAI-Compatible. Local-First. Ready to Use.</h3>
                 <div class="code-examples">
                     <div class="code-block" data-title="Check Availability">
@@ -893,6 +893,26 @@ for await (const chunk of stream) {
   max_tokens: 500,
   stream: false
 });</code></pre></div>
+                </div>
+            </div>
+        </div>
+        <div class="testflight-section" id="testflight-signup">
+            <div class="container">
+                <div class="ios-signup-section">
+                    <h3 class="ios-signup-title">📱 iOS TestFlight Beta</h3>
+                    <p class="ios-signup-subtitle">Be among the first to test llllm on iOS - Join our exclusive TestFlight beta program</p>
+
+                    <form id="testflight-form" autocomplete="off" class="waitlist">
+                        <div class="form-group">
+                            <input name="name" required placeholder="Your Name" class="form-input">
+                            <input name="email" type="email" required placeholder="you@example.com" class="form-input">
+                        </div>
+                        <button type="submit" class="submit-btn">
+                            <span class="btn-icon">🚀</span>
+                            <span class="btn-text">Join iOS TestFlight Beta</span>
+                        </button>
+                        <p class="form-note" id="msg">Get early access to test builds and shape the future of llllm on iOS</p>
+                    </form>
                 </div>
             </div>
         </div>
@@ -1113,6 +1133,64 @@ for await (const chunk of stream) {
                 }, 1000);
             });
         }
+
+        // Handle form submission without redirect
+        document.getElementById('testflight-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitBtn = form.querySelector('.submit-btn');
+            const msgEl = document.getElementById('msg');
+            const originalBtnHTML = submitBtn.innerHTML;
+            
+            // Disable button and show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Submitting...</span>';
+            
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('https://submit-form.com/6LiRQJkhr', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    // Success - show thank you message
+                    submitBtn.innerHTML = '<span class="btn-icon">✅</span><span class="btn-text">Success!</span>';
+                    msgEl.textContent = 'Thank you! We\'ll be in touch soon with your TestFlight invite.';
+                    msgEl.style.color = '#2ecc71';
+                    
+                    // Reset form
+                    form.reset();
+                    
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        submitBtn.innerHTML = originalBtnHTML;
+                        submitBtn.disabled = false;
+                        msgEl.textContent = 'Get early access to test builds and shape the future of llllm on iOS';
+                        msgEl.style.color = '';
+                    }, 5000);
+                } else {
+                    throw new Error('Submission failed');
+                }
+            } catch (error) {
+                // Error - show error message
+                submitBtn.innerHTML = '<span class="btn-icon">❌</span><span class="btn-text">Error</span>';
+                msgEl.textContent = 'Something went wrong. Please try again.';
+                msgEl.style.color = '#e74c3c';
+                
+                // Re-enable button after 3 seconds
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalBtnHTML;
+                    submitBtn.disabled = false;
+                    msgEl.textContent = 'Get early access to test builds and shape the future of llllm on iOS';
+                    msgEl.style.color = '';
+                }, 3000);
+            }
+        });
 
     </script>
     <script src="prism.js"></script>
