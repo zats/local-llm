@@ -566,7 +566,7 @@ struct AppSettingsView: View {
                     .buttonStyle(PlainButtonStyle())
                     .focusable(false)
                     .padding(.top, 35)
-                    .padding(.trailing, 35)
+                    .padding(.trailing, 30)
                 }
         }
         .frame(width: 420, height: 700)

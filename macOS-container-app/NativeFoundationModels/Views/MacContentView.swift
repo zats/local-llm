@@ -10,7 +10,6 @@ import AppKit
 
 struct MacContentView: View {
     @StateObject private var stepManager = InstallationStepManager()
-    @State private var heartbeat = false
     @State private var selectedBrowser: Browser?
     @State private var showBrowserSelector = true
     @State private var showAutoInstallStatus = false
@@ -102,12 +101,6 @@ struct MacContentView: View {
                 .offset(x: showBrowserSelector ? 0 : 60, y: showBrowserSelector ? 0: -70)
                 .frame(width: showBrowserSelector ? 300 : 100, height: showBrowserSelector ? 300 : 100)
                 .shadow(color: .black.opacity(0.3), radius: showBrowserSelector ? 8 : 16, y: 4)
-                .scaleEffect(heartbeat ? 1.02 : 1.0)
-                .animation(
-                    .easeInOut(duration: 1.2)
-                    .repeatForever(autoreverses: true),
-                    value: heartbeat
-                )
             if showBrowserSelector {
                 BrowserSelectorView(selectedBrowser: $selectedBrowser, animationNamespace: animation) {
                     if let browser = selectedBrowser {
@@ -136,9 +129,6 @@ struct MacContentView: View {
                 Spacer()
             }
             .padding(.horizontal, 32)
-        }
-        .onAppear {
-            heartbeat = true
         }
         .frame(width: 420, height: 700)
     }
