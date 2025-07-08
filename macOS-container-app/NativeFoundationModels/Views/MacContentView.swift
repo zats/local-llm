@@ -6,6 +6,7 @@
 
 import SwiftUI
 import SafariServices
+import AppKit
 
 struct MacContentView: View {
     @StateObject private var stepManager = InstallationStepManager()
@@ -137,9 +138,6 @@ struct MacContentView: View {
             .padding(.horizontal, 32)
         }
         .onAppear {
-            DispatchQueue.main.async {
-                AppMover.moveIfNecessary()
-            }
             heartbeat = true
         }
         .frame(width: 420, height: 700)

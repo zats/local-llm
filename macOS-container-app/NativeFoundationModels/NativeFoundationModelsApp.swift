@@ -25,6 +25,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Check for updates silently on app startup
         updaterController.updater.checkForUpdatesInBackground()
+        DispatchQueue.main.async {
+            AppMover.moveIfNecessary()
+        }
     }
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -228,12 +231,10 @@ class InstallationStepManager: ObservableObject {
                 DispatchQueue.main.async {
                     self.stepInProgress[.installBinary] = false
                     self.checkAllSteps()
-                    print("Auto-installation completed successfully")
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.stepInProgress[.installBinary] = false
-                    print("Auto-installation failed: \(error.localizedDescription)")
                 }
             }
         }
@@ -490,7 +491,7 @@ class InstallationStepManager: ObservableObject {
     private func openSafariExtensionPreferences() {
         SFSafariApplication.showPreferencesForExtension(withIdentifier: safariExtensionBundleIdentifier) { error in
             DispatchQueue.main.async {
-                if let error = error {
+                if let error {
                     print("Error opening Safari extension preferences: \(error)")
                 }
                 self.stepInProgress[.installExtension] = false

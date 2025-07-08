@@ -13,6 +13,8 @@ class LaunchManager: ObservableObject {
     private let firstLaunchKey = "hasLaunchedBefore"
     
     init() {
+        UserDefaults.standard.set(false, forKey: "hasLaunchedBefore")
+        UserDefaults.standard.synchronize()
         self.isFirstLaunch = !UserDefaults.standard.bool(forKey: firstLaunchKey)
     }
     

@@ -24,6 +24,29 @@ extension Color {
         #endif
     }
     
+    static var chatBackground: Color {
+        #if os(macOS)
+        return Color(NSColor.windowBackgroundColor)
+        #else
+        return Color(.systemBackground)
+        #endif
+    }
+    
+    static var messageBackground: Color {
+        #if os(macOS)
+        return Color(.systemGray).opacity(0.5)
+        #else
+        return Color(.systemGray5)
+        #endif
+    }
+    
+    static var inputFieldBackground: Color {
+        #if os(macOS)
+        return Color(NSColor.controlColor)
+        #else
+        return Color(.systemGray6)
+        #endif
+    }
 }
 
 struct ChatView: View {
@@ -72,7 +95,7 @@ struct ChatView: View {
                     .padding(.horizontal, 16)
                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: sessionManager.messages.count)
                 }
-                .background(Color.white)
+                .background(Color.chatBackground)
                 .onChange(of: sessionManager.messages.count) { _ in
                     if let lastMessage = sessionManager.messages.last {
                         withAnimation(.easeOut(duration: 0.3)) {
@@ -85,7 +108,7 @@ struct ChatView: View {
             // Input area
             chatInput
         }
-        .background(Color.white)
+        .background(Color.chatBackground)
         .onAppear {
             sessionManager.createNewSession()
         }
@@ -148,9 +171,7 @@ struct ChatView: View {
                                 .foregroundColor(.secondary)
                         }
                 }
-                
                 Spacer()
-                
                 // Right side - Chat Actions
                 HStack(spacing: 16) {
                     Button(action: { showingSystemPromptEditor = true }) {
@@ -172,7 +193,8 @@ struct ChatView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
-            .background(Color.white)
+            .background(Color.chatBackground)
+            Divider()
         }
     }
     
@@ -194,7 +216,7 @@ struct ChatView: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Color(red: 0.95, green: 0.95, blue: 0.97))
+                        .fill(Color.inputFieldBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
                                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
@@ -219,7 +241,7 @@ struct ChatView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.white)
+            .background(Color.chatBackground)
         }
     }
     
@@ -256,7 +278,7 @@ struct MessageBubble: View {
                         .padding(.vertical, 10)
                         .background(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color(hex: "007AFF"), Color(hex: "0051D5")]),
+                                gradient: Gradient(colors: [Color(hex: "8B5CF6"), Color(hex: "A855F7"), Color(hex: "C084FC")]),
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -287,10 +309,10 @@ struct MessageBubble: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(message.content)
                         .font(.system(size: 16))
-                        .foregroundColor(.primary)
+                        .foregroundColor(.white)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(Color.white)
+                        .background(Color.messageBackground)
                         .clipShape(MessageBubbleShape(isFromUser: false))
                         .textSelection(.enabled)
                         .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
@@ -382,7 +404,7 @@ struct LoadingIndicator: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color.white)
+            .background(Color.messageBackground)
             .clipShape(MessageBubbleShape(isFromUser: false))
             .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
             
@@ -522,12 +544,29 @@ struct AppSettingsView: View {
         VStack(spacing: 0) {
             MacContentView()
                 .overlay(alignment: .topTrailing) {
-                    Button("Done") {
+                    Button {
                         dismiss()
+                    } label: {
+                        HStack {
+                            Text("Done")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                        )
                     }
-                    .buttonStyle(.borderedProminent)
-                    .padding(.top, 20)
-                    .padding(.leading, 20)
+                    .buttonStyle(PlainButtonStyle())
+                    .focusable(false)
+                    .padding(.top, 35)
+                    .padding(.trailing, 35)
                 }
         }
         .frame(width: 420, height: 700)

@@ -153,25 +153,18 @@ class SimpleChatSessionManager: ObservableObject {
             var isFirstToken = true
             
             for try await token in responseStream {
-                // Debug logging to understand the token behavior
-                print("DEBUG: Received token: '\(token)'")
-                print("DEBUG: Token length: \(token.count)")
-                
                 // Check if this might be cumulative content rather than delta
                 if isFirstToken {
                     fullResponse = token
                     isFirstToken = false
-                    print("DEBUG: First token - setting fullResponse to: '\(fullResponse)'")
                 } else {
                     // Check if token is cumulative by seeing if it contains our previous response
                     if token.hasPrefix(fullResponse) {
                         // This is cumulative content, use it directly
                         fullResponse = token
-                        print("DEBUG: Cumulative token detected - fullResponse: '\(fullResponse)'")
                     } else {
                         // This is delta content, append it
                         fullResponse += token
-                        print("DEBUG: Delta token detected - fullResponse: '\(fullResponse)'")
                     }
                 }
                 
