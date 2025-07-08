@@ -10,19 +10,15 @@ struct InstructionsView: View {
     let onDismiss: () -> Void
     
     var body: some View {
+#if os(macOS)
         ZStack {
             GradientBackground()
                 .ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                // Platform-specific instructions
-                #if os(macOS)
-                MacInstructionsContent(onDismiss: onDismiss)
-                #else
-                IOSInstructionsContent(onDismiss: onDismiss)
-                #endif
-            }
+            MacInstructionsContent(onDismiss: onDismiss)
         }
+#else
+        IOSInstructionsContent(onDismiss: onDismiss)
+        #endif
     }
 }
 
