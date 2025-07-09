@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LocalLLM",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Provides on-device LLM capabilities to websites with built-in playground",
   
   "icons": {
